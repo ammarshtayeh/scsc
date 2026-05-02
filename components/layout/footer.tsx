@@ -15,7 +15,7 @@ export function Footer() {
   ];
 
   return (
-    <footer className="border-t border-white/60 bg-white/78 backdrop-blur-2xl dark:border-white/10 dark:bg-brand-surface/88">
+    <footer className="border-t border-[#efe6d7] bg-[rgba(248,244,236,0.92)] backdrop-blur-2xl dark:border-white/10 dark:bg-brand-surface/88">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
         <div className="min-w-0 space-y-3">
           <SiteLogo
