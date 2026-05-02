@@ -1,7 +1,10 @@
 import path from "path";
 
+const distDir = process.env.NEXT_DIST_DIR?.trim();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  ...(distDir ? { distDir } : {}),
   images: {
     unoptimized: true
   },

@@ -4,6 +4,8 @@ functions/node_modules/
 
 # Next.js
 .next/
+.next-dev/
+.next-prod/
 out/
 .next-dev.log
 .next-dev.err.log
