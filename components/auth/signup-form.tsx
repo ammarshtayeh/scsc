@@ -1,0 +1,124 @@
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useToast } from "@/components/ui/toast";
+import { useLocale } from "@/hooks/useLocale";
+import { useAuth } from "@/hooks/useAuth";
+
+export function SignupForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
+  const { signup } = useAuth();
+  const { dictionary } = useLocale();
+  const { pushToast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    displayName: "",
+    email: "",
+    password: "",
+    company: ""
+  });
+
+  function getErrorMessage(error: unknown) {
+    if (!(error instanceof Error)) {
+      return dictionary.auth.createError;
+    }
+
+    if (error.message === "auth/email-already-in-use") {
+      return dictionary.auth.emailAlreadyExists;
+    }
+
+    return error.message;
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (form.password.length < 6) {
+      pushToast(dictionary.auth.passwordShort, "error");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const nextPath = await signup(form);
+      pushToast(dictionary.auth.createSuccess, "success");
+      router.push(redirect || nextPath);
+    } catch (error) {
+      pushToast(getErrorMessage(error), "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Card className="w-full max-w-xl">
+      <h1 className="font-heading text-3xl font-bold text-brand-primary">
+        {dictionary.auth.signupCardTitle}
+      </h1>
+      <p className="mt-3 text-sm leading-7 text-slate-600">{dictionary.auth.signupCardText}</p>
+      <form onSubmit={handleSubmit} className="mt-8 grid gap-5 md:grid-cols-2">
+        <div className="md:col-span-2">
+          <label className="mb-2 block text-sm font-medium text-brand-primary">
+            {dictionary.auth.fullName}
+          </label>
+          <input
+            value={form.displayName}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, displayName: event.target.value }))
+            }
+            className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
+            placeholder={dictionary.auth.fullNamePlaceholder}
+          />
+        </div>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-brand-primary">
+            {dictionary.auth.emailLabel}
+          </label>
+          <input
+            type="email"
+            value={form.email}
+            onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+            className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
+            placeholder={dictionary.contact.emailPlaceholder}
+          />
+        </div>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-brand-primary">
+            {dictionary.auth.companyLabel}
+          </label>
+          <input
+            value={form.company}
+            onChange={(event) => setForm((current) => ({ ...current, company: event.target.value }))}
+            className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
+            placeholder={dictionary.auth.companyPlaceholder}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label className="mb-2 block text-sm font-medium text-brand-primary">
+            {dictionary.auth.passwordLabel}
+          </label>
+          <input
+            type="password"
+            value={form.password}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, password: event.target.value }))
+            }
+            className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
+            placeholder={dictionary.auth.signupPasswordPlaceholder}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <Button type="submit" loading={loading}>
+            {dictionary.auth.createAccount}
+          </Button>
+        </div>
+      </form>
+    </Card>
+  );
+}

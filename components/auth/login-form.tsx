@@ -1,0 +1,135 @@
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useToast } from "@/components/ui/toast";
+import { useLocale } from "@/hooks/useLocale";
+import {
+  clearFailedLogins,
+  getLoginLockout,
+  recordFailedLogin
+} from "@/lib/auth-lockout";
+import { sendPasswordReset } from "@/lib/firebase/auth";
+import { isFirebaseClientConfigured } from "@/lib/firebase/firebase";
+import { useAuth } from "@/hooks/useAuth";
+
+export function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
+  const { login } = useAuth();
+  const { dictionary, locale } = useLocale();
+  const { pushToast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  function getErrorMessage(error: unknown) {
+    if (!(error instanceof Error)) {
+      return dictionary.auth.invalidCredentials;
+    }
+
+    if (error.message === "auth/invalid-credentials") {
+      return dictionary.auth.invalidCredentials;
+    }
+
+    return error.message;
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const lockedUntil = getLoginLockout(email);
+    if (lockedUntil) {
+      pushToast(
+        `${dictionary.auth.lockoutPrefix} ${new Date(lockedUntil).toLocaleTimeString(
+          locale === "ar" ? "ar-PS" : "en-US"
+        )}.`,
+        "error"
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const nextPath = await login(email, password);
+      clearFailedLogins(email);
+      pushToast(dictionary.auth.welcomeBack, "success");
+      router.push(redirect || nextPath);
+    } catch (error) {
+      recordFailedLogin(email);
+      pushToast(getErrorMessage(error), "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePasswordReset() {
+    if (!email) {
+      pushToast(dictionary.auth.enterEmailFirst, "error");
+      return;
+    }
+
+    if (!isFirebaseClientConfigured) {
+      pushToast(dictionary.auth.resetNeedsFirebase, "info");
+      return;
+    }
+
+    try {
+      await sendPasswordReset(email);
+      pushToast(dictionary.auth.resetSent, "success");
+    } catch (error) {
+      pushToast(error instanceof Error ? error.message : dictionary.auth.resetError, "error");
+    }
+  }
+
+  return (
+    <Card className="w-full max-w-lg">
+      <h1 className="font-heading text-3xl font-bold text-brand-primary">
+        {dictionary.auth.loginCardTitle}
+      </h1>
+      <p className="mt-3 text-sm leading-7 text-slate-600">{dictionary.auth.loginCardText}</p>
+      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+        <div>
+          <label className="mb-2 block text-sm font-medium text-brand-primary">
+            {dictionary.auth.emailLabel}
+          </label>
+          <input
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
+            placeholder={dictionary.contact.emailPlaceholder}
+          />
+        </div>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-brand-primary">
+            {dictionary.auth.passwordLabel}
+          </label>
+          <input
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
+            placeholder={dictionary.auth.passwordPlaceholder}
+          />
+        </div>
+        <Button type="submit" loading={loading}>
+          {dictionary.auth.signIn}
+        </Button>
+        <button
+          type="button"
+          onClick={handlePasswordReset}
+          className="block text-sm font-medium text-brand-primary underline underline-offset-4"
+        >
+          {dictionary.auth.forgotPassword}
+        </button>
+      </form>
+    </Card>
+  );
+}

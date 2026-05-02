@@ -1,0 +1,41 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function role() {
+      return request.auth.token.role;
+    }
+
+    function isAdminOrModerator() {
+      return isSignedIn() && (role() == "admin" || role() == "moderator");
+    }
+
+    match /images/events/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdminOrModerator();
+    }
+
+    match /images/products/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isAdminOrModerator();
+    }
+
+    match /images/articles/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdminOrModerator();
+    }
+
+    match /images/members/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (request.auth.uid == userId || isAdminOrModerator());
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

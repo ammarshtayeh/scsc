@@ -1,0 +1,101 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function role() {
+      return request.auth.token.role;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && role() == "admin";
+    }
+
+    function isModerator() {
+      return isSignedIn() && role() == "moderator";
+    }
+
+    function isAdminOrModerator() {
+      return isAdmin() || isModerator();
+    }
+
+    function isSelf(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow read: if isSelf(userId) || isAdminOrModerator();
+      allow create: if isSelf(userId);
+      allow update: if isAdminOrModerator() || (
+        isSelf(userId) &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly([
+          "displayName",
+          "phone",
+          "company",
+          "photoURL",
+          "registeredEventIds",
+          "savedArticleIds",
+          "lastEventRegistrationAt"
+        ])
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow create, delete: if isAdminOrModerator();
+      allow update: if isAdminOrModerator() || (
+        isSignedIn() &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(["registeredCount"]) &&
+        request.resource.data.registeredCount == resource.data.registeredCount + 1 &&
+        resource.data.registeredCount < resource.data.capacity
+      );
+
+      match /registrations/{userId} {
+        allow read: if isSelf(userId) || isAdminOrModerator();
+        allow create: if isSelf(userId) &&
+          !exists(/databases/$(database)/documents/events/$(eventId)/registrations/$(userId)) &&
+          get(/databases/$(database)/documents/events/$(eventId)).data.registeredCount <
+            get(/databases/$(database)/documents/events/$(eventId)).data.capacity;
+        allow delete: if isAdminOrModerator();
+      }
+    }
+
+    match /articles/{articleId} {
+      allow read: if resource.data.approved == true || isAdminOrModerator();
+      allow create, update, delete: if isAdminOrModerator();
+    }
+
+    match /products/{productId} {
+      allow read: if isSignedIn() || isAdminOrModerator();
+      allow create, update, delete: if isAdminOrModerator();
+    }
+
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdminOrModerator());
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdminOrModerator();
+    }
+
+    match /boardMembers/{memberId} {
+      allow read: if true;
+      allow create, update, delete: if isAdminOrModerator();
+    }
+
+    match /contacts/{contactId} {
+      allow read: if isAdminOrModerator();
+      allow write: if false;
+    }
+
+    match /carts/{userId} {
+      allow read, write: if isSelf(userId) || isAdminOrModerator();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
