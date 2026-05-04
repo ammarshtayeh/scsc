@@ -1,10 +1,12 @@
+"use client";
+
 import Link from "next/link";
 
 import { SiteLogo } from "@/components/ui/site-logo";
-import { getServerDictionary } from "@/lib/i18n/server";
+import { useLocale } from "@/hooks/useLocale";
 
 export function Footer() {
-  const dictionary = getServerDictionary();
+  const { dictionary } = useLocale();
   const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL;
   const navLinks = [
     { href: "/", label: dictionary.nav.home },
@@ -53,7 +55,7 @@ export function Footer() {
                 rel="noreferrer"
                 className="block break-words font-medium text-brand-primary underline underline-offset-4 dark:text-brand-accent"
               >
-                Instagram
+                {dictionary.footer.instagram}
               </a>
             ) : null}
             <p className="text-pretty">{dictionary.footer.location}</p>

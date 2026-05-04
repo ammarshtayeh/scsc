@@ -1,14 +1,26 @@
 "use client";
 
-import { Languages } from "lucide-react";
+import { Globe2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
 import { useLocale } from "@/hooks/useLocale";
+import { cn } from "@/lib/utils";
 
 export function LanguageToggle() {
   const router = useRouter();
   const { locale, dictionary, setLocale } = useLocale();
+  const options = [
+    {
+      value: "en" as const,
+      label: dictionary.languageToggle.english,
+      ariaLabel: dictionary.languageToggle.switchToEnglish
+    },
+    {
+      value: "ar" as const,
+      label: dictionary.languageToggle.arabic,
+      ariaLabel: dictionary.languageToggle.switchToArabic
+    }
+  ];
 
   function handleChange(nextLocale: "en" | "ar") {
     if (nextLocale === locale) {
@@ -20,28 +32,35 @@ export function LanguageToggle() {
   }
 
   return (
-    <div className="inline-flex items-center gap-1.5 rounded-full border border-brand-primary/20 bg-white/85 p-1.5 shadow-card hover:shadow-soft transition-shadow dark:border-white/10 dark:bg-brand-surface/84">
-      <span className="flex h-8 w-8 items-center justify-center text-brand-primary dark:text-brand-ink">
-        <Languages className="h-4 w-4" />
+    <div
+      className="inline-flex h-11 items-center rounded-full border border-brand-primary/15 bg-white/90 p-1 shadow-card transition-shadow hover:shadow-soft dark:border-white/12 dark:bg-[#121f33]/90"
+      role="group"
+      aria-label={dictionary.languageToggle.label}
+    >
+      <span className="flex h-9 w-9 items-center justify-center rounded-full text-brand-primary/70 dark:text-brand-ink/80">
+        <Globe2 className="h-4 w-4" />
       </span>
-      <Button
-        size="sm"
-        variant={locale === "en" ? "primary" : "ghost"}
-        aria-label={dictionary.languageToggle.switchToEnglish}
-        onClick={() => handleChange("en")}
-        className={locale === "en" ? "" : "hover:bg-brand-sky/60"}
-      >
-        {dictionary.languageToggle.english}
-      </Button>
-      <Button
-        size="sm"
-        variant={locale === "ar" ? "primary" : "ghost"}
-        aria-label={dictionary.languageToggle.switchToArabic}
-        onClick={() => handleChange("ar")}
-        className={locale === "ar" ? "" : "hover:bg-brand-sky/60"}
-      >
-        {dictionary.languageToggle.arabic}
-      </Button>
+      {options.map((option) => {
+        const active = locale === option.value;
+
+        return (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={active}
+            aria-label={option.ariaLabel}
+            onClick={() => handleChange(option.value)}
+            className={cn(
+              "h-9 min-w-20 rounded-full px-4 text-sm font-semibold transition-all",
+              active
+                ? "bg-brand-primary text-white shadow-soft dark:bg-[#2b5794] dark:text-white"
+                : "text-brand-primary/70 hover:bg-brand-sky/75 hover:text-brand-primary dark:text-brand-ink/72 dark:hover:bg-white/8 dark:hover:text-white"
+            )}
+          >
+            {option.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

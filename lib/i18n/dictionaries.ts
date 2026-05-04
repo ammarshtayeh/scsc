@@ -5,8 +5,8 @@ export const dictionaries = {
     localeName: "English",
     languageToggle: {
       label: "Language",
-      english: "EN",
-      arabic: "AR",
+      english: "English",
+      arabic: "Arabic",
       switchToEnglish: "Switch to English",
       switchToArabic: "Switch to Arabic"
     },
@@ -44,7 +44,8 @@ export const dictionaries = {
       noData: "No data available",
       notProvided: "Not provided",
       saveChanges: "Save Changes",
-      refresh: "Refresh"
+      refresh: "Refresh",
+      toggleTheme: "Toggle theme"
     },
     home: {
       badge: "Elegance meets evidence-based care",
@@ -348,7 +349,25 @@ export const dictionaries = {
       review: "Review",
       approved: "Approved",
       pending: "Pending",
-      items: "items"
+      items: "items",
+      save: "Save",
+      delete: "Delete",
+      approve: "Approve",
+      reject: "Reject",
+      actionSaved: "Saved successfully.",
+      actionFailed: "Action failed.",
+      eventTitlePlaceholder: "Event title",
+      eventVenuePlaceholder: "Venue",
+      eventCapacityPlaceholder: "Capacity",
+      eventCoverImagePlaceholder: "Cover image URL",
+      eventExcerptPlaceholder: "Short description",
+      eventDescriptionPlaceholder: "Full description, one paragraph per line",
+      eventTagsPlaceholder: "Tags separated by comma",
+      productNamePlaceholder: "Product name",
+      productCompanyPlaceholder: "Company",
+      productImagePlaceholder: "Image URL",
+      productDescriptionPlaceholder: "Short description",
+      productLongDescriptionPlaceholder: "Long description, one paragraph per line"
     },
     verify: {
       eyebrow: "Membership Verification",
@@ -380,6 +399,7 @@ export const dictionaries = {
     footer: {
       explore: "Explore",
       contact: "Contact",
+      instagram: "Instagram",
       membership: "Membership",
       membershipText:
         "Join for workshops, discounts, community access, and professional growth opportunities.",
@@ -435,8 +455,8 @@ export const dictionaries = {
     localeName: "العربية",
     languageToggle: {
       label: "اللغة",
-      english: "EN",
-      arabic: "AR",
+      english: "الإنجليزية",
+      arabic: "العربية",
       switchToEnglish: "التبديل إلى الإنجليزية",
       switchToArabic: "التبديل إلى العربية"
     },
@@ -474,7 +494,8 @@ export const dictionaries = {
       noData: "لا توجد بيانات",
       notProvided: "غير متوفر",
       saveChanges: "حفظ التعديلات",
-      refresh: "تحديث"
+      refresh: "تحديث",
+      toggleTheme: "تبديل المظهر"
     },
     home: {
       badge: "أناقة مبنية على المعرفة العلمية",
@@ -533,7 +554,7 @@ export const dictionaries = {
       ],
       whyTitle: "لماذا يستمر الأعضاء بالمشاركة",
       whyDescription:
-        "وصول إلى فعاليات الشركاء وتعليم حصري وأسعار خاصة على المنتجات ومزايا عضوية موثقة عبر QR ديناميكي.",
+        "وصول إلى فعاليات الشركاء وتعليم حصري وأسعار خاصة على المنتجات ومزايا عضوية موثقة عبر رمز استجابة سريع ديناميكي.",
       whyExtra:
         "كما يحصل الأعضاء على فرص منظمة للتطوع وقيادة اللجان والمساهمة في المحتوى التعليمي للمجتمع الطلابي.",
       joinCta: "انضم كعضو",
@@ -576,7 +597,7 @@ export const dictionaries = {
       eventDetailEyebrow: "تفاصيل الفعالية",
       attendanceNotesTitle: "ملاحظات الحضور",
       attendanceNotesBody:
-        "التسجيل متاح فقط للأعضاء المسجلين دخولًا، ويستخدم معاملة Firestore لمنع التكرار وتعطيل التسجيل عند اكتمال السعة.",
+        "التسجيل متاح فقط للأعضاء المسجلين دخولًا، ويستخدم معاملة فايرستور لمنع التكرار وتعطيل التسجيل عند اكتمال السعة.",
       registeredSuffix: "مسجل"
     },
     eventRegistration: {
@@ -589,7 +610,7 @@ export const dictionaries = {
       registerNow: "سجّل الآن",
       alreadyRegistered: "مسجل مسبقًا",
       reserved: "تم حجز مقعدك مسبقًا في هذه الفعالية.",
-      duplicateNote: "يتم منع التسجيل المكرر عبر معاملة Firestore لكل عضو.",
+      duplicateNote: "يتم منع التسجيل المكرر عبر معاملة فايرستور لكل عضو.",
       success: "تم تأكيد التسجيل.",
       genericError: "حدث خطأ أثناء التسجيل."
     },
@@ -597,7 +618,7 @@ export const dictionaries = {
       eyebrow: "تواصل معنا",
       title: "تواصل مع فريق الجمعية.",
       description:
-        "استخدم نموذج التواصل للاستفسارات والتعاون وطلبات الورش أو الدعم العام. النموذج مصمم مع تحقق واضح وإرسال بريد عبر Firebase Cloud Functions.",
+        "استخدم نموذج التواصل للاستفسارات والتعاون وطلبات الورش أو الدعم العام. النموذج مصمم مع تحقق واضح وإرسال بريد عبر دوال فايربيس السحابية.",
       cardTitle: "لنتحدث",
       cardText:
         "نرحب بأسئلة الأعضاء والزوار وأعضاء الهيئة التدريسية والشركاء المهتمين بالتعليم والفعاليات أو التعاون الطلابي.",
@@ -627,20 +648,20 @@ export const dictionaries = {
       signupEyebrow: "العضوية",
       signupTitle: "انضم إلى الجمعية.",
       signupDescription:
-        "أنشئ حساب العضوية للوصول إلى التسجيل في الفعاليات وأدوات الملف الشخصي والتحقق بالـ QR وسجل الطلبات وأسعار الأعضاء.",
+        "أنشئ حساب العضوية للوصول إلى التسجيل في الفعاليات وأدوات الملف الشخصي والتحقق برمز الاستجابة السريعة وسجل الطلبات وأسعار الأعضاء.",
       loginCardTitle: "تسجيل الدخول",
       loginCardText:
-        "سجّل الدخول بحساب الجمعية. صلاحيات الإدارة والمراجعة تُدار من أدوار Firebase.",
+        "سجّل الدخول بحساب الجمعية. صلاحيات الإدارة والمراجعة تُدار من أدوار فايربيس.",
       emailLabel: "البريد الإلكتروني",
       passwordLabel: "كلمة المرور",
       passwordPlaceholder: "أدخل كلمة المرور",
       signupPasswordPlaceholder: "6 أحرف على الأقل",
       signIn: "دخول",
-      continueWithGoogle: "المتابعة عبر Google",
+      continueWithGoogle: "المتابعة عبر جوجل",
       orEmail: "أو البريد",
       forgotPassword: "نسيت كلمة المرور؟",
       enterEmailFirst: "أدخل بريدك الإلكتروني أولًا لإرسال إعادة تعيين كلمة المرور.",
-      resetNeedsFirebase: "إرسال بريد إعادة التعيين يتطلب إعداد Firebase.",
+      resetNeedsFirebase: "إرسال بريد إعادة التعيين يتطلب إعداد فايربيس.",
       resetSent: "تم إرسال بريد إعادة تعيين كلمة المرور.",
       resetError: "تعذر إرسال بريد إعادة التعيين.",
       lockoutPrefix: "عدد كبير من المحاولات الفاشلة. حاول مرة أخرى بعد",
@@ -680,7 +701,7 @@ export const dictionaries = {
       cartText: "الدفع عند الاستلام مع تطبيق خصومات الأعضاء تلقائيًا.",
       emptyCart: "سلتك فارغة.",
       estimatedTotal: "الإجمالي التقديري",
-      checkout: "إتمام الطلب (COD)",
+      checkout: "إتمام الطلب بالدفع عند الاستلام",
       checkoutError: "فشل إتمام الطلب.",
       noProductsTitle: "لم يتم العثور على منتجات",
       noProductsDescription: "جرّب تعديل التصنيف أو الشركة أو البحث أو السعر.",
@@ -703,12 +724,12 @@ export const dictionaries = {
       membershipCardEyebrow: "بطاقة العضوية",
       membershipCardTitle: "بطاقة عضوية رقمية",
       membershipCardDescription:
-        "افتح رمز QR آمن وقصير العمر في صفحة مخصصة مع تحقق لمرة واحدة.",
+        "افتح رمز استجابة سريع آمن وقصير العمر في صفحة مخصصة مع تحقق لمرة واحدة.",
       membershipCardInfoDescription:
-        "تظهر هنا معلومات بطاقة العضوية. افتح رمز QR فقط عند الحاجة إلى تحقق مباشر.",
+        "تظهر هنا معلومات بطاقة العضوية. افتح رمز الاستجابة السريعة فقط عند الحاجة إلى تحقق مباشر.",
       membershipCardOnlyHint:
-        "رمز QR الحي متاح فقط من خلال صفحة بطاقة العضوية لمزيد من الأمان.",
-      viewMembershipCard: "عرض QR العضوية",
+        "رمز الاستجابة السريعة الحي متاح فقط من خلال صفحة بطاقة العضوية لمزيد من الأمان.",
+      viewMembershipCard: "عرض رمز العضوية",
       backToDashboard: "العودة إلى اللوحة الشخصية",
       memberId: "رقم العضوية",
       role: "الصلاحية",
@@ -716,22 +737,22 @@ export const dictionaries = {
       joined: "تاريخ الانضمام",
       company: "الشركة",
       phone: "رقم الهاتف",
-      qrEyebrow: "QR العضوية",
+      qrEyebrow: "رمز العضوية",
       qrTitle: "بطاقة دخول ديناميكية آمنة",
-      qrGenerating: "جارٍ إنشاء QR آمن...",
-      qrMemberId: "رقم العضوية داخل QR",
-      qrName: "الاسم داخل QR",
-      qrExpiryDate: "تاريخ الانتهاء داخل QR",
-      qrExpiresIn: "ينتهي QR خلال",
+      qrGenerating: "جارٍ إنشاء رمز آمن...",
+      qrMemberId: "رقم العضوية داخل الرمز",
+      qrName: "الاسم داخل الرمز",
+      qrExpiryDate: "تاريخ الانتهاء داخل الرمز",
+      qrExpiresIn: "ينتهي الرمز خلال",
       secondsLabel: "ثانية",
-      qrUnavailableTitle: "QR غير متاح",
-      qrUnavailableDescription: "فقط العضويات النشطة يمكنها إنشاء QR مؤقت.",
-      qrRefreshed: "تم تحديث QR العضوية.",
-      qrIssueError: "تعذر إنشاء جلسة QR.",
+      qrUnavailableTitle: "الرمز غير متاح",
+      qrUnavailableDescription: "فقط العضويات النشطة يمكنها إنشاء رمز مؤقت.",
+      qrRefreshed: "تم تحديث رمز العضوية.",
+      qrIssueError: "تعذر إنشاء جلسة الرمز.",
       securityTitle: "ميزات الأمان",
-      securityOne: "جلسات QR ديناميكية بعمر قصير يقارب 45 ثانية.",
+      securityOne: "جلسات رمز ديناميكية بعمر قصير يقارب 45 ثانية.",
       securityTwo: "تحقق لمرة واحدة مع كشف التكرار من جهة الخادم.",
-      securityThree: "إلغاء تلقائي لأي QR سابق عند إصدار QR جديد.",
+      securityThree: "إلغاء تلقائي لأي رمز سابق عند إصدار رمز جديد.",
       securityFour: "الصور الملتقطة أو الرموز القديمة تتوقف تلقائيًا عن العمل.",
       securityFive:
         "التحقق من جهة الخادم يفحص الحالة والانتهاء والحداثة وسلامة الرمز قبل القبول.",
@@ -769,7 +790,25 @@ export const dictionaries = {
       review: "مراجعة",
       approved: "مقبول",
       pending: "قيد الانتظار",
-      items: "عناصر"
+      items: "عناصر",
+      save: "حفظ",
+      delete: "حذف",
+      approve: "قبول",
+      reject: "رفض",
+      actionSaved: "تم الحفظ بنجاح.",
+      actionFailed: "تعذر تنفيذ الإجراء.",
+      eventTitlePlaceholder: "عنوان الفعالية",
+      eventVenuePlaceholder: "المكان",
+      eventCapacityPlaceholder: "السعة",
+      eventCoverImagePlaceholder: "رابط صورة الغلاف",
+      eventExcerptPlaceholder: "وصف قصير",
+      eventDescriptionPlaceholder: "الوصف الكامل، فقرة في كل سطر",
+      eventTagsPlaceholder: "الوسوم مفصولة بفاصلة",
+      productNamePlaceholder: "اسم المنتج",
+      productCompanyPlaceholder: "الشركة",
+      productImagePlaceholder: "رابط الصورة",
+      productDescriptionPlaceholder: "وصف قصير",
+      productLongDescriptionPlaceholder: "وصف تفصيلي، فقرة في كل سطر"
     },
     verify: {
       eyebrow: "التحقق من العضوية",
@@ -777,17 +816,17 @@ export const dictionaries = {
       valid: "العضوية صالحة",
       invalid: "العضوية غير صالحة",
       validBody:
-        "تم التحقق من العضو: {name}. تمت الموافقة على جلسة الـ QR وإبطالها مباشرة بعد المسح.",
+        "تم التحقق من العضو: {name}. تمت الموافقة على جلسة الرمز وإبطالها مباشرة بعد المسح.",
       memberId: "رقم العضوية",
       memberName: "العضو",
       membershipExpiry: "انتهاء العضوية",
       verifiedAt: "تم التحقق في",
       reasonDuplicate:
-        "تم استخدام هذا الـ QR سابقًا مرة واحدة. تم اكتشاف محاولة تكرار ورفضها.",
+        "تم استخدام هذا الرمز سابقًا مرة واحدة. تم اكتشاف محاولة تكرار ورفضها.",
       reasonExpired:
-        "انتهت صلاحية جلسة الـ QR قبل التحقق. يجب إنشاء QR جديد.",
+        "انتهت صلاحية جلسة الرمز قبل التحقق. يجب إنشاء رمز جديد.",
       reasonInactive: "هذه العضوية ليست نشطة حاليًا من أجل التحقق.",
-      reasonStale: "هذا الـ QR ليس الأحدث. تم استبداله بالفعل برمز أحدث.",
+      reasonStale: "هذا الرمز ليس الأحدث. تم استبداله بالفعل برمز أحدث.",
       reasonInvalid:
         "بطاقة العضوية هذه مفقودة أو غير صالحة أو منتهية أو لم تعد معتمدة."
     },
@@ -799,6 +838,7 @@ export const dictionaries = {
     footer: {
       explore: "استكشف",
       contact: "تواصل",
+      instagram: "إنستغرام",
       membership: "العضوية",
       membershipText:
         "انضم للاستفادة من الورش والخصومات والوصول إلى المجتمع وفرص التطور المهني.",

@@ -20,6 +20,7 @@ import {
 } from "@/lib/firebase/functions";
 import {
   translateArticleCategory,
+  translateMembershipStatus,
   translateOrderStatus,
   translateProductCategory,
   translateRole
@@ -96,6 +97,24 @@ export function DashboardShell({
     approved: string;
     pending: string;
     items: string;
+    save: string;
+    delete: string;
+    approve: string;
+    reject: string;
+    actionSaved: string;
+    actionFailed: string;
+    eventTitlePlaceholder: string;
+    eventVenuePlaceholder: string;
+    eventCapacityPlaceholder: string;
+    eventCoverImagePlaceholder: string;
+    eventExcerptPlaceholder: string;
+    eventDescriptionPlaceholder: string;
+    eventTagsPlaceholder: string;
+    productNamePlaceholder: string;
+    productCompanyPlaceholder: string;
+    productImagePlaceholder: string;
+    productDescriptionPlaceholder: string;
+    productLongDescriptionPlaceholder: string;
   };
 }) {
   const router = useRouter();
@@ -137,10 +156,10 @@ export function DashboardShell({
     try {
       setLoadingAction(name);
       await action();
-      pushToast("Saved successfully.", "success");
+      pushToast(labels.actionSaved, "success");
       router.refresh();
     } catch (error) {
-      pushToast(error instanceof Error ? error.message : "Action failed.", "error");
+      pushToast(error instanceof Error ? error.message : labels.actionFailed, "error");
     } finally {
       setLoadingAction(null);
     }
@@ -186,14 +205,14 @@ export function DashboardShell({
                 );
               }}
             >
-              <input required placeholder="Event title" value={eventForm.title} onChange={(event) => setEventForm((current) => ({ ...current, title: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+              <input required placeholder={labels.eventTitlePlaceholder} value={eventForm.title} onChange={(event) => setEventForm((current) => ({ ...current, title: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
               <input required type="datetime-local" value={eventForm.startsAt} onChange={(event) => setEventForm((current) => ({ ...current, startsAt: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input placeholder="Venue" value={eventForm.venue} onChange={(event) => setEventForm((current) => ({ ...current, venue: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input required type="number" min={1} placeholder="Capacity" value={eventForm.capacity} onChange={(event) => setEventForm((current) => ({ ...current, capacity: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input placeholder="Cover image URL" value={eventForm.coverImage} onChange={(event) => setEventForm((current) => ({ ...current, coverImage: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-              <textarea placeholder="Short description" value={eventForm.excerpt} onChange={(event) => setEventForm((current) => ({ ...current, excerpt: event.target.value }))} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-              <textarea placeholder="Full description, one paragraph per line" value={eventForm.description} onChange={(event) => setEventForm((current) => ({ ...current, description: event.target.value }))} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-              <input placeholder="Tags separated by comma" value={eventForm.tags} onChange={(event) => setEventForm((current) => ({ ...current, tags: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <input placeholder={labels.eventVenuePlaceholder} value={eventForm.venue} onChange={(event) => setEventForm((current) => ({ ...current, venue: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+              <input required type="number" min={1} placeholder={labels.eventCapacityPlaceholder} value={eventForm.capacity} onChange={(event) => setEventForm((current) => ({ ...current, capacity: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+              <input placeholder={labels.eventCoverImagePlaceholder} value={eventForm.coverImage} onChange={(event) => setEventForm((current) => ({ ...current, coverImage: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <textarea placeholder={labels.eventExcerptPlaceholder} value={eventForm.excerpt} onChange={(event) => setEventForm((current) => ({ ...current, excerpt: event.target.value }))} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <textarea placeholder={labels.eventDescriptionPlaceholder} value={eventForm.description} onChange={(event) => setEventForm((current) => ({ ...current, description: event.target.value }))} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <input placeholder={labels.eventTagsPlaceholder} value={eventForm.tags} onChange={(event) => setEventForm((current) => ({ ...current, tags: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
               <Button loading={loadingAction === "create-event"} type="submit" className="md:col-span-2">
                 <Save className="h-4 w-4" />
                 {labels.addEvent}
@@ -221,7 +240,7 @@ export function DashboardShell({
                         onClick={() => runAction(`delete-event-${event.id}`, () => deleteEventAdmin(event.id))}
                       >
                         <Trash2 className="h-4 w-4" />
-                        Delete
+                        {labels.delete}
                       </Button>
                     </div>
                   </div>
@@ -253,8 +272,8 @@ export function DashboardShell({
                 );
               }}
             >
-              <input required placeholder="Product name" value={productForm.name} onChange={(event) => setProductForm((current) => ({ ...current, name: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input placeholder="Company" value={productForm.company} onChange={(event) => setProductForm((current) => ({ ...current, company: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+              <input required placeholder={labels.productNamePlaceholder} value={productForm.name} onChange={(event) => setProductForm((current) => ({ ...current, name: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+              <input placeholder={labels.productCompanyPlaceholder} value={productForm.company} onChange={(event) => setProductForm((current) => ({ ...current, company: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
               <select value={productForm.category} onChange={(event) => setProductForm((current) => ({ ...current, category: event.target.value as ProductCategory }))} className="rounded-xl border border-brand-primary/10 px-4 py-3">
                 {productCategories.map((entry) => (
                   <option key={entry} value={entry}>
@@ -265,9 +284,9 @@ export function DashboardShell({
               <input required type="number" min={0} value={productForm.stock} onChange={(event) => setProductForm((current) => ({ ...current, stock: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
               <input required type="number" min={0.01} step="0.01" value={productForm.price} onChange={(event) => setProductForm((current) => ({ ...current, price: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
               <input type="number" min={0.01} step="0.01" value={productForm.memberPrice} onChange={(event) => setProductForm((current) => ({ ...current, memberPrice: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input placeholder="Image URL" value={productForm.image} onChange={(event) => setProductForm((current) => ({ ...current, image: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-              <textarea placeholder="Short description" value={productForm.description} onChange={(event) => setProductForm((current) => ({ ...current, description: event.target.value }))} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-              <textarea placeholder="Long description, one paragraph per line" value={productForm.longDescription} onChange={(event) => setProductForm((current) => ({ ...current, longDescription: event.target.value }))} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <input placeholder={labels.productImagePlaceholder} value={productForm.image} onChange={(event) => setProductForm((current) => ({ ...current, image: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <textarea placeholder={labels.productDescriptionPlaceholder} value={productForm.description} onChange={(event) => setProductForm((current) => ({ ...current, description: event.target.value }))} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <textarea placeholder={labels.productLongDescriptionPlaceholder} value={productForm.longDescription} onChange={(event) => setProductForm((current) => ({ ...current, longDescription: event.target.value }))} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
               <Button loading={loadingAction === "create-product"} type="submit" className="md:col-span-2">
                 <Save className="h-4 w-4" />
                 {labels.addProduct}
@@ -297,7 +316,7 @@ export function DashboardShell({
                       onClick={() => runAction(`delete-product-${product.id}`, () => deleteProductAdmin(product.id))}
                     >
                       <Trash2 className="h-4 w-4" />
-                      Delete
+                      {labels.delete}
                     </Button>
                   </div>
                 </div>
@@ -326,7 +345,7 @@ export function DashboardShell({
                   <select defaultValue={entry.membershipStatus} id={`status-${entry.id}`} className="rounded-xl border border-brand-primary/10 px-3 py-2">
                     {membershipStatuses.map((status) => (
                       <option key={status} value={status}>
-                        {status}
+                        {translateMembershipStatus(status, locale)}
                       </option>
                     ))}
                   </select>
@@ -347,7 +366,7 @@ export function DashboardShell({
                     }}
                   >
                     <Save className="h-4 w-4" />
-                    Save
+                    {labels.save}
                   </Button>
                 </div>
               ))}
@@ -389,7 +408,7 @@ export function DashboardShell({
                     }}
                   >
                     <Save className="h-4 w-4" />
-                    Save
+                    {labels.save}
                   </Button>
                 </div>
               ))}
@@ -425,7 +444,7 @@ export function DashboardShell({
                       }
                     >
                       <CheckCircle2 className="h-4 w-4" />
-                      {article.approved ? "Reject" : "Approve"}
+                      {article.approved ? labels.reject : labels.approve}
                     </Button>
                   </div>
                 </div>
