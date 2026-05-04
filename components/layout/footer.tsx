@@ -16,7 +16,7 @@ export function Footer() {
   ];
 
   return (
-    <footer className="border-t border-[#efe6d7] bg-[rgba(248,244,236,0.92)] backdrop-blur-2xl dark:border-white/10 dark:bg-brand-surface/88">
+    <footer className="border-t border-brand-primary/10 bg-[#f2f0e8] text-brand-primary backdrop-blur-2xl dark:border-white/10 dark:bg-[#07101f] dark:text-brand-ink">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
         <div className="min-w-0 space-y-3">
           <SiteLogo
@@ -24,34 +24,34 @@ export function Footer() {
             university={dictionary.site.university}
             shortName="SCSC"
           />
-          <p className="text-pretty text-sm text-slate-600 dark:text-brand-mist">
+          <p className="text-pretty text-sm text-[#445061] dark:text-[#d7e1f1]">
             {dictionary.site.description}
           </p>
         </div>
         <div className="min-w-0">
-          <h4 className="font-heading text-lg font-semibold text-brand-primary dark:text-brand-ink">
+          <h4 className="font-heading text-lg font-semibold text-brand-primary dark:text-white">
             {dictionary.footer.explore}
           </h4>
-          <div className="mt-3 flex flex-col gap-2 text-sm text-slate-600 dark:text-brand-mist">
+          <div className="mt-3 flex flex-col gap-2 text-sm text-[#445061] dark:text-[#d7e1f1]">
             {navLinks.map((link) => (
-              <Link key={link.href} href={link.href} className="break-words hover:text-brand-accent">
+              <Link key={link.href} href={link.href} className="break-words transition hover:text-brand-primary dark:hover:text-brand-accent">
                 {link.label}
               </Link>
             ))}
           </div>
         </div>
         <div className="min-w-0">
-          <h4 className="font-heading text-lg font-semibold text-brand-primary dark:text-brand-ink">
+          <h4 className="font-heading text-lg font-semibold text-brand-primary dark:text-white">
             {dictionary.footer.contact}
           </h4>
-          <div className="mt-3 space-y-2 text-sm text-slate-600 dark:text-brand-mist">
+          <div className="mt-3 space-y-2 text-sm text-[#445061] dark:text-[#d7e1f1]">
             <p className="break-all">scsc@najah.edu</p>
             {instagramUrl ? (
               <a
                 href={instagramUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="block break-words font-medium text-brand-primary underline underline-offset-4 dark:text-brand-ink"
+                className="block break-words font-medium text-brand-primary underline underline-offset-4 dark:text-brand-accent"
               >
                 Instagram
               </a>
@@ -61,10 +61,10 @@ export function Footer() {
           </div>
         </div>
         <div className="min-w-0">
-          <h4 className="font-heading text-lg font-semibold text-brand-primary dark:text-brand-ink">
+          <h4 className="font-heading text-lg font-semibold text-brand-primary dark:text-white">
             {dictionary.footer.membership}
           </h4>
-          <p className="mt-3 text-pretty text-sm text-slate-600 dark:text-brand-mist">
+          <p className="mt-3 text-pretty text-sm text-[#445061] dark:text-[#d7e1f1]">
             {dictionary.footer.membershipText}
           </p>
         </div>

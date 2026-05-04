@@ -2,7 +2,9 @@
 
 import {
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
   sendPasswordResetEmail,
+  signInWithPopup,
   signInWithEmailAndPassword,
   signOut,
   updateProfile
@@ -17,6 +19,19 @@ export async function signInWithEmail(email: string, password: string) {
   }
 
   return signInWithEmailAndPassword(auth, email, password);
+}
+
+export async function signInWithGoogle() {
+  if (!auth) {
+    throw new Error("Firebase Auth is not configured.");
+  }
+
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({
+    prompt: "select_account"
+  });
+
+  return signInWithPopup(auth, provider);
 }
 
 export async function signUpWithEmail(

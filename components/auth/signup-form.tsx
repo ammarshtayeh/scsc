@@ -13,7 +13,7 @@ export function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect");
-  const { signup } = useAuth();
+  const { signup, loginWithGoogle } = useAuth();
   const { dictionary } = useLocale();
   const { pushToast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -56,12 +56,42 @@ export function SignupForm() {
     }
   }
 
+  async function handleGoogleSignup() {
+    try {
+      setLoading(true);
+      const nextPath = await loginWithGoogle();
+      pushToast(dictionary.auth.createSuccess, "success");
+      router.push(redirect || nextPath);
+    } catch (error) {
+      pushToast(getErrorMessage(error), "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <Card className="w-full max-w-xl">
       <h1 className="font-heading text-3xl font-bold text-brand-primary">
         {dictionary.auth.signupCardTitle}
       </h1>
       <p className="mt-3 text-sm leading-7 text-slate-600">{dictionary.auth.signupCardText}</p>
+      <Button
+        type="button"
+        variant="secondary"
+        className="mt-6 w-full"
+        loading={loading}
+        onClick={handleGoogleSignup}
+      >
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-sm font-bold text-brand-primary shadow-sm">
+          G
+        </span>
+        {dictionary.auth.continueWithGoogle}
+      </Button>
+      <div className="mt-6 flex items-center gap-3 text-xs font-medium uppercase text-slate-500">
+        <span className="h-px flex-1 bg-brand-primary/10" />
+        {dictionary.auth.orEmail}
+        <span className="h-px flex-1 bg-brand-primary/10" />
+      </div>
       <form onSubmit={handleSubmit} className="mt-8 grid gap-5 md:grid-cols-2">
         <div className="md:col-span-2">
           <label className="mb-2 block text-sm font-medium text-brand-primary">

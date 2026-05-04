@@ -39,6 +39,12 @@ declare module "firebase/auth" {
   }
 
   export interface Auth {}
+  export interface AuthProvider {}
+
+  export class GoogleAuthProvider implements AuthProvider {
+    constructor();
+    setCustomParameters(parameters: Record<string, string>): AuthProvider;
+  }
 
   export function getAuth(app?: FirebaseApp): Auth;
   export function onIdTokenChanged(
@@ -49,6 +55,10 @@ declare module "firebase/auth" {
     auth: Auth,
     email: string,
     password: string
+  ): Promise<UserCredential>;
+  export function signInWithPopup(
+    auth: Auth,
+    provider: AuthProvider
   ): Promise<UserCredential>;
   export function createUserWithEmailAndPassword(
     auth: Auth,

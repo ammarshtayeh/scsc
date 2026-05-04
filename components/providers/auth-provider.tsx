@@ -5,7 +5,13 @@ import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
-import { getRoleRedirect, signInWithEmail, signOutUser, signUpWithEmail } from "@/lib/firebase/auth";
+import {
+  getRoleRedirect,
+  signInWithEmail,
+  signInWithGoogle,
+  signOutUser,
+  signUpWithEmail
+} from "@/lib/firebase/auth";
 import { auth, db, isFirebaseClientConfigured } from "@/lib/firebase/firebase";
 import { mockUsers } from "@/lib/mock-data";
 import { upsertMockUserProfile } from "@/lib/mock-profiles";
@@ -34,6 +40,7 @@ interface AuthContextValue {
     password: string;
     company?: string;
   }) => Promise<string>;
+  loginWithGoogle: () => Promise<string>;
   logout: () => Promise<void>;
 }
 
@@ -186,6 +193,44 @@ function buildMembershipId(uid: string) {
   return `SCSC-${uid.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10).toUpperCase()}`;
 }
 
+async function ensureFirebaseUserProfile(firebaseUser: FirebaseUser) {
+  if (!db) {
+    return;
+  }
+
+  const profileRef = doc(db, "users", firebaseUser.uid);
+  const profileSnap = await getDoc(profileRef);
+
+  if (profileSnap.exists()) {
+    return;
+  }
+
+  await setDoc(
+    profileRef,
+    {
+      membershipId: buildMembershipId(firebaseUser.uid),
+      displayName:
+        firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Association Member",
+      email: firebaseUser.email || "",
+      company: "",
+      photoURL: firebaseUser.photoURL || "",
+      role: "user",
+      membershipStatus: "active",
+      membershipExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
+      joinedAt: serverTimestamp(),
+      qrToken: uuidv4(),
+      savedArticleIds: [],
+      registeredEventIds: [],
+      activeQrSessionId: null,
+      activeQrSessionExpiresAt: null,
+      lastQrIssuedAt: null,
+      lastQrScanAt: null,
+      discountRate: 0.12
+    },
+    { merge: true }
+  );
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppSessionUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -232,6 +277,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const credential = await signInWithEmail(email, password);
+    const sessionUser = await buildFirebaseSessionUser(credential.user);
+    setUser(sessionUser);
+    await syncSessionCookie(await credential.user.getIdToken());
+    return getRoleRedirect(sessionUser.role);
+  }, []);
+
+  const loginWithGoogle = useCallback(async () => {
+    if (!isFirebaseClientConfigured || !auth) {
+      const mockAccount: MockAccount = {
+        id: "mock-google-user",
+        email: "google.user@example.com",
+        displayName: "Google Member",
+        password: "",
+        role: "user"
+      };
+      upsertMockUserProfile({
+        id: mockAccount.id,
+        membershipId: buildMembershipId(mockAccount.id),
+        displayName: mockAccount.displayName,
+        email: mockAccount.email,
+        role: "user",
+        membershipStatus: "active",
+        membershipExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
+        joinedAt: new Date().toISOString(),
+        qrToken: uuidv4(),
+        savedArticleIds: [],
+        registeredEventIds: [],
+        activeQrSessionId: null,
+        activeQrSessionExpiresAt: null,
+        lastQrIssuedAt: null,
+        lastQrScanAt: null,
+        discountRate: 0.12
+      });
+      const mockUser = buildMockSessionUser(mockAccount);
+      window.localStorage.setItem(MOCK_USER_STORAGE_KEY, JSON.stringify(mockUser));
+      setUser(mockUser);
+      await syncSessionCookie(serializeMockUser(mockUser));
+      return "/profile";
+    }
+
+    const credential = await signInWithGoogle();
+    await ensureFirebaseUserProfile(credential.user);
     const sessionUser = await buildFirebaseSessionUser(credential.user);
     setUser(sessionUser);
     await syncSessionCookie(await credential.user.getIdToken());
@@ -297,29 +384,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const credential = await signUpWithEmail(email, password, displayName);
       if (db) {
-        const membershipExpiresAt = new Date(
-          Date.now() + 1000 * 60 * 60 * 24 * 365
-        ).toISOString();
-
+        await ensureFirebaseUserProfile(credential.user);
         await setDoc(
           doc(db, "users", credential.user.uid),
           {
-            membershipId: buildMembershipId(credential.user.uid),
             displayName,
             email,
-            company: company || "",
-            role: "user",
-            membershipStatus: "active",
-            membershipExpiresAt,
-            joinedAt: serverTimestamp(),
-            qrToken: uuidv4(),
-            savedArticleIds: [],
-            registeredEventIds: [],
-            activeQrSessionId: null,
-            activeQrSessionExpiresAt: null,
-            lastQrIssuedAt: null,
-            lastQrScanAt: null,
-            discountRate: 0.12
+            company: company || ""
           },
           { merge: true }
         );
@@ -352,9 +423,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       login,
       signup,
+      loginWithGoogle,
       logout
     }),
-    [user, loading, login, signup, logout]
+    [user, loading, login, signup, loginWithGoogle, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
