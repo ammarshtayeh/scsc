@@ -179,6 +179,7 @@ export const dictionaries = {
       cardText:
         "We welcome questions from members, guests, faculty, and brand partners interested in education, events, or student collaboration.",
       emailLabel: "Email",
+      instagramLabel: "Instagram",
       locationLabel: "Location",
       locationValue: "New Campus, Nablus",
       officeHoursLabel: "Office hours",
@@ -599,6 +600,7 @@ export const dictionaries = {
       cardText:
         "نرحب بأسئلة الأعضاء والزوار وأعضاء الهيئة التدريسية والشركاء المهتمين بالتعليم والفعاليات أو التعاون الطلابي.",
       emailLabel: "البريد الإلكتروني",
+      instagramLabel: "إنستغرام",
       locationLabel: "الموقع",
       locationValue: "الحرم الجديد، نابلس",
       officeHoursLabel: "ساعات الدوام",

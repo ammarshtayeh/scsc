@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
+exports.moderateArticle = exports.updateOrderStatus = exports.updateUserAdmin = exports.deleteProduct = exports.upsertProduct = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
 const crypto_1 = require("crypto");
 const app_1 = require("firebase-admin/app");
 const auth_1 = require("firebase-admin/auth");
@@ -81,6 +81,41 @@ function normalizeMembershipStatus(data) {
         return "expired";
     }
     return (data.membershipStatus || "active");
+}
+function requireAdminOrModerator(request) {
+    var _a, _b;
+    const callerRole = (_b = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.role;
+    if (callerRole !== "admin" && callerRole !== "moderator") {
+        throw new https_1.HttpsError("permission-denied", "Only admins or moderators can perform this action.");
+    }
+}
+function requireAdmin(request) {
+    var _a, _b;
+    if (((_b = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.role) !== "admin") {
+        throw new https_1.HttpsError("permission-denied", "Only admins can perform this action.");
+    }
+}
+function cleanString(value, fallback = "") {
+    return typeof value === "string" ? value.trim() : fallback;
+}
+function cleanStringArray(value) {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+    return value
+        .map((entry) => cleanString(entry))
+        .filter(Boolean);
+}
+function cleanNumber(value, fallback = 0) {
+    const next = Number(value);
+    return Number.isFinite(next) ? next : fallback;
+}
+function slugify(value) {
+    return value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
 }
 exports.sendContactEmail = (0, https_1.onCall)(async (request) => {
     const { name, email, message } = request.data;
@@ -303,16 +338,139 @@ exports.verifyMembership = (0, https_1.onCall)(async (request) => {
     return result;
 });
 exports.setUserRole = (0, https_1.onCall)(async (request) => {
-    var _a;
-    const callerRole = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.token.role;
-    if (callerRole !== "admin") {
-        throw new https_1.HttpsError("permission-denied", "Only admins can assign roles.");
-    }
+    requireAdmin(request);
     const { uid, role } = request.data;
     if (!uid || !role) {
         throw new https_1.HttpsError("invalid-argument", "User ID and role are required.");
     }
     await (0, auth_1.getAuth)().setCustomUserClaims(uid, { role });
     await db.collection("users").doc(uid).set({ role }, { merge: true });
+    return { success: true };
+});
+exports.upsertEvent = (0, https_1.onCall)(async (request) => {
+    requireAdminOrModerator(request);
+    const data = request.data;
+    const id = cleanString(data.id) || db.collection("events").doc().id;
+    const title = cleanString(data.title);
+    const startsAt = cleanString(data.startsAt);
+    const capacity = cleanNumber(data.capacity);
+    if (!title || !startsAt || capacity <= 0) {
+        throw new https_1.HttpsError("invalid-argument", "Event title, start date, and capacity are required.");
+    }
+    const payload = {
+        slug: cleanString(data.slug) || slugify(title) || id,
+        title,
+        excerpt: cleanString(data.excerpt),
+        description: cleanStringArray(data.description),
+        coverImage: cleanString(data.coverImage),
+        startsAt,
+        venue: cleanString(data.venue, "TBA"),
+        capacity,
+        registeredCount: Math.max(0, cleanNumber(data.registeredCount)),
+        tags: cleanStringArray(data.tags),
+        isFeatured: Boolean(data.isFeatured),
+        updatedAt: new Date().toISOString()
+    };
+    await db.collection("events").doc(id).set(payload, { merge: true });
+    return { success: true, id };
+});
+exports.deleteEvent = (0, https_1.onCall)(async (request) => {
+    requireAdminOrModerator(request);
+    const { id } = request.data;
+    if (!id) {
+        throw new https_1.HttpsError("invalid-argument", "Event ID is required.");
+    }
+    await db.collection("events").doc(id).delete();
+    return { success: true };
+});
+exports.upsertProduct = (0, https_1.onCall)(async (request) => {
+    requireAdminOrModerator(request);
+    const data = request.data;
+    const id = cleanString(data.id) || db.collection("products").doc().id;
+    const name = cleanString(data.name);
+    const price = cleanNumber(data.price);
+    const stock = cleanNumber(data.stock);
+    if (!name || price <= 0 || stock < 0) {
+        throw new https_1.HttpsError("invalid-argument", "Product name, price, and stock are required.");
+    }
+    const payload = {
+        slug: cleanString(data.slug) || slugify(name) || id,
+        name,
+        description: cleanString(data.description),
+        longDescription: cleanStringArray(data.longDescription),
+        price,
+        memberPrice: cleanNumber(data.memberPrice, price),
+        category: cleanString(data.category, "Skin Care"),
+        company: cleanString(data.company, "SCSC Partner"),
+        stock,
+        images: cleanStringArray(data.images),
+        featured: Boolean(data.featured),
+        updatedAt: new Date().toISOString()
+    };
+    await db.collection("products").doc(id).set(payload, { merge: true });
+    return { success: true, id };
+});
+exports.deleteProduct = (0, https_1.onCall)(async (request) => {
+    requireAdminOrModerator(request);
+    const { id } = request.data;
+    if (!id) {
+        throw new https_1.HttpsError("invalid-argument", "Product ID is required.");
+    }
+    await db.collection("products").doc(id).delete();
+    return { success: true };
+});
+exports.updateUserAdmin = (0, https_1.onCall)(async (request) => {
+    requireAdmin(request);
+    const { uid, role, membershipStatus, membershipExpiresAt } = request.data;
+    if (!uid) {
+        throw new https_1.HttpsError("invalid-argument", "User ID is required.");
+    }
+    const allowedRoles = ["admin", "moderator", "user"];
+    const allowedStatuses = ["active", "expired", "pendingRenewal"];
+    const payload = {
+        updatedAt: new Date().toISOString()
+    };
+    if (role) {
+        if (!allowedRoles.includes(role)) {
+            throw new https_1.HttpsError("invalid-argument", "Invalid role.");
+        }
+        await (0, auth_1.getAuth)().setCustomUserClaims(uid, { role });
+        payload.role = role;
+    }
+    if (membershipStatus) {
+        if (!allowedStatuses.includes(membershipStatus)) {
+            throw new https_1.HttpsError("invalid-argument", "Invalid membership status.");
+        }
+        payload.membershipStatus = membershipStatus;
+    }
+    if (membershipExpiresAt) {
+        payload.membershipExpiresAt = membershipExpiresAt;
+    }
+    await db.collection("users").doc(uid).set(payload, { merge: true });
+    return { success: true };
+});
+exports.updateOrderStatus = (0, https_1.onCall)(async (request) => {
+    requireAdminOrModerator(request);
+    const { id, status } = request.data;
+    const allowedStatuses = ["pending", "confirmed", "processing", "delivered"];
+    if (!id || !status || !allowedStatuses.includes(status)) {
+        throw new https_1.HttpsError("invalid-argument", "Order ID and a valid status are required.");
+    }
+    await db.collection("orders").doc(id).set({
+        status,
+        updatedAt: new Date().toISOString()
+    }, { merge: true });
+    return { success: true };
+});
+exports.moderateArticle = (0, https_1.onCall)(async (request) => {
+    requireAdminOrModerator(request);
+    const { id, approved } = request.data;
+    if (!id || typeof approved !== "boolean") {
+        throw new https_1.HttpsError("invalid-argument", "Article ID and approval status are required.");
+    }
+    await db.collection("articles").doc(id).set({
+        approved,
+        moderatedAt: new Date().toISOString()
+    }, { merge: true });
     return { success: true };
 });

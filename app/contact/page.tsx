@@ -5,6 +5,7 @@ import { getServerDictionary } from "@/lib/i18n/server";
 
 export default function ContactPage() {
   const dictionary = getServerDictionary();
+  const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL;
 
   return (
     <>
@@ -22,6 +23,19 @@ export default function ContactPage() {
             <p className="text-sm leading-8 text-slate-600">{dictionary.contact.cardText}</p>
             <div className="space-y-2 text-sm text-slate-600">
               <p>{dictionary.contact.emailLabel}: scsc@najah.edu</p>
+              {instagramUrl ? (
+                <p>
+                  {dictionary.contact.instagramLabel}:{" "}
+                  <a
+                    href={instagramUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-brand-primary underline underline-offset-4"
+                  >
+                    Instagram
+                  </a>
+                </p>
+              ) : null}
               <p>{dictionary.contact.locationLabel}: {dictionary.contact.locationValue}</p>
               <p>{dictionary.contact.officeHoursLabel}: {dictionary.contact.officeHoursValue}</p>
             </div>

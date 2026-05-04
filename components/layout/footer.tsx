@@ -5,6 +5,7 @@ import { getServerDictionary } from "@/lib/i18n/server";
 
 export function Footer() {
   const dictionary = getServerDictionary();
+  const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL;
   const navLinks = [
     { href: "/", label: dictionary.nav.home },
     { href: "/about", label: dictionary.nav.about },
@@ -45,6 +46,16 @@ export function Footer() {
           </h4>
           <div className="mt-3 space-y-2 text-sm text-slate-600 dark:text-brand-mist">
             <p className="break-all">scsc@najah.edu</p>
+            {instagramUrl ? (
+              <a
+                href={instagramUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="block break-words font-medium text-brand-primary underline underline-offset-4 dark:text-brand-ink"
+              >
+                Instagram
+              </a>
+            ) : null}
             <p className="text-pretty">{dictionary.footer.location}</p>
             <p className="text-pretty">{dictionary.footer.officeHours}</p>
           </div>

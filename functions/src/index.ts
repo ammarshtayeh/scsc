@@ -13,6 +13,8 @@ const db = getFirestore();
 const QR_LIFETIME_SECONDS = 45;
 
 type MembershipStatus = "active" | "expired" | "pendingRenewal";
+type Role = "admin" | "moderator" | "user";
+type OrderStatus = "pending" | "confirmed" | "processing" | "delivered";
 
 interface EncryptedMembershipPayload {
   userId: string;
@@ -114,6 +116,46 @@ function normalizeMembershipStatus(data: {
   }
 
   return (data.membershipStatus || "active") as MembershipStatus;
+}
+
+function requireAdminOrModerator(request: { auth?: { token?: Record<string, unknown> } }) {
+  const callerRole = request.auth?.token?.role;
+  if (callerRole !== "admin" && callerRole !== "moderator") {
+    throw new HttpsError("permission-denied", "Only admins or moderators can perform this action.");
+  }
+}
+
+function requireAdmin(request: { auth?: { token?: Record<string, unknown> } }) {
+  if (request.auth?.token?.role !== "admin") {
+    throw new HttpsError("permission-denied", "Only admins can perform this action.");
+  }
+}
+
+function cleanString(value: unknown, fallback = "") {
+  return typeof value === "string" ? value.trim() : fallback;
+}
+
+function cleanStringArray(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [] as string[];
+  }
+
+  return value
+    .map((entry) => cleanString(entry))
+    .filter(Boolean);
+}
+
+function cleanNumber(value: unknown, fallback = 0) {
+  const next = Number(value);
+  return Number.isFinite(next) ? next : fallback;
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 export const sendContactEmail = onCall(async (request) => {
@@ -419,14 +461,11 @@ export const verifyMembership = onCall(async (request) => {
 });
 
 export const setUserRole = onCall(async (request) => {
-  const callerRole = request.auth?.token.role;
-  if (callerRole !== "admin") {
-    throw new HttpsError("permission-denied", "Only admins can assign roles.");
-  }
+  requireAdmin(request);
 
   const { uid, role } = request.data as {
     uid?: string;
-    role?: "admin" | "moderator" | "user";
+    role?: Role;
   };
 
   if (!uid || !role) {
@@ -435,6 +474,184 @@ export const setUserRole = onCall(async (request) => {
 
   await getAuth().setCustomUserClaims(uid, { role });
   await db.collection("users").doc(uid).set({ role }, { merge: true });
+
+  return { success: true };
+});
+
+export const upsertEvent = onCall(async (request) => {
+  requireAdminOrModerator(request);
+
+  const data = request.data as Record<string, unknown>;
+  const id = cleanString(data.id) || db.collection("events").doc().id;
+  const title = cleanString(data.title);
+  const startsAt = cleanString(data.startsAt);
+  const capacity = cleanNumber(data.capacity);
+
+  if (!title || !startsAt || capacity <= 0) {
+    throw new HttpsError("invalid-argument", "Event title, start date, and capacity are required.");
+  }
+
+  const payload = {
+    slug: cleanString(data.slug) || slugify(title) || id,
+    title,
+    excerpt: cleanString(data.excerpt),
+    description: cleanStringArray(data.description),
+    coverImage: cleanString(data.coverImage),
+    startsAt,
+    venue: cleanString(data.venue, "TBA"),
+    capacity,
+    registeredCount: Math.max(0, cleanNumber(data.registeredCount)),
+    tags: cleanStringArray(data.tags),
+    isFeatured: Boolean(data.isFeatured),
+    updatedAt: new Date().toISOString()
+  };
+
+  await db.collection("events").doc(id).set(payload, { merge: true });
+  return { success: true, id };
+});
+
+export const deleteEvent = onCall(async (request) => {
+  requireAdminOrModerator(request);
+  const { id } = request.data as { id?: string };
+
+  if (!id) {
+    throw new HttpsError("invalid-argument", "Event ID is required.");
+  }
+
+  await db.collection("events").doc(id).delete();
+  return { success: true };
+});
+
+export const upsertProduct = onCall(async (request) => {
+  requireAdminOrModerator(request);
+
+  const data = request.data as Record<string, unknown>;
+  const id = cleanString(data.id) || db.collection("products").doc().id;
+  const name = cleanString(data.name);
+  const price = cleanNumber(data.price);
+  const stock = cleanNumber(data.stock);
+
+  if (!name || price <= 0 || stock < 0) {
+    throw new HttpsError("invalid-argument", "Product name, price, and stock are required.");
+  }
+
+  const payload = {
+    slug: cleanString(data.slug) || slugify(name) || id,
+    name,
+    description: cleanString(data.description),
+    longDescription: cleanStringArray(data.longDescription),
+    price,
+    memberPrice: cleanNumber(data.memberPrice, price),
+    category: cleanString(data.category, "Skin Care"),
+    company: cleanString(data.company, "SCSC Partner"),
+    stock,
+    images: cleanStringArray(data.images),
+    featured: Boolean(data.featured),
+    updatedAt: new Date().toISOString()
+  };
+
+  await db.collection("products").doc(id).set(payload, { merge: true });
+  return { success: true, id };
+});
+
+export const deleteProduct = onCall(async (request) => {
+  requireAdminOrModerator(request);
+  const { id } = request.data as { id?: string };
+
+  if (!id) {
+    throw new HttpsError("invalid-argument", "Product ID is required.");
+  }
+
+  await db.collection("products").doc(id).delete();
+  return { success: true };
+});
+
+export const updateUserAdmin = onCall(async (request) => {
+  requireAdmin(request);
+
+  const { uid, role, membershipStatus, membershipExpiresAt } = request.data as {
+    uid?: string;
+    role?: Role;
+    membershipStatus?: MembershipStatus;
+    membershipExpiresAt?: string;
+  };
+
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "User ID is required.");
+  }
+
+  const allowedRoles: Role[] = ["admin", "moderator", "user"];
+  const allowedStatuses: MembershipStatus[] = ["active", "expired", "pendingRenewal"];
+  const payload: Record<string, unknown> = {
+    updatedAt: new Date().toISOString()
+  };
+
+  if (role) {
+    if (!allowedRoles.includes(role)) {
+      throw new HttpsError("invalid-argument", "Invalid role.");
+    }
+    await getAuth().setCustomUserClaims(uid, { role });
+    payload.role = role;
+  }
+
+  if (membershipStatus) {
+    if (!allowedStatuses.includes(membershipStatus)) {
+      throw new HttpsError("invalid-argument", "Invalid membership status.");
+    }
+    payload.membershipStatus = membershipStatus;
+  }
+
+  if (membershipExpiresAt) {
+    payload.membershipExpiresAt = membershipExpiresAt;
+  }
+
+  await db.collection("users").doc(uid).set(payload, { merge: true });
+  return { success: true };
+});
+
+export const updateOrderStatus = onCall(async (request) => {
+  requireAdminOrModerator(request);
+
+  const { id, status } = request.data as {
+    id?: string;
+    status?: OrderStatus;
+  };
+  const allowedStatuses: OrderStatus[] = ["pending", "confirmed", "processing", "delivered"];
+
+  if (!id || !status || !allowedStatuses.includes(status)) {
+    throw new HttpsError("invalid-argument", "Order ID and a valid status are required.");
+  }
+
+  await db.collection("orders").doc(id).set(
+    {
+      status,
+      updatedAt: new Date().toISOString()
+    },
+    { merge: true }
+  );
+
+  return { success: true };
+});
+
+export const moderateArticle = onCall(async (request) => {
+  requireAdminOrModerator(request);
+
+  const { id, approved } = request.data as {
+    id?: string;
+    approved?: boolean;
+  };
+
+  if (!id || typeof approved !== "boolean") {
+    throw new HttpsError("invalid-argument", "Article ID and approval status are required.");
+  }
+
+  await db.collection("articles").doc(id).set(
+    {
+      approved,
+      moderatedAt: new Date().toISOString()
+    },
+    { merge: true }
+  );
 
   return { success: true };
 });
