@@ -15,108 +15,16 @@ import { MEMBER_DISCOUNT_RATE } from "@/lib/constants";
 import { db } from "@/lib/firebase/firebase";
 import type { CartItem, Order, OrderLineItem, Product } from "@/types";
 
-const LOCAL_CART_PREFIX = "scsc-cart";
-const LOCAL_REGISTRATION_PREFIX = "scsc-registration";
-const LOCAL_REGISTERED_EVENTS_PREFIX = "scsc-registered-events";
-const LOCAL_ORDER_PREFIX = "scsc-orders";
-const LOCAL_CART_UPDATED_EVENT = "scsc-local-cart-updated";
-
-function localCartKey(userId: string) {
-  return `${LOCAL_CART_PREFIX}:${userId}`;
-}
-
-function localRegistrationKey(eventId: string, userId: string) {
-  return `${LOCAL_REGISTRATION_PREFIX}:${eventId}:${userId}`;
-}
-
-function localRegisteredEventsKey(userId: string) {
-  return `${LOCAL_REGISTERED_EVENTS_PREFIX}:${userId}`;
-}
-
-function localOrderKey(userId: string) {
-  return `${LOCAL_ORDER_PREFIX}:${userId}`;
-}
-
-function readLocalCart(userId: string): CartItem[] {
-  if (typeof window === "undefined") {
-    return [];
+function requireDb() {
+  if (!db) {
+    throw new Error("Firebase Firestore is not configured.");
   }
 
-  const raw = window.localStorage.getItem(localCartKey(userId));
-  return raw ? (JSON.parse(raw) as CartItem[]) : [];
-}
-
-function writeLocalCart(userId: string, items: CartItem[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(localCartKey(userId), JSON.stringify(items));
-  window.dispatchEvent(
-    new CustomEvent(LOCAL_CART_UPDATED_EVENT, {
-      detail: { userId, items }
-    })
-  );
-}
-
-function readLocalRegisteredEvents(userId: string): string[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const raw = window.localStorage.getItem(localRegisteredEventsKey(userId));
-  return raw ? (JSON.parse(raw) as string[]) : [];
-}
-
-function writeLocalRegisteredEvents(userId: string, eventIds: string[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(localRegisteredEventsKey(userId), JSON.stringify(eventIds));
-}
-
-function readLocalOrders(userId: string): Order[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const raw = window.localStorage.getItem(localOrderKey(userId));
-  return raw ? (JSON.parse(raw) as Order[]) : [];
-}
-
-function writeLocalOrders(userId: string, orders: Order[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(localOrderKey(userId), JSON.stringify(orders));
-}
-
-export function getMockRegisteredEventIds(userId: string) {
-  return readLocalRegisteredEvents(userId);
-}
-
-export function getMockOrdersForUser(userId: string) {
-  return readLocalOrders(userId);
+  return db;
 }
 
 export async function registerForEvent(eventId: string, userId: string) {
-  const database = db;
-
-  if (!database) {
-    const marker = localRegistrationKey(eventId, userId);
-    if (window.localStorage.getItem(marker)) {
-      throw new Error("You are already registered for this event.");
-    }
-
-    window.localStorage.setItem(marker, "true");
-    writeLocalRegisteredEvents(
-      userId,
-      Array.from(new Set([...readLocalRegisteredEvents(userId), eventId]))
-    );
-    return { success: true, mock: true };
-  }
+  const database = requireDb();
 
   await runTransaction(database, async (transaction) => {
     const eventRef = doc(database, "events", eventId);
@@ -174,41 +82,14 @@ export async function registerForEvent(eventId: string, userId: string) {
   return { success: true };
 }
 
+export async function isUserRegisteredForEvent(eventId: string, userId: string) {
+  const database = requireDb();
+  const snapshot = await getDoc(doc(database, "events", eventId, "registrations", userId));
+  return snapshot.exists();
+}
+
 export function subscribeToCart(userId: string, callback: (items: CartItem[]) => void) {
-  const database = db;
-
-  if (!database) {
-    callback(readLocalCart(userId));
-
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key && event.key !== localCartKey(userId)) {
-        return;
-      }
-
-      callback(readLocalCart(userId));
-    };
-
-    const handleLocalUpdate = (event: Event) => {
-      const detail = (event as CustomEvent<{ userId?: string; items?: CartItem[] }>).detail;
-
-      if (!detail || detail.userId !== userId) {
-        return;
-      }
-
-      callback(detail.items || []);
-    };
-
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener(LOCAL_CART_UPDATED_EVENT, handleLocalUpdate as EventListener);
-
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener(
-        LOCAL_CART_UPDATED_EVENT,
-        handleLocalUpdate as EventListener
-      );
-    };
-  }
+  const database = requireDb();
 
   const cartRef = doc(database, "carts", userId);
   return onSnapshot(cartRef, (snapshot) => {
@@ -232,8 +113,7 @@ export async function addCartItem(userId: string, productId: string, quantity = 
   const database = db;
 
   if (!database) {
-    writeLocalCart(userId, next);
-    return next;
+    throw new Error("Firebase Firestore is not configured.");
   }
 
   await setDoc(
@@ -257,8 +137,7 @@ export async function updateCartItem(userId: string, productId: string, quantity
   const database = db;
 
   if (!database) {
-    writeLocalCart(userId, next);
-    return next;
+    throw new Error("Firebase Firestore is not configured.");
   }
 
   await setDoc(
@@ -281,7 +160,7 @@ export async function getCartItems(userId: string): Promise<CartItem[]> {
   const database = db;
 
   if (!database) {
-    return readLocalCart(userId);
+    throw new Error("Firebase Firestore is not configured.");
   }
 
   const snapshot = await getDoc(doc(database, "carts", userId));
@@ -322,26 +201,7 @@ export async function checkoutCodOrder(
   const database = db;
 
   if (!database) {
-    const orderId = `mock-${uuidv4()}`;
-    const mockOrder: Order = {
-      id: orderId,
-      userId,
-      createdAt: new Date().toISOString(),
-      status: "pending",
-      subtotal,
-      discount,
-      total,
-      items: lineItems
-    };
-
-    writeLocalOrders(userId, [mockOrder, ...readLocalOrders(userId)]);
-    writeLocalCart(userId, []);
-    return {
-      id: orderId,
-      subtotal,
-      discount,
-      total
-    };
+    throw new Error("Firebase Firestore is not configured.");
   }
 
   const orderId = uuidv4();

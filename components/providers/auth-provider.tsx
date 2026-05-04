@@ -13,22 +13,7 @@ import {
   signUpWithEmail
 } from "@/lib/firebase/auth";
 import { auth, db, isFirebaseClientConfigured } from "@/lib/firebase/firebase";
-import { mockUsers } from "@/lib/mock-data";
-import { upsertMockUserProfile } from "@/lib/mock-profiles";
 import type { AppSessionUser, Role, UserProfile } from "@/types";
-
-const MOCK_USER_STORAGE_KEY = "scsc-mock-user";
-const MOCK_ACCOUNT_STORAGE_KEY = "scsc-mock-accounts";
-
-interface MockAccount {
-  id: string;
-  email: string;
-  displayName: string;
-  password: string;
-  role: Role;
-  company?: string;
-  photoURL?: string;
-}
 
 interface AuthContextValue {
   user: AppSessionUser | null;
@@ -45,112 +30,6 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-function serializeMockUser(user: AppSessionUser) {
-  return `mock:${btoa(JSON.stringify(user))}`;
-}
-
-function parseMockUser(): AppSessionUser | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const raw = window.localStorage.getItem(MOCK_USER_STORAGE_KEY);
-  return raw ? (JSON.parse(raw) as AppSessionUser) : null;
-}
-
-function getSeedMockAccounts(): MockAccount[] {
-  const seeded = mockUsers.map((entry) => ({
-    id: entry.id,
-    email: entry.email.toLowerCase(),
-    displayName: entry.displayName,
-    password: "admin123",
-    role: entry.role,
-    company: entry.company,
-    photoURL: entry.photoURL
-  }));
-
-  return [
-    ...seeded,
-    {
-      ...seeded[0],
-      email: "admin@example.com"
-    },
-    {
-      ...seeded[1],
-      email: "moderator@example.com"
-    }
-  ];
-}
-
-function writeMockAccounts(accounts: MockAccount[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(MOCK_ACCOUNT_STORAGE_KEY, JSON.stringify(accounts));
-}
-
-function readMockAccounts() {
-  const seeded = getSeedMockAccounts();
-
-  if (typeof window === "undefined") {
-    return seeded;
-  }
-
-  const raw = window.localStorage.getItem(MOCK_ACCOUNT_STORAGE_KEY);
-  if (!raw) {
-    writeMockAccounts(seeded);
-    return seeded;
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as MockAccount[];
-    const seededMap = new Map(seeded.map((entry) => [entry.email, entry]));
-    const merged = new Map(seededMap);
-
-    parsed.forEach((entry) => {
-      const normalizedEmail = entry.email.toLowerCase();
-      const seededEntry = seededMap.get(normalizedEmail);
-
-      if (seededEntry) {
-        merged.set(normalizedEmail, {
-          ...entry,
-          ...seededEntry,
-          email: normalizedEmail
-        });
-        return;
-      }
-
-      merged.set(normalizedEmail, {
-        ...merged.get(normalizedEmail),
-        ...entry,
-        email: normalizedEmail
-      });
-    });
-
-    const accounts = [...merged.values()];
-    writeMockAccounts(accounts);
-    return accounts;
-  } catch {
-    writeMockAccounts(seeded);
-    return seeded;
-  }
-}
-
-function findMockAccount(email: string) {
-  return readMockAccounts().find((entry) => entry.email === email.toLowerCase()) || null;
-}
-
-function buildMockSessionUser(account: MockAccount): AppSessionUser {
-  return {
-    id: account.id,
-    email: account.email,
-    displayName: account.displayName,
-    role: account.role,
-    photoURL: account.photoURL
-  };
-}
 
 async function syncSessionCookie(token: string) {
   await fetch("/api/session", {
@@ -237,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isFirebaseClientConfigured || !auth) {
-      setUser(parseMockUser());
+      setUser(null);
       setLoading(false);
       return;
     }
@@ -264,16 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     if (!isFirebaseClientConfigured || !auth) {
-      const account = findMockAccount(email);
-      if (!account || account.password !== password) {
-        throw new Error("auth/invalid-credentials");
-      }
-
-      const mockUser = buildMockSessionUser(account);
-      window.localStorage.setItem(MOCK_USER_STORAGE_KEY, JSON.stringify(mockUser));
-      setUser(mockUser);
-      await syncSessionCookie(serializeMockUser(mockUser));
-      return getRoleRedirect(mockUser.role);
+      throw new Error("Firebase Auth is not configured.");
     }
 
     const credential = await signInWithEmail(email, password);
@@ -285,36 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginWithGoogle = useCallback(async () => {
     if (!isFirebaseClientConfigured || !auth) {
-      const mockAccount: MockAccount = {
-        id: "mock-google-user",
-        email: "google.user@example.com",
-        displayName: "Google Member",
-        password: "",
-        role: "user"
-      };
-      upsertMockUserProfile({
-        id: mockAccount.id,
-        membershipId: buildMembershipId(mockAccount.id),
-        displayName: mockAccount.displayName,
-        email: mockAccount.email,
-        role: "user",
-        membershipStatus: "active",
-        membershipExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
-        joinedAt: new Date().toISOString(),
-        qrToken: uuidv4(),
-        savedArticleIds: [],
-        registeredEventIds: [],
-        activeQrSessionId: null,
-        activeQrSessionExpiresAt: null,
-        lastQrIssuedAt: null,
-        lastQrScanAt: null,
-        discountRate: 0.12
-      });
-      const mockUser = buildMockSessionUser(mockAccount);
-      window.localStorage.setItem(MOCK_USER_STORAGE_KEY, JSON.stringify(mockUser));
-      setUser(mockUser);
-      await syncSessionCookie(serializeMockUser(mockUser));
-      return "/profile";
+      throw new Error("Firebase Auth is not configured.");
     }
 
     const credential = await signInWithGoogle();
@@ -338,48 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       company?: string;
     }) => {
       if (!isFirebaseClientConfigured || !auth) {
-        const normalizedEmail = email.toLowerCase();
-        const existingAccount = findMockAccount(normalizedEmail);
-        if (existingAccount) {
-          throw new Error("auth/email-already-in-use");
-        }
-
-        const mockAccount: MockAccount = {
-          id: `mock-${normalizedEmail}`,
-          email: normalizedEmail,
-          displayName,
-          password,
-          role: "user",
-          company: company || ""
-        };
-        writeMockAccounts([mockAccount, ...readMockAccounts()]);
-        upsertMockUserProfile({
-          id: mockAccount.id,
-          membershipId: buildMembershipId(mockAccount.id),
-          displayName,
-          email: normalizedEmail,
-          company: company || "",
-          role: "user",
-          membershipStatus: "active",
-          membershipExpiresAt: new Date(
-            Date.now() + 1000 * 60 * 60 * 24 * 365
-          ).toISOString(),
-          joinedAt: new Date().toISOString(),
-          qrToken: uuidv4(),
-          savedArticleIds: [],
-          registeredEventIds: [],
-          activeQrSessionId: null,
-          activeQrSessionExpiresAt: null,
-          lastQrIssuedAt: null,
-          lastQrScanAt: null,
-          discountRate: 0.12
-        });
-
-        const mockUser = buildMockSessionUser(mockAccount);
-        window.localStorage.setItem(MOCK_USER_STORAGE_KEY, JSON.stringify(mockUser));
-        setUser(mockUser);
-        await syncSessionCookie(serializeMockUser(mockUser));
-        return "/profile";
+        throw new Error("Firebase Auth is not configured.");
       }
 
       const credential = await signUpWithEmail(email, password, displayName);
@@ -406,7 +206,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     if (!isFirebaseClientConfigured || !auth) {
-      window.localStorage.removeItem(MOCK_USER_STORAGE_KEY);
       setUser(null);
       await clearSessionCookie();
       return;

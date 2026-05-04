@@ -207,7 +207,7 @@ export const dictionaries = {
         "Create your member account to unlock event registration, profile tools, QR verification, order history, and member pricing.",
       loginCardTitle: "Login",
       loginCardText:
-        "Sign in with your association account. In mock mode, emails containing `admin` or `moderator` will open the matching role.",
+        "Sign in with your association account. Admin and moderator access is controlled by Firebase roles.",
       emailLabel: "Email",
       passwordLabel: "Password",
       passwordPlaceholder: "Enter your password",
@@ -630,7 +630,7 @@ export const dictionaries = {
         "أنشئ حساب العضوية للوصول إلى التسجيل في الفعاليات وأدوات الملف الشخصي والتحقق بالـ QR وسجل الطلبات وأسعار الأعضاء.",
       loginCardTitle: "تسجيل الدخول",
       loginCardText:
-        "سجّل الدخول بحساب الجمعية. في وضع mock، أي بريد يحتوي على `admin` أو `moderator` سيفتح الصلاحية المطابقة.",
+        "سجّل الدخول بحساب الجمعية. صلاحيات الإدارة والمراجعة تُدار من أدوار Firebase.",
       emailLabel: "البريد الإلكتروني",
       passwordLabel: "كلمة المرور",
       passwordPlaceholder: "أدخل كلمة المرور",

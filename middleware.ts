@@ -18,30 +18,11 @@ function buildLoginRedirect(request: NextRequest) {
   return NextResponse.redirect(url);
 }
 
-function parseMockSession(token: string): SessionData | null {
-  try {
-    const decoded = JSON.parse(atob(token.replace("mock:", ""))) as {
-      id: string;
-      role: string;
-    };
-    return {
-      uid: decoded.id,
-      role: decoded.role
-    };
-  } catch {
-    return null;
-  }
-}
-
 async function verifySession(request: NextRequest): Promise<SessionData | null> {
   const token = request.cookies.get(COOKIE_NAME)?.value;
 
   if (!token) {
     return null;
-  }
-
-  if (token.startsWith("mock:")) {
-    return parseMockSession(token);
   }
 
   if (!projectId) {

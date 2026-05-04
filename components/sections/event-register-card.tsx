@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "@/hooks/useLocale";
-import { registerForEvent } from "@/lib/firebase/firestore";
+import { isUserRegisteredForEvent, registerForEvent } from "@/lib/firebase/firestore";
 import { formatNumber } from "@/lib/utils";
 
 interface EventRegisterCardProps {
@@ -33,15 +33,28 @@ export function EventRegisterCard({
   const isFull = registeredCount >= capacity;
 
   useEffect(() => {
-    if (typeof window === "undefined" || !user) {
+    if (!user) {
       setIsRegistered(false);
       return;
     }
 
-    const marker = window.localStorage.getItem(
-      `scsc-registration:${eventId}:${user.id}`
-    );
-    setIsRegistered(Boolean(marker));
+    let cancelled = false;
+
+    isUserRegisteredForEvent(eventId, user.id)
+      .then((registered) => {
+        if (!cancelled) {
+          setIsRegistered(registered);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setIsRegistered(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [eventId, user]);
 
   async function handleRegister() {

@@ -8,7 +8,6 @@ import { useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "@/hooks/useLocale";
-import { getLocalizedMockUsers } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/ui/language-toggle";
@@ -20,9 +19,6 @@ export function Navbar() {
   const { user, logout } = useAuth();
   const { dictionary, locale } = useLocale();
   const [open, setOpen] = useState(false);
-  const localizedMockUserName =
-    user &&
-    getLocalizedMockUsers(locale).find((entry) => entry.email === user.email)?.displayName;
 
   const navLinks = [
     { href: "/", label: dictionary.nav.home },
@@ -83,7 +79,7 @@ export function Navbar() {
               <Link href={user.role === "admin" || user.role === "moderator" ? "/dashboard" : "/profile"}>
                 <Button variant="ghost" size="sm" className="whitespace-nowrap">
                   <User2 className="h-4 w-4" />
-                  <span className="max-w-28 truncate">{localizedMockUserName || user.displayName}</span>
+                  <span className="max-w-28 truncate">{user.displayName}</span>
                 </Button>
               </Link>
               <Button variant="primary" size="sm" onClick={() => logout()} className="whitespace-nowrap">

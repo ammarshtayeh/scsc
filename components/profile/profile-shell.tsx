@@ -33,22 +33,10 @@ import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "@/hooks/useLocale";
 import { issueMembershipQrPass } from "@/lib/firebase/functions";
-import { db, isFirebaseClientConfigured } from "@/lib/firebase/firebase";
-import { getMockOrdersForUser, getMockRegisteredEventIds } from "@/lib/firebase/firestore";
+import { db } from "@/lib/firebase/firebase";
 import { uploadFileToStorage } from "@/lib/firebase/storage";
 import { translateOrderStatus, translateRole } from "@/lib/i18n/helpers";
 import { getMembershipStatusClasses, getMembershipStatusLabel, getSecondsUntilExpiry, resolveMembershipStatus } from "@/lib/membership";
-import {
-  getMockUserProfile,
-  subscribeToMockProfile,
-  upsertMockUserProfile
-} from "@/lib/mock-profiles";
-import {
-  getLocalizedMockArticles,
-  getLocalizedMockEvents,
-  getLocalizedMockOrders,
-  getLocalizedMockUsers
-} from "@/lib/mock-data";
 import {
   formatCurrency,
   formatDateLong,
@@ -176,15 +164,6 @@ function normalizeEvent(id: string, data: Record<string, unknown>): EventItem {
   };
 }
 
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-    reader.onerror = () => reject(new Error("Unable to read selected image."));
-    reader.readAsDataURL(file);
-  });
-}
-
 export function ProfileShell({
   view = "dashboard"
 }: {
@@ -193,10 +172,6 @@ export function ProfileShell({
   const { user } = useAuth();
   const { dictionary, locale } = useLocale();
   const { pushToast } = useToast();
-  const localizedUsers = useMemo(() => getLocalizedMockUsers(locale), [locale]);
-  const localizedOrders = useMemo(() => getLocalizedMockOrders(locale), [locale]);
-  const localizedArticles = useMemo(() => getLocalizedMockArticles(locale), [locale]);
-  const localizedEvents = useMemo(() => getLocalizedMockEvents(locale), [locale]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [savedArticles, setSavedArticles] = useState<Article[]>([]);
@@ -269,89 +244,13 @@ export function ProfileShell({
     }
   }, [dictionary.profile.qrIssueError, dictionary.profile.qrRefreshed, pushToast]);
 
-  const hydrateMockDashboard = useCallback(
-    (sourceProfile?: UserProfile | null) => {
-      if (!user) {
-        return;
-      }
-
-      const fallbackProfile =
-        sourceProfile ||
-        getMockUserProfile({ id: user.id, email: user.email }) ||
-        localizedUsers.find((entry) => entry.email === user.email || entry.id === user.id) || {
-          id: user.id,
-          membershipId: `SCSC-${user.id.slice(0, 8).toUpperCase()}`,
-          displayName: user.displayName,
-          email: user.email,
-          role: user.role,
-          membershipStatus: "active",
-          membershipExpiresAt: new Date(Date.now() + 31536000000).toISOString(),
-          joinedAt: new Date().toISOString(),
-          qrToken: "11111111-1111-4111-8111-111111111111",
-          phone: "",
-          company: "",
-          photoURL: user.photoURL,
-          savedArticleIds: [],
-          registeredEventIds: [],
-          activeQrSessionId: null,
-          activeQrSessionExpiresAt: null,
-          lastQrIssuedAt: null,
-          lastQrScanAt: null,
-          discountRate: 0.12
-        };
-
-      const mergedRegisteredEventIds = Array.from(
-        new Set([
-          ...(fallbackProfile.registeredEventIds || []),
-          ...getMockRegisteredEventIds(user.id),
-          ...getMockRegisteredEventIds(fallbackProfile.id)
-        ])
-      );
-      const mergedOrders = [...getMockOrdersForUser(user.id), ...getMockOrdersForUser(fallbackProfile.id)];
-      const uniqueLocalOrders = mergedOrders.filter(
-        (order, index, collection) => collection.findIndex((entry) => entry.id === order.id) === index
-      );
-      const baseOrders = localizedOrders.filter((order) => order.userId === fallbackProfile.id);
-      const combinedOrders = [...uniqueLocalOrders, ...baseOrders].sort(
-        (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
-      );
-      const hydratedProfile = {
-        ...fallbackProfile,
-        registeredEventIds: mergedRegisteredEventIds
-      };
-
-      setProfile(hydratedProfile);
-      setOrders(combinedOrders);
-      setSavedArticles(
-        localizedArticles.filter((article) => hydratedProfile.savedArticleIds?.includes(article.id))
-      );
-      setRegisteredEvents(
-        localizedEvents.filter((event) => hydratedProfile.registeredEventIds?.includes(event.id))
-      );
-
-      const nextScanAt = hydratedProfile.lastQrScanAt || null;
-      if (
-        view === "membership-card" &&
-        nextScanAt &&
-        nextScanAt !== lastObservedScanAtRef.current
-      ) {
-        lastObservedScanAtRef.current = nextScanAt;
-        void refreshQrSession(hydratedProfile, true);
-      } else if (!lastObservedScanAtRef.current) {
-        lastObservedScanAtRef.current = nextScanAt;
-      }
-    },
-    [localizedArticles, localizedEvents, localizedOrders, localizedUsers, refreshQrSession, user, view]
-  );
-
   useEffect(() => {
     async function loadDashboard() {
       if (!user) {
         return;
       }
 
-      if (!isFirebaseClientConfigured || !db) {
-        hydrateMockDashboard();
+      if (!db) {
         return;
       }
 
@@ -403,17 +302,7 @@ export function ProfileShell({
     }
 
     loadDashboard();
-  }, [hydrateMockDashboard, user]);
-
-  useEffect(() => {
-    if (isFirebaseClientConfigured || !user) {
-      return;
-    }
-
-    return subscribeToMockProfile(user.id, (nextProfile) => {
-      hydrateMockDashboard(nextProfile);
-    });
-  }, [hydrateMockDashboard, user]);
+  }, [user]);
 
   useEffect(() => {
     if (view !== "membership-card") {
@@ -444,7 +333,7 @@ export function ProfileShell({
   }, [profile, qrSession, refreshQrSession, view]);
 
   useEffect(() => {
-    if (!isFirebaseClientConfigured || !db || !user) {
+    if (!db || !user) {
       return;
     }
 
@@ -537,10 +426,8 @@ export function ProfileShell({
       setSaving(true);
       let nextPhotoURL = profile.photoURL;
 
-      if (photoFile && isFirebaseClientConfigured) {
+      if (photoFile) {
         nextPhotoURL = await uploadFileToStorage(`images/members/${user.id}`, photoFile);
-      } else if (photoFile) {
-        nextPhotoURL = await fileToDataUrl(photoFile);
       }
 
       const nextProfile = {
@@ -548,12 +435,11 @@ export function ProfileShell({
         photoURL: nextPhotoURL
       };
 
-      if (db && isFirebaseClientConfigured) {
-        await setDoc(doc(db, "users", user.id), nextProfile, { merge: true });
-      } else {
-        upsertMockUserProfile(nextProfile);
+      if (!db) {
+        throw new Error("Firebase Firestore is not configured.");
       }
 
+      await setDoc(doc(db, "users", user.id), nextProfile, { merge: true });
       setProfile(nextProfile);
       pushToast(dictionary.profile.profileUpdated, "success");
     } catch (error) {

@@ -3,16 +3,6 @@ import "server-only";
 import { FieldPath } from "firebase-admin/firestore";
 
 import { adminDb, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import {
-  getLocalizedMockArticles,
-  getLocalizedMockBoardMembers,
-  getLocalizedMockEvents,
-  getLocalizedMockOrders,
-  getLocalizedMockProducts,
-  getLocalizedMockUsers,
-  mockDashboardStats,
-} from "@/lib/mock-data";
-import { getServerLocale } from "@/lib/i18n/server";
 import type {
   Article,
   BoardMember,
@@ -41,7 +31,7 @@ function convertDoc<T>(id: string, data: Record<string, unknown>) {
 
 export async function getLatestArticles(limit = 3): Promise<Article[]> {
   if (!isFirebaseAdminConfigured || !adminDb) {
-    return sortByDate(getLocalizedMockArticles(getServerLocale()), "publishedAt").slice(0, limit);
+    return [];
   }
 
   const snapshot = await adminDb
@@ -56,8 +46,7 @@ export async function getLatestArticles(limit = 3): Promise<Article[]> {
 
 export async function getAllArticles(category?: string): Promise<Article[]> {
   if (!isFirebaseAdminConfigured || !adminDb) {
-    const list = sortByDate(getLocalizedMockArticles(getServerLocale()), "publishedAt");
-    return category ? list.filter((item) => item.category === category) : list;
+    return [];
   }
 
   let query = adminDb.collection("articles").where("approved", "==", true);
@@ -70,7 +59,7 @@ export async function getAllArticles(category?: string): Promise<Article[]> {
 
 export async function getArticleBySlug(slug: string): Promise<Article | null> {
   if (!isFirebaseAdminConfigured || !adminDb) {
-    return getLocalizedMockArticles(getServerLocale()).find((article) => article.slug === slug) || null;
+    return null;
   }
 
   const snapshot = await adminDb
@@ -90,10 +79,7 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
 
 export async function getUpcomingEvents(limit?: number): Promise<EventItem[]> {
   if (!isFirebaseAdminConfigured || !adminDb) {
-    const items = [...getLocalizedMockEvents(getServerLocale())].sort(
-      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()
-    );
-    return typeof limit === "number" ? items.slice(0, limit) : items;
+    return [];
   }
 
   let query = adminDb.collection("events").orderBy("startsAt", "asc");
@@ -106,7 +92,7 @@ export async function getUpcomingEvents(limit?: number): Promise<EventItem[]> {
 
 export async function getEventBySlug(slug: string): Promise<EventItem | null> {
   if (!isFirebaseAdminConfigured || !adminDb) {
-    return getLocalizedMockEvents(getServerLocale()).find((event) => event.slug === slug) || null;
+    return null;
   }
 
   const snapshot = await adminDb.collection("events").where("slug", "==", slug).limit(1).get();
@@ -120,7 +106,7 @@ export async function getEventBySlug(slug: string): Promise<EventItem | null> {
 
 export async function getAllProducts(): Promise<Product[]> {
   if (!isFirebaseAdminConfigured || !adminDb) {
-    return getLocalizedMockProducts(getServerLocale());
+    return [];
   }
 
   const snapshot = await adminDb.collection("products").orderBy(FieldPath.documentId()).get();
@@ -129,7 +115,7 @@ export async function getAllProducts(): Promise<Product[]> {
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   if (!isFirebaseAdminConfigured || !adminDb) {
-    return getLocalizedMockProducts(getServerLocale()).find((product) => product.slug === slug) || null;
+    return null;
   }
 
   const snapshot = await adminDb.collection("products").where("slug", "==", slug).limit(1).get();
@@ -143,10 +129,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
 
 export async function getBoardMembersByYear(): Promise<Record<string, BoardMember[]>> {
   if (!isFirebaseAdminConfigured || !adminDb) {
-    return getLocalizedMockBoardMembers(getServerLocale()).reduce<Record<string, BoardMember[]>>((acc, member) => {
-      acc[member.year] = acc[member.year] ? [...acc[member.year], member] : [member];
-      return acc;
-    }, {});
+    return {};
   }
 
   const snapshot = await adminDb.collection("boardMembers").orderBy("year", "desc").get();
@@ -159,7 +142,12 @@ export async function getBoardMembersByYear(): Promise<Record<string, BoardMembe
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   if (!isFirebaseAdminConfigured || !adminDb) {
-    return mockDashboardStats;
+    return {
+      totalUsers: 0,
+      upcomingEvents: 0,
+      totalOrders: 0,
+      registeredCompanies: 0
+    };
   }
 
   const [users, events, orders, products] = await Promise.all([
@@ -180,14 +168,12 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 }
 
 export async function getUserProfileById(userId?: string): Promise<UserProfile | null> {
-  const locale = getServerLocale();
-
   if (!userId) {
-    return getLocalizedMockUsers(locale)[0] || null;
+    return null;
   }
 
   if (!isFirebaseAdminConfigured || !adminDb) {
-    return getLocalizedMockUsers(locale).find((user) => user.id === userId) || null;
+    return null;
   }
 
   const doc = await adminDb.collection("users").doc(userId).get();
@@ -195,14 +181,12 @@ export async function getUserProfileById(userId?: string): Promise<UserProfile |
 }
 
 export async function getOrdersForUser(userId?: string): Promise<Order[]> {
-  const locale = getServerLocale();
-
   if (!userId) {
-    return getLocalizedMockOrders(locale);
+    return [];
   }
 
   if (!isFirebaseAdminConfigured || !adminDb) {
-    return getLocalizedMockOrders(locale).filter((order) => order.userId === userId);
+    return [];
   }
 
   const snapshot = await adminDb
@@ -216,7 +200,7 @@ export async function getOrdersForUser(userId?: string): Promise<Order[]> {
 
 export async function getAllUsers(): Promise<UserProfile[]> {
   if (!isFirebaseAdminConfigured || !adminDb) {
-    return getLocalizedMockUsers(getServerLocale());
+    return [];
   }
 
   const snapshot = await adminDb.collection("users").orderBy("joinedAt", "desc").get();
@@ -225,7 +209,7 @@ export async function getAllUsers(): Promise<UserProfile[]> {
 
 export async function getAllOrders(): Promise<Order[]> {
   if (!isFirebaseAdminConfigured || !adminDb) {
-    return getLocalizedMockOrders(getServerLocale());
+    return [];
   }
 
   const snapshot = await adminDb.collection("orders").orderBy("createdAt", "desc").get();
