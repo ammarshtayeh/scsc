@@ -42,7 +42,7 @@ export function HeroSection({ slides, featuredEvent }: HeroSectionProps) {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="relative overflow-hidden rounded-[28px] border border-white/70 bg-white/78 p-6 shadow-elevated backdrop-blur-xl dark:border-white/10 dark:bg-brand-surface/90 dark:shadow-[0_28px_72px_rgba(0,0,0,0.4)] sm:rounded-[34px] sm:p-10"
+          className="relative overflow-hidden rounded-[28px] border border-white/70 bg-white/78 p-6 shadow-elevated backdrop-blur-xl dark:border-white/10 dark:bg-[#0e1b2e]/92 dark:shadow-[0_28px_72px_rgba(0,0,0,0.4)] sm:rounded-[34px] sm:p-10"
         >
           <div className="absolute -right-10 top-0 h-36 w-36 rounded-full bg-brand-accent/18 blur-3xl dark:bg-brand-accent/14" />
           <div className="absolute bottom-0 left-0 h-44 w-44 rounded-full bg-brand-sky blur-3xl dark:bg-[#173257]" />
@@ -69,7 +69,7 @@ export function HeroSection({ slides, featuredEvent }: HeroSectionProps) {
             </motion.p>
 
             <motion.div variants={itemVariants} className="mt-7 grid gap-4 sm:mt-8 sm:grid-cols-2">
-              <div className="rounded-2xl border border-brand-primary/15 bg-white/70 p-5 transition-shadow dark:border-[#36527c]/55 dark:bg-[#0d1a2d]/96 dark:shadow-[0_16px_40px_rgba(0,0,0,0.26)] sm:p-6 sm:hover:shadow-card">
+              <div className="rounded-2xl border border-brand-primary/15 bg-white/82 p-5 transition-shadow dark:border-brand-accent/18 dark:bg-white/[0.06] dark:shadow-[0_16px_40px_rgba(0,0,0,0.22)] sm:p-6 sm:hover:shadow-card">
                 <p className="text-xs font-bold uppercase tracking-widest text-brand-accent dark:text-[#f5d669]">
                   {dictionary.home.visionLabel}
                 </p>
@@ -77,7 +77,7 @@ export function HeroSection({ slides, featuredEvent }: HeroSectionProps) {
                   {dictionary.home.visionText}
                 </p>
               </div>
-              <div className="rounded-2xl border border-brand-primary/15 bg-white/70 p-5 transition-shadow dark:border-[#36527c]/55 dark:bg-[#0d1a2d]/96 dark:shadow-[0_16px_40px_rgba(0,0,0,0.26)] sm:p-6 sm:hover:shadow-card">
+              <div className="rounded-2xl border border-brand-primary/15 bg-white/82 p-5 transition-shadow dark:border-brand-accent/18 dark:bg-white/[0.06] dark:shadow-[0_16px_40px_rgba(0,0,0,0.22)] sm:p-6 sm:hover:shadow-card">
                 <p className="text-xs font-bold uppercase tracking-widest text-brand-accent dark:text-[#f5d669]">
                   {dictionary.home.missionLabel}
                 </p>

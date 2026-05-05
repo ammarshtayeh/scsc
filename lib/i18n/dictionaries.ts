@@ -156,6 +156,8 @@ export const dictionaries = {
       structureTitle: "Organizational structure",
       foundingBody:
         "The founding body includes the student members who established the society inside the university.",
+      structureLeadershipTitle: "Society leadership",
+      structureCommitteesTitle: "Working committees",
       structure: [
         "President",
         "Vice President",
@@ -640,6 +642,8 @@ export const dictionaries = {
       structureTitle: "الهيكل التنظيمي",
       foundingBody:
         "الهيئة التأسيسية هم الأعضاء الطلاب الذين قاموا بتأسيس الجمعية داخل الجامعة.",
+      structureLeadershipTitle: "قيادة الجمعية",
+      structureCommitteesTitle: "اللجان العاملة",
       structure: [
         "رئيس الجمعية",
         "نائب الرئيس",

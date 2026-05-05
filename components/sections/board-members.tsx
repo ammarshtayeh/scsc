@@ -25,13 +25,13 @@ export function BoardMembers({ groupedMembers }: BoardMembersProps) {
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="rounded-[32px] border border-white/60 bg-white/70 p-8 shadow-soft backdrop-blur-xl">
+      <div className="rounded-[32px] border border-brand-primary/10 bg-white/82 p-8 shadow-soft backdrop-blur-xl dark:border-white/10 dark:bg-[#0d1829]/92 dark:shadow-[0_26px_70px_rgba(0,0,0,0.36)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent">
               {dictionary.about.boardEyebrow}
             </p>
-            <h2 className="mt-3 font-heading text-3xl font-bold text-brand-primary">
+            <h2 className="mt-3 font-heading text-3xl font-bold text-brand-primary dark:text-brand-ink">
               {dictionary.about.boardTitle}
             </h2>
           </div>
@@ -44,8 +44,8 @@ export function BoardMembers({ groupedMembers }: BoardMembersProps) {
                   className={cn(
                     "rounded-full px-4 py-2 text-sm font-medium transition",
                     year === selectedYear
-                      ? "bg-brand-primary text-white"
-                      : "bg-brand-sky text-brand-primary hover:bg-brand-primary hover:text-white"
+                      ? "bg-brand-primary text-white dark:bg-brand-accent dark:text-brand-primary"
+                      : "bg-brand-sky text-brand-primary hover:bg-brand-primary hover:text-white dark:bg-white/8 dark:text-brand-ink dark:hover:bg-brand-accent dark:hover:text-brand-primary"
                   )}
                 >
                   {year}
