@@ -11,10 +11,10 @@ export const dictionaries = {
       switchToArabic: "Switch to Arabic"
     },
     site: {
-      title: "Cosmetics & Skin Care",
+      title: "SCSC-NNU",
       university: "An-Najah National University",
       description:
-        "A modern association platform for education, membership, events, and curated products."
+        "The official platform of the Society of Cosmetics and Skin Care at An-Najah National University."
     },
     nav: {
       home: "Home",
@@ -48,39 +48,39 @@ export const dictionaries = {
       toggleTheme: "Toggle theme"
     },
     home: {
-      badge: "Elegance meets evidence-based care",
-      title: "Empowering cosmetic and skin care leaders at An-Najah.",
+      badge: "SCSC-NNU | Student society",
+      title: "Society of Cosmetics and Skin Care - An-Najah National University",
       description:
-        "We connect members through education, scientific awareness, practical workshops, and a trusted community shaped by care, professionalism, and innovation.",
+        "A local student society for Cosmetics and Skin Care students, built to strengthen scientific knowledge, practical skills, teamwork, and professional readiness.",
       visionLabel: "Vision",
       visionText:
-        "To become the university's leading student association for cosmetic science, beauty education, and member growth.",
+        "To be a leading student platform in promoting scientific and practical knowledge in cosmetics and skincare, and a source of inspiration for students to achieve academic and professional excellence.",
       missionLabel: "Mission",
       missionText:
-        "Deliver workshops, content, and member services that translate modern knowledge into safe, elegant, real-world practice.",
+        "To empower students through a supportive learning environment and scientific and training activities that develop their skills, prepare them for the professional field, and encourage innovation and continuous learning.",
       joinCta: "Become a Member",
       featuredEventCta: "Explore Featured Event",
       viewEventsCta: "View Events",
       featuredEventLabel: "Featured Event",
       latestNewsLabel: "Latest News",
       latestNewsTitle: "Educational updates, tips, and association insights",
-      upcomingEventsLabel: "Upcoming Events",
-      upcomingEventsTitle: "Workshops and experiences worth planning around",
+      upcomingEventsLabel: "Activities",
+      upcomingEventsTitle: "Scientific, training, and student events from SCSC-NNU",
       slides: [
         {
-          title: "Clinical beauty education",
+          title: "Scientific and practical learning",
           caption:
-            "Workshops and curated sessions designed around safe, modern cosmetic practice."
+            "Workshops, training sessions, and activities that connect cosmetic knowledge with real practice."
         },
         {
-          title: "Elegant member experiences",
+          title: "Student community",
           caption:
-            "Events, networking, and leadership opportunities shaped for ambitious students."
+            "A collaborative space for students to learn, represent their major, and grow together."
         },
         {
-          title: "Trusted product discovery",
+          title: "Professional readiness",
           caption:
-            "Association-approved selections with member pricing and thoughtful presentation."
+            "Connections, initiatives, and learning paths that prepare students for the cosmetics and skincare field."
         }
       ],
       newsEmptyTitle: "No updates available",
@@ -88,45 +88,85 @@ export const dictionaries = {
     },
     membershipPromo: {
       eyebrow: "Membership",
-      title: "Join a community shaped around beauty, science, and leadership.",
+      title: "Join SCSC-NNU and take part in a focused student community.",
       description:
-        "Membership opens the door to workshops, discounts, interdisciplinary events, leadership tracks, and a trusted network of students and professionals.",
+        "Membership opens at the beginning of each academic year through the society's official platforms. Accepted members receive one-year membership and access to activities, committees, and learning opportunities.",
       benefits: [
         {
-          title: "Networking",
+          title: "Scientific Growth",
           description:
-            "Build relationships with peers, faculty, and cosmetic industry collaborators."
+            "Strengthen your knowledge in cosmetics and skincare through specialized scientific activities."
         },
         {
-          title: "Workshops",
+          title: "Practical Training",
           description:
-            "Join practical labs, seminars, and training sessions throughout the year."
+            "Join workshops, courses, and applied sessions that help build real skills."
         },
         {
-          title: "Member Discounts",
+          title: "Professional Links",
           description:
-            "Receive store discounts and access to curated offers from partner brands."
+            "Connect with committees, initiatives, and relevant professional opportunities."
         }
       ],
-      whyTitle: "Why members stay involved",
+      whyTitle: "Membership rules",
       whyDescription:
-        "Access to partner events, exclusive education, special product pricing, and verified membership benefits through dynamic QR identity.",
+        "First-degree membership is for Cosmetics and Skin Care students at An-Najah National University. Students from other majors may be accepted as second-degree members according to need.",
       whyExtra:
-        "Members also gain structured opportunities to volunteer, lead committees, and contribute to educational content for the wider student body.",
+        "Members commit to the society's regulations, renew membership annually after the new administrative structure is approved, and follow any membership fee decisions issued by the administration and treasurer reports.",
       joinCta: "Become a Member",
       learnMore: "Learn More"
     },
     about: {
       eyebrow: "About the Association",
-      title: "A student association built around beauty, science, and service.",
+      title: "A local student society for cosmetics, skincare, and professional growth.",
       description:
-        "The Cosmetics & Skin Care Association brings together students who care about evidence-based practice, elegant presentation, community education, and meaningful professional growth.",
-      overviewTitle: "Association overview",
+        "The Society of Cosmetics and Skin Care - An-Najah National University is a student society that brings together students of the Cosmetics and Skin Care major and represents them inside the university.",
+      overviewTitle: "Official identity",
       overviewTextOne:
-        "Our association exists to connect cosmetic science, skin care literacy, and student leadership through workshops, peer collaboration, practical events, and responsible product awareness.",
+        "Official name: Society of Cosmetics and Skin Care - An-Najah National University. Official abbreviation: SCSC-NNU.",
       overviewTextTwo:
-        "We create accessible educational experiences for members and the wider campus community, while giving students a structured path to volunteer, lead, and grow.",
+        "Official languages: Arabic and English. Nature: a local student society for Cosmetics and Skin Care students at An-Najah National University.",
       imageAlt: "Association members collaborating",
+      principlesTitle: "General principles",
+      principles: [
+        "Promote human values, cooperation, and teamwork among students.",
+        "Develop scientific and practical knowledge in cosmetics and skincare.",
+        "Represent major students inside the university and support their academic and professional level."
+      ],
+      goalsTitle: "Goals and objectives",
+      goals: [
+        "Build an interested and integrated student community in the field.",
+        "Provide a supportive learning environment for student skill development.",
+        "Organize workshops, training courses, and specialized scientific events.",
+        "Strengthen students' practical and applied experience.",
+        "Spread scientific awareness in skincare and cosmetics.",
+        "Connect students with the labor market and specialized bodies.",
+        "Encourage scientific research and continuous learning."
+      ],
+      membershipTitle: "Membership",
+      membershipText:
+        "Membership opens at the beginning of each academic year or after forming the administrative structure, and registration is announced for a limited period through the society's official platforms. Accepted members receive membership for one year from the joining date.",
+      membershipConditions: [
+        "First-degree membership is for Cosmetics and Skin Care students at An-Najah National University.",
+        "Students from other university majors may be accepted as second-degree members according to need.",
+        "Members must follow society regulations and instructions.",
+        "Membership is renewed annually after approval and handover of the new administrative structure.",
+        "Membership fees, if any, are set or amended based on administration decisions and treasurer reports."
+      ],
+      structureTitle: "Organizational structure",
+      foundingBody:
+        "The founding body includes the student members who established the society inside the university.",
+      structure: [
+        "President",
+        "Vice President",
+        "Treasurer",
+        "Media Committee",
+        "Public Relations Committee",
+        "Activities Committee",
+        "Initiatives and Projects Committee",
+        "Members Affairs Committee",
+        "Scientific Research and Training Committee"
+      ],
       boardEyebrow: "Board by Year",
       boardTitle: "Leadership archive",
       boardEmptyTitle: "No data available",
@@ -145,9 +185,9 @@ export const dictionaries = {
     },
     events: {
       eyebrow: "Events",
-      title: "Learning, networking, and hands-on experiences.",
+      title: "Activities, workshops, and student experiences.",
       description:
-        "Explore upcoming association events with clear scheduling, concise previews, and detail pages built for smooth registration.",
+        "Explore the society's scientific, training, and awareness activities with clear details and smooth registration pages.",
       emptyTitle: "No events scheduled",
       emptyDescription: "Check back soon for future sessions and workshops.",
       eventDetailEyebrow: "Event Detail",
@@ -461,10 +501,10 @@ export const dictionaries = {
       switchToArabic: "التبديل إلى العربية"
     },
     site: {
-      title: "جمعية مستحضرات التجميل والعناية بالبشرة",
+      title: "SCSC-NNU",
       university: "جامعة النجاح الوطنية",
       description:
-        "منصة عصرية للجمعية تجمع التعليم والعضوية والفعاليات والمتجر المختار بعناية."
+        "المنصة الرسمية لجمعية مستحضرات التجميل والعناية بالبشرة في جامعة النجاح الوطنية."
     },
     nav: {
       home: "الرئيسية",
@@ -498,36 +538,36 @@ export const dictionaries = {
       toggleTheme: "تبديل المظهر"
     },
     home: {
-      badge: "أناقة مبنية على المعرفة العلمية",
-      title: "نُمكّن قادة التجميل والعناية بالبشرة في جامعة النجاح.",
+      badge: "SCSC-NNU | جمعية طلابية",
+      title: "جمعية مستحضرات التجميل والعناية بالبشرة - جامعة النجاح الوطنية",
       description:
-        "نربط الأعضاء بالتعليم، والوعي العلمي، والورش العملية، ومجتمع موثوق قائم على العناية والاحتراف والابتكار.",
+        "جمعية طلابية محلية لطلبة تخصص مستحضرات التجميل والعناية بالبشرة، تعمل على تعزيز المعرفة العلمية والعملية وروح التعاون والجاهزية المهنية.",
       visionLabel: "الرؤية",
       visionText:
-        "أن نصبح الجمعية الطلابية الرائدة في الجامعة في علوم التجميل والتعليم الجمالي ونمو الأعضاء.",
+        "أن تكون جمعية مستحضرات التجميل والعناية بالبشرة منصة طلابية رائدة في تعزيز المعرفة العلمية والعملية في مجال التجميل، ومصدر إلهام للطلبة نحو التميز الأكاديمي والمهني.",
       missionLabel: "الرسالة",
       missionText:
-        "تقديم ورش ومحتوى وخدمات عضوية تنقل المعرفة الحديثة إلى ممارسة آمنة وأنيقة وواقعية.",
+        "تسعى الجمعية إلى تمكين الطلبة من خلال توفير بيئة تعليمية داعمة، وتنظيم أنشطة وفعاليات علمية وتدريبية تسهم في تطوير مهاراتهم وتعزيز جاهزيتهم لسوق العمل، مع تشجيع الابتكار والتعلم المستمر.",
       joinCta: "انضم كعضو",
       featuredEventCta: "استكشف الفعالية المميزة",
       viewEventsCta: "عرض الفعاليات",
       featuredEventLabel: "فعالية مميزة",
       latestNewsLabel: "آخر المستجدات",
       latestNewsTitle: "مستجدات تعليمية ونصائح ورؤى من الجمعية",
-      upcomingEventsLabel: "الفعاليات القادمة",
-      upcomingEventsTitle: "ورش وتجارب تستحق التخطيط لها",
+      upcomingEventsLabel: "الفعاليات",
+      upcomingEventsTitle: "فعاليات علمية وتدريبية وطلابية من SCSC-NNU",
       slides: [
         {
-          title: "تعليم جمالي سريري",
-          caption: "ورش وجلسات مختارة بعناية تدور حول الممارسة التجميلية الحديثة والآمنة."
+          title: "تعلم علمي وعملي",
+          caption: "ورش ودورات وفعاليات تربط المعرفة في مستحضرات التجميل والعناية بالبشرة بالتطبيق الواقعي."
         },
         {
-          title: "تجربة عضوية أنيقة",
-          caption: "فعاليات وشبكات علاقات وفرص قيادية مصممة للطلبة الطموحين."
+          title: "مجتمع طلابي",
+          caption: "مساحة تعاونية للطلبة للتعلم وتمثيل التخصص والنمو معًا داخل الجامعة."
         },
         {
-          title: "اكتشاف موثوق للمنتجات",
-          caption: "منتجات معتمدة من الجمعية بأسعار خاصة للأعضاء وعرض احترافي."
+          title: "جاهزية مهنية",
+          caption: "مبادرات وروابط تعليمية ومهنية تساعد الطلبة على الاستعداد لسوق العمل."
         }
       ],
       newsEmptyTitle: "لا توجد تحديثات حاليًا",
@@ -535,42 +575,82 @@ export const dictionaries = {
     },
     membershipPromo: {
       eyebrow: "العضوية",
-      title: "انضم إلى مجتمع يجمع بين الجمال والعلم والقيادة.",
+      title: "انضم إلى SCSC-NNU وكن جزءًا من مجتمع طلابي متخصص.",
       description:
-        "العضوية تفتح الباب أمام الورش والخصومات والفعاليات متعددة التخصصات والمسارات القيادية وشبكة موثوقة من الطلبة والمهنيين.",
+        "يُفتح باب الانتساب مع بداية كل سنة دراسية عبر المنصات الرسمية للجمعية لمدة محددة. يحصل العضو المقبول على عضوية لمدة سنة واحدة من تاريخ الانضمام.",
       benefits: [
         {
-          title: "بناء العلاقات",
-          description: "كوّن علاقات مع الزملاء وأعضاء الهيئة التدريسية وشركاء قطاع التجميل."
+          title: "تطور علمي",
+          description: "تعزيز المعرفة في مستحضرات التجميل والعناية بالبشرة من خلال فعاليات علمية متخصصة."
         },
         {
-          title: "ورش عملية",
-          description: "انضم إلى مختبرات عملية وندوات وجلسات تدريبية طوال العام."
+          title: "تدريب عملي",
+          description: "المشاركة في ورش عمل ودورات تدريبية وجلسات تطبيقية تساعد على بناء المهارات."
         },
         {
-          title: "خصومات الأعضاء",
-          description: "احصل على خصومات المتجر ووصول إلى عروض مختارة من العلامات الشريكة."
+          title: "روابط مهنية",
+          description: "التواصل مع اللجان والمبادرات والجهات المختصة وفرص التطور المهني."
         }
       ],
-      whyTitle: "لماذا يستمر الأعضاء بالمشاركة",
+      whyTitle: "شروط الانتساب",
       whyDescription:
-        "وصول إلى فعاليات الشركاء وتعليم حصري وأسعار خاصة على المنتجات ومزايا عضوية موثقة عبر رمز استجابة سريع ديناميكي.",
+        "العضوية من الدرجة الأولى مخصصة لطلبة تخصص مستحضرات التجميل والعناية بالبشرة في جامعة النجاح الوطنية، ويمكن قبول طلبة من تخصصات أخرى كعضوية درجة ثانية حسب الحاجة.",
       whyExtra:
-        "كما يحصل الأعضاء على فرص منظمة للتطوع وقيادة اللجان والمساهمة في المحتوى التعليمي للمجتمع الطلابي.",
+        "يلتزم الأعضاء بأنظمة وتعليمات الجمعية، وتجدد العضوية سنويًا بعد اعتماد وتسليم الهيكلية الإدارية الجديدة، وتحدد رسوم الانتساب إن وجدت وفق قرارات الإدارة وتقارير أمين الصندوق.",
       joinCta: "انضم كعضو",
       learnMore: "اعرف المزيد"
     },
     about: {
       eyebrow: "عن الجمعية",
-      title: "جمعية طلابية مبنية على الجمال والعلم والخدمة.",
+      title: "جمعية طلابية محلية للتجميل والعناية بالبشرة والتطور المهني.",
       description:
-        "تجمع جمعية مستحضرات التجميل والعناية بالبشرة الطلبة المهتمين بالممارسة المبنية على الدليل، والعرض الأنيق، والتثقيف المجتمعي، والنمو المهني الحقيقي.",
-      overviewTitle: "نبذة عن الجمعية",
+        "جمعية مستحضرات التجميل والعناية بالبشرة - جامعة النجاح الوطنية هي جمعية طلابية تضم طلبة التخصص وتمثلهم داخل الجامعة.",
+      overviewTitle: "هوية الجمعية",
       overviewTextOne:
-        "توجد جمعيتنا لربط علوم التجميل وثقافة العناية بالبشرة والقيادة الطلابية من خلال الورش والتعاون بين الأقران والفعاليات العملية والوعي المسؤول بالمنتجات.",
+        "الاسم الصريح: جمعية مستحضرات التجميل والعناية بالبشرة - جامعة النجاح الوطنية. الاسم بالإنجليزية: Society of Cosmetics and Skin Care - An Najah National University.",
       overviewTextTwo:
-        "نقدّم تجارب تعليمية سهلة الوصول للأعضاء وللمجتمع الجامعي الأوسع، مع منح الطلبة مسارًا منظمًا للتطوع والقيادة والتطور.",
+        "الاختصار الرسمي: SCSC-NNU. اللغة الرسمية: العربية والإنجليزية. الطبيعة: جمعية طلابية محلية تضم طلبة تخصص مستحضرات التجميل والعناية بالبشرة في جامعة النجاح الوطنية.",
       imageAlt: "أعضاء الجمعية أثناء التعاون",
+      principlesTitle: "المبادئ العامة",
+      principles: [
+        "تعزيز القيم الإنسانية وروح التعاون والعمل الجماعي بين الطلبة.",
+        "تطوير المعرفة العلمية والعملية في مجال مستحضرات التجميل والعناية بالبشرة.",
+        "تمثيل طلبة التخصص داخل الجامعة والمساهمة في رفع مستواهم الأكاديمي والمهني."
+      ],
+      goalsTitle: "الأهداف والغايات",
+      goals: [
+        "بناء مجتمع طلابي مهتم ومتكامل في هذا المجال.",
+        "توفير بيئة تعليمية داعمة لتطوير مهارات الطلبة.",
+        "تنظيم ورش عمل ودورات تدريبية وفعاليات علمية متخصصة.",
+        "تعزيز الجانب العملي والتطبيقي لدى الطلبة.",
+        "نشر الوعي العلمي في مجال العناية بالبشرة والتجميل.",
+        "ربط الطلبة بسوق العمل والجهات المختصة.",
+        "تشجيع البحث العلمي والتعلم المستمر."
+      ],
+      membershipTitle: "الانتساب",
+      membershipText:
+        "يتم فتح باب الانتساب مع بداية كل سنة دراسية أو بعد تشكيل الهيكلية الإدارية، ويتم الإعلان عن فترة التسجيل عبر المنصات الرسمية للجمعية. يحصل العضو المقبول على عضوية لمدة سنة واحدة من تاريخ الانضمام.",
+      membershipConditions: [
+        "أن يكون الطالب/ـة من طلبة تخصص مستحضرات التجميل والعناية بالبشرة في جامعة النجاح الوطنية كعضوية درجة أولى.",
+        "يمكن قبول طلبة من تخصصات أخرى داخل الجامعة حسب الحاجة كعضوية درجة ثانية.",
+        "الالتزام بأنظمة وتعليمات الجمعية.",
+        "تجديد العضوية سنويًا بعد اعتماد وتسليم الهيكلية الإدارية الجديدة.",
+        "تحديد رسوم الانتساب إن وجدت أو تعديلها بناءً على قرارات الإدارة وتقارير أمين الصندوق."
+      ],
+      structureTitle: "الهيكل التنظيمي",
+      foundingBody:
+        "الهيئة التأسيسية هم الأعضاء الطلاب الذين قاموا بتأسيس الجمعية داخل الجامعة.",
+      structure: [
+        "رئيس الجمعية",
+        "نائب الرئيس",
+        "أمين الصندوق",
+        "اللجنة الإعلامية",
+        "لجنة العلاقات العامة",
+        "لجنة الأنشطة",
+        "لجنة المبادرات والمشاريع",
+        "لجنة شؤون الأعضاء",
+        "لجنة البحث العلمي والتدريب"
+      ],
       boardEyebrow: "الهيئة الإدارية حسب السنة",
       boardTitle: "أرشيف القيادة",
       boardEmptyTitle: "لا توجد بيانات",
@@ -589,9 +669,9 @@ export const dictionaries = {
     },
     events: {
       eyebrow: "الفعاليات",
-      title: "تعلّم وتواصل وتجارب عملية.",
+      title: "أنشطة وورش وتجارب طلابية.",
       description:
-        "استكشف فعاليات الجمعية القادمة مع مواعيد واضحة وبطاقات مختصرة وصفحات تفاصيل معدّة لتسجيل سلس.",
+        "استكشف فعاليات الجمعية العلمية والتدريبية والتوعوية مع تفاصيل واضحة وصفحات معدّة لتسجيل سلس.",
       emptyTitle: "لا توجد فعاليات مجدولة",
       emptyDescription: "تحقق لاحقًا للاطلاع على ورش وجلسات جديدة.",
       eventDetailEyebrow: "تفاصيل الفعالية",

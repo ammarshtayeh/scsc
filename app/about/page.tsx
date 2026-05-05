@@ -4,6 +4,7 @@ import { PageHero } from "@/components/ui/page-hero";
 import { SmartImage } from "@/components/ui/smart-image";
 import { getBoardMembersByYear } from "@/lib/firebase/queries";
 import { getServerDictionary } from "@/lib/i18n/server";
+import { CheckCircle2, Network, UsersRound } from "lucide-react";
 
 export default async function AboutPage() {
   const dictionary = getServerDictionary();
@@ -39,6 +40,92 @@ export default async function AboutPage() {
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 50vw"
               />
+            </div>
+          </Card>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-accent/15 text-brand-accent">
+                <UsersRound className="h-5 w-5" />
+              </div>
+              <h2 className="font-heading text-2xl font-bold text-brand-primary">
+                {dictionary.about.principlesTitle}
+              </h2>
+            </div>
+            <ul className="space-y-3">
+              {dictionary.about.principles.map((principle) => (
+                <li key={principle} className="flex gap-3 text-sm leading-7 text-slate-600">
+                  <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-brand-accent" />
+                  <span>{principle}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          <Card className="space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-accent/15 text-brand-accent">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+              <h2 className="font-heading text-2xl font-bold text-brand-primary">
+                {dictionary.about.goalsTitle}
+              </h2>
+            </div>
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {dictionary.about.goals.map((goal) => (
+                <li key={goal} className="rounded-lg border border-brand-primary/10 bg-white/70 p-4 text-sm leading-7 text-slate-600 dark:border-white/10 dark:bg-white/5">
+                  {goal}
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+          <Card className="space-y-5">
+            <h2 className="font-heading text-2xl font-bold text-brand-primary">
+              {dictionary.about.membershipTitle}
+            </h2>
+            <p className="text-sm leading-8 text-slate-600">
+              {dictionary.about.membershipText}
+            </p>
+            <ul className="space-y-3">
+              {dictionary.about.membershipConditions.map((condition) => (
+                <li key={condition} className="flex gap-3 text-sm leading-7 text-slate-600">
+                  <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-brand-accent" />
+                  <span>{condition}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          <Card className="space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-accent/15 text-brand-accent">
+                <Network className="h-5 w-5" />
+              </div>
+              <h2 className="font-heading text-2xl font-bold text-brand-primary">
+                {dictionary.about.structureTitle}
+              </h2>
+            </div>
+            <p className="text-sm leading-8 text-slate-600">
+              {dictionary.about.foundingBody}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {dictionary.about.structure.map((role) => (
+                <div
+                  key={role}
+                  className="rounded-lg border border-brand-primary/10 bg-white/70 px-4 py-3 text-sm font-semibold text-brand-primary dark:border-white/10 dark:bg-white/5 dark:text-brand-ink"
+                >
+                  {role}
+                </div>
+              ))}
             </div>
           </Card>
         </div>

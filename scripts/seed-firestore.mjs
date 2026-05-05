@@ -87,40 +87,77 @@ const articles = [
 const events = [
   {
     id: "evt-1",
-    slug: "derma-glow-symposium",
-    title: "Derma Glow Symposium 2026",
+    slug: "master-your-time",
+    title: "Master Your Time: Time Management & Midterm Preparation",
     excerpt:
-      "A full-day campus symposium on evidence-based skin care, dermocosmetics, and member networking.",
+      "An interactive student session on time management, midterm preparation, productivity, and balanced study habits.",
     description: [
-      "The symposium combines keynote talks, product science sessions, and peer-led case discussions.",
-      "Attendees will explore formulation trends, ingredient literacy, and member collaboration opportunities."
+      "انضموا إلينا في جلسة تفاعلية حول إدارة الوقت بفعالية والاستعداد للامتحانات النصفية.",
+      "تناقش الجلسة الحفاظ على الإنتاجية خلال الأوقات الصعبة، مع التطرق للحديث عن بر الوالدين بمناسبة قرب يوم الأم."
     ],
     coverImage:
-      "https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1200&q=80",
-    startsAt: "2026-05-18T09:00:00.000Z",
-    venue: "Engineering Auditorium, An-Najah National University",
-    capacity: 120,
+      "https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=1200&q=80",
+    startsAt: "2026-03-17T10:00:00.000Z",
+    venue: "An-Najah National University",
+    capacity: 60,
     registeredCount: 0,
-    tags: ["Workshop", "Research", "Networking"],
+    tags: ["Workshop", "Members"],
     isFeatured: true
   },
   {
     id: "evt-2",
-    slug: "advanced-makeup-lab",
-    title: "Advanced Makeup Lab",
+    slug: "future-digital-marketing-cosmetics-pharmacy",
+    title: "The Future of Digital Marketing in Cosmetics & Pharmacy",
     excerpt:
-      "Hands-on demo covering skin prep, long-wear looks, and hygiene protocols.",
+      "A specialized session on the future of digital marketing in cosmetics and pharmacy.",
     description: [
-      "This lab is designed for members who want guided practical training.",
-      "Participants rotate through live stations and receive reference notes."
+      "A student activity supervised by Dr. Firas Al-Naser, Dr. Faten Amer, and Dr. Noor Barakat.",
+      "The session connects cosmetics, pharmacy, and digital marketing skills for students preparing for the professional field."
     ],
     coverImage:
-      "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&w=1200&q=80",
-    startsAt: "2026-06-02T11:00:00.000Z",
-    venue: "Student Innovation Hub",
+      "https://images.unsplash.com/photo-1557838923-2985c318be48?auto=format&fit=crop&w=1200&q=80",
+    startsAt: "2026-04-22T10:00:00.000Z",
+    venue: "An-Najah National University",
+    capacity: 80,
+    registeredCount: 0,
+    tags: ["Workshop", "Networking"]
+  },
+  {
+    id: "evt-3",
+    slug: "lotion-bar-solid-perfume",
+    title: "Lotion Bar & Solid Perfume",
+    excerpt:
+      "A practical cosmetics activity for society members focused on lotion bars and solid perfume.",
+    description: [
+      "A hands-on activity for members to explore applied cosmetic preparation.",
+      "Participants learn through practical demonstration and guided student engagement."
+    ],
+    coverImage:
+      "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=1200&q=80",
+    startsAt: "2026-04-22T12:00:00.000Z",
+    venue: "An-Najah National University",
     capacity: 40,
     registeredCount: 0,
-    tags: ["Makeup", "Lab"]
+    tags: ["Lab", "Members"]
+  },
+  {
+    id: "evt-4",
+    slug: "face-mapping",
+    title: "Face Mapping",
+    excerpt:
+      "An awareness exhibition about the relationship between internal health and skin appearance.",
+    description: [
+      "بإشراف عمادة شؤون الطلبة وكلية الصيدلة، تم تنظيم معرض تعريفي بعنوان Face Mapping للحديث عن العلاقة بين الصحة الداخلية والبشرة.",
+      "تضمن المعرض بوثات حول الجبهة والأمعاء، الهالات السوداء، الخدود والمعدة ونمط الحياة، والذقن والهرمونات.",
+      "تضمن النشاط أيضًا بوثًا للتعريف بأكاديمية النجاح للتجميل N-Joy وألعابًا ترفيهية."
+    ],
+    coverImage:
+      "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=1200&q=80",
+    startsAt: "2026-05-05T10:00:00.000Z",
+    venue: "An-Najah National University",
+    capacity: 120,
+    registeredCount: 0,
+    tags: ["Workshop", "Networking"]
   }
 ];
 
