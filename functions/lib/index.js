@@ -14,6 +14,7 @@ const uuid_1 = require("uuid");
 (0, app_1.initializeApp)();
 const db = (0, firestore_1.getFirestore)();
 const QR_LIFETIME_SECONDS = 45;
+const publicCallableOptions = { invoker: "public" };
 function createTransport() {
     if (!process.env.SMTP_HOST ||
         !process.env.SMTP_PORT ||
@@ -117,7 +118,7 @@ function slugify(value) {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "");
 }
-exports.sendContactEmail = (0, https_1.onCall)(async (request) => {
+exports.sendContactEmail = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     const { name, email, message } = request.data;
     if (!name || !email || !message) {
         throw new https_1.HttpsError("invalid-argument", "Name, email, and message are required.");
@@ -140,7 +141,7 @@ exports.sendContactEmail = (0, https_1.onCall)(async (request) => {
     }
     return { success: true };
 });
-exports.issueMembershipQrPass = (0, https_1.onCall)(async (request) => {
+exports.issueMembershipQrPass = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     var _a;
     const userId = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
     if (!userId) {
@@ -215,7 +216,7 @@ exports.issueMembershipQrPass = (0, https_1.onCall)(async (request) => {
         refreshIntervalSeconds: QR_LIFETIME_SECONDS
     };
 });
-exports.verifyMembership = (0, https_1.onCall)(async (request) => {
+exports.verifyMembership = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     const { pass } = request.data;
     if (!pass) {
         throw new https_1.HttpsError("invalid-argument", "Membership pass is required.");
@@ -337,7 +338,7 @@ exports.verifyMembership = (0, https_1.onCall)(async (request) => {
     });
     return result;
 });
-exports.setUserRole = (0, https_1.onCall)(async (request) => {
+exports.setUserRole = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdmin(request);
     const { uid, role } = request.data;
     if (!uid || !role) {
@@ -347,7 +348,7 @@ exports.setUserRole = (0, https_1.onCall)(async (request) => {
     await db.collection("users").doc(uid).set({ role }, { merge: true });
     return { success: true };
 });
-exports.upsertEvent = (0, https_1.onCall)(async (request) => {
+exports.upsertEvent = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdminOrModerator(request);
     const data = request.data;
     const id = cleanString(data.id) || db.collection("events").doc().id;
@@ -374,7 +375,7 @@ exports.upsertEvent = (0, https_1.onCall)(async (request) => {
     await db.collection("events").doc(id).set(payload, { merge: true });
     return { success: true, id };
 });
-exports.deleteEvent = (0, https_1.onCall)(async (request) => {
+exports.deleteEvent = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdminOrModerator(request);
     const { id } = request.data;
     if (!id) {
@@ -383,7 +384,7 @@ exports.deleteEvent = (0, https_1.onCall)(async (request) => {
     await db.collection("events").doc(id).delete();
     return { success: true };
 });
-exports.upsertProduct = (0, https_1.onCall)(async (request) => {
+exports.upsertProduct = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdminOrModerator(request);
     const data = request.data;
     const id = cleanString(data.id) || db.collection("products").doc().id;
@@ -410,7 +411,7 @@ exports.upsertProduct = (0, https_1.onCall)(async (request) => {
     await db.collection("products").doc(id).set(payload, { merge: true });
     return { success: true, id };
 });
-exports.deleteProduct = (0, https_1.onCall)(async (request) => {
+exports.deleteProduct = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdminOrModerator(request);
     const { id } = request.data;
     if (!id) {
@@ -419,7 +420,7 @@ exports.deleteProduct = (0, https_1.onCall)(async (request) => {
     await db.collection("products").doc(id).delete();
     return { success: true };
 });
-exports.updateUserAdmin = (0, https_1.onCall)(async (request) => {
+exports.updateUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdmin(request);
     const { uid, role, membershipStatus, membershipExpiresAt } = request.data;
     if (!uid) {
@@ -449,7 +450,7 @@ exports.updateUserAdmin = (0, https_1.onCall)(async (request) => {
     await db.collection("users").doc(uid).set(payload, { merge: true });
     return { success: true };
 });
-exports.updateOrderStatus = (0, https_1.onCall)(async (request) => {
+exports.updateOrderStatus = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdminOrModerator(request);
     const { id, status } = request.data;
     const allowedStatuses = ["pending", "confirmed", "processing", "delivered"];
@@ -462,7 +463,7 @@ exports.updateOrderStatus = (0, https_1.onCall)(async (request) => {
     }, { merge: true });
     return { success: true };
 });
-exports.moderateArticle = (0, https_1.onCall)(async (request) => {
+exports.moderateArticle = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdminOrModerator(request);
     const { id, approved } = request.data;
     if (!id || typeof approved !== "boolean") {

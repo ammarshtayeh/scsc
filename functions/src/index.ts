@@ -11,6 +11,7 @@ initializeApp();
 
 const db = getFirestore();
 const QR_LIFETIME_SECONDS = 45;
+const publicCallableOptions = { invoker: "public" as const };
 
 type MembershipStatus = "active" | "expired" | "pendingRenewal";
 type Role = "admin" | "moderator" | "user";
@@ -158,7 +159,7 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-export const sendContactEmail = onCall(async (request) => {
+export const sendContactEmail = onCall(publicCallableOptions, async (request) => {
   const { name, email, message } = request.data as {
     name?: string;
     email?: string;
@@ -191,7 +192,7 @@ export const sendContactEmail = onCall(async (request) => {
   return { success: true };
 });
 
-export const issueMembershipQrPass = onCall(async (request) => {
+export const issueMembershipQrPass = onCall(publicCallableOptions, async (request) => {
   const userId = request.auth?.uid;
 
   if (!userId) {
@@ -293,7 +294,7 @@ export const issueMembershipQrPass = onCall(async (request) => {
   };
 });
 
-export const verifyMembership = onCall(async (request) => {
+export const verifyMembership = onCall(publicCallableOptions, async (request) => {
   const { pass } = request.data as { pass?: string };
 
   if (!pass) {
@@ -460,7 +461,7 @@ export const verifyMembership = onCall(async (request) => {
   return result;
 });
 
-export const setUserRole = onCall(async (request) => {
+export const setUserRole = onCall(publicCallableOptions, async (request) => {
   requireAdmin(request);
 
   const { uid, role } = request.data as {
@@ -478,7 +479,7 @@ export const setUserRole = onCall(async (request) => {
   return { success: true };
 });
 
-export const upsertEvent = onCall(async (request) => {
+export const upsertEvent = onCall(publicCallableOptions, async (request) => {
   requireAdminOrModerator(request);
 
   const data = request.data as Record<string, unknown>;
@@ -510,7 +511,7 @@ export const upsertEvent = onCall(async (request) => {
   return { success: true, id };
 });
 
-export const deleteEvent = onCall(async (request) => {
+export const deleteEvent = onCall(publicCallableOptions, async (request) => {
   requireAdminOrModerator(request);
   const { id } = request.data as { id?: string };
 
@@ -522,7 +523,7 @@ export const deleteEvent = onCall(async (request) => {
   return { success: true };
 });
 
-export const upsertProduct = onCall(async (request) => {
+export const upsertProduct = onCall(publicCallableOptions, async (request) => {
   requireAdminOrModerator(request);
 
   const data = request.data as Record<string, unknown>;
@@ -554,7 +555,7 @@ export const upsertProduct = onCall(async (request) => {
   return { success: true, id };
 });
 
-export const deleteProduct = onCall(async (request) => {
+export const deleteProduct = onCall(publicCallableOptions, async (request) => {
   requireAdminOrModerator(request);
   const { id } = request.data as { id?: string };
 
@@ -566,7 +567,7 @@ export const deleteProduct = onCall(async (request) => {
   return { success: true };
 });
 
-export const updateUserAdmin = onCall(async (request) => {
+export const updateUserAdmin = onCall(publicCallableOptions, async (request) => {
   requireAdmin(request);
 
   const { uid, role, membershipStatus, membershipExpiresAt } = request.data as {
@@ -609,7 +610,7 @@ export const updateUserAdmin = onCall(async (request) => {
   return { success: true };
 });
 
-export const updateOrderStatus = onCall(async (request) => {
+export const updateOrderStatus = onCall(publicCallableOptions, async (request) => {
   requireAdminOrModerator(request);
 
   const { id, status } = request.data as {
@@ -633,7 +634,7 @@ export const updateOrderStatus = onCall(async (request) => {
   return { success: true };
 });
 
-export const moderateArticle = onCall(async (request) => {
+export const moderateArticle = onCall(publicCallableOptions, async (request) => {
   requireAdminOrModerator(request);
 
   const { id, approved } = request.data as {

@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Save, Trash2 } from "lucide-react";
+import { CheckCircle2, ImageUp, LinkIcon, Save, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -18,6 +18,7 @@ import {
   upsertEventAdmin,
   upsertProductAdmin
 } from "@/lib/firebase/functions";
+import { uploadFileToStorage } from "@/lib/firebase/storage";
 import {
   translateArticleCategory,
   translateMembershipStatus,
@@ -61,6 +62,22 @@ function splitCsv(value: string) {
     .split(",")
     .map((entry) => entry.trim())
     .filter(Boolean);
+}
+
+function cleanFileName(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9.]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+async function uploadDashboardImage(folder: "events" | "products", file: File) {
+  const safeName = cleanFileName(file.name) || "image";
+  const extension = safeName.includes(".") ? "" : ".jpg";
+  return uploadFileToStorage(
+    `images/${folder}/${Date.now()}-${crypto.randomUUID()}-${safeName}${extension}`,
+    file
+  );
 }
 
 export function DashboardShell({
@@ -130,6 +147,7 @@ export function DashboardShell({
     description: "",
     tags: ""
   });
+  const [eventImageFile, setEventImageFile] = useState<File | null>(null);
   const [productForm, setProductForm] = useState({
     name: "",
     price: "10",
@@ -141,6 +159,25 @@ export function DashboardShell({
     description: "",
     longDescription: ""
   });
+  const [productImageFiles, setProductImageFiles] = useState<File[]>([]);
+  const imageLabels =
+    locale === "ar"
+      ? {
+          url: "رابط الصورة",
+          upload: "رفع صورة",
+          uploadMany: "رفع صور",
+          eventHint: "يمكنك وضع رابط صورة أو رفع صورة من جهازك.",
+          productHint: "يمكنك وضع رابط صورة أو رفع صورة/صور من جهازك.",
+          selected: "تم اختيار"
+        }
+      : {
+          url: "Image URL",
+          upload: "Upload image",
+          uploadMany: "Upload images",
+          eventHint: "Use an image URL or upload one from your device.",
+          productHint: "Use an image URL or upload one or more images from your device.",
+          selected: "Selected"
+        };
 
   const statCards = useMemo(
     () => [
@@ -190,26 +227,50 @@ export function DashboardShell({
               className="grid gap-3 md:grid-cols-2"
               onSubmit={(event) => {
                 event.preventDefault();
-                void runAction("create-event", () =>
-                  upsertEventAdmin({
+                void runAction("create-event", async () => {
+                  const uploadedCoverImage = eventImageFile
+                    ? await uploadDashboardImage("events", eventImageFile)
+                    : "";
+
+                  await upsertEventAdmin({
                     title: eventForm.title,
                     startsAt: eventForm.startsAt,
                     venue: eventForm.venue,
                     capacity: Number(eventForm.capacity),
-                    coverImage: eventForm.coverImage,
+                    coverImage: uploadedCoverImage || eventForm.coverImage,
                     excerpt: eventForm.excerpt,
                     description: splitLines(eventForm.description),
                     tags: splitCsv(eventForm.tags),
                     registeredCount: 0
-                  })
-                );
+                  });
+                  setEventImageFile(null);
+                });
               }}
             >
               <input required placeholder={labels.eventTitlePlaceholder} value={eventForm.title} onChange={(event) => setEventForm((current) => ({ ...current, title: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
               <input required type="datetime-local" value={eventForm.startsAt} onChange={(event) => setEventForm((current) => ({ ...current, startsAt: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
               <input placeholder={labels.eventVenuePlaceholder} value={eventForm.venue} onChange={(event) => setEventForm((current) => ({ ...current, venue: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
               <input required type="number" min={1} placeholder={labels.eventCapacityPlaceholder} value={eventForm.capacity} onChange={(event) => setEventForm((current) => ({ ...current, capacity: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input placeholder={labels.eventCoverImagePlaceholder} value={eventForm.coverImage} onChange={(event) => setEventForm((current) => ({ ...current, coverImage: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <div className="grid gap-3 md:col-span-2 md:grid-cols-2">
+                <label className="space-y-2">
+                  <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                    <LinkIcon className="h-4 w-4" />
+                    {imageLabels.url}
+                  </span>
+                  <input placeholder={labels.eventCoverImagePlaceholder} value={eventForm.coverImage} onChange={(event) => setEventForm((current) => ({ ...current, coverImage: event.target.value }))} className="w-full rounded-xl border border-brand-primary/10 px-4 py-3" />
+                </label>
+                <label className="space-y-2">
+                  <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                    <ImageUp className="h-4 w-4" />
+                    {imageLabels.upload}
+                  </span>
+                  <input type="file" accept="image/*" onChange={(event) => setEventImageFile(event.target.files?.[0] || null)} className="w-full rounded-xl border border-brand-primary/10 bg-white px-4 py-3 text-sm" />
+                </label>
+                <p className="text-xs leading-5 text-slate-500 md:col-span-2">
+                  {imageLabels.eventHint}
+                  {eventImageFile ? ` ${imageLabels.selected}: ${eventImageFile.name}` : ""}
+                </p>
+              </div>
               <textarea placeholder={labels.eventExcerptPlaceholder} value={eventForm.excerpt} onChange={(event) => setEventForm((current) => ({ ...current, excerpt: event.target.value }))} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
               <textarea placeholder={labels.eventDescriptionPlaceholder} value={eventForm.description} onChange={(event) => setEventForm((current) => ({ ...current, description: event.target.value }))} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
               <input placeholder={labels.eventTagsPlaceholder} value={eventForm.tags} onChange={(event) => setEventForm((current) => ({ ...current, tags: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
@@ -257,19 +318,25 @@ export function DashboardShell({
               className="grid gap-3 md:grid-cols-2"
               onSubmit={(event) => {
                 event.preventDefault();
-                void runAction("create-product", () =>
-                  upsertProductAdmin({
+                void runAction("create-product", async () => {
+                  const uploadedImages = await Promise.all(
+                    productImageFiles.map((file) => uploadDashboardImage("products", file))
+                  );
+                  const images = [...(productForm.image ? [productForm.image] : []), ...uploadedImages];
+
+                  await upsertProductAdmin({
                     name: productForm.name,
                     price: Number(productForm.price),
                     memberPrice: Number(productForm.memberPrice),
                     stock: Number(productForm.stock),
                     category: productForm.category,
                     company: productForm.company,
-                    images: productForm.image ? [productForm.image] : [],
+                    images,
                     description: productForm.description,
                     longDescription: splitLines(productForm.longDescription)
-                  })
-                );
+                  });
+                  setProductImageFiles([]);
+                });
               }}
             >
               <input required placeholder={labels.productNamePlaceholder} value={productForm.name} onChange={(event) => setProductForm((current) => ({ ...current, name: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
@@ -284,7 +351,28 @@ export function DashboardShell({
               <input required type="number" min={0} value={productForm.stock} onChange={(event) => setProductForm((current) => ({ ...current, stock: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
               <input required type="number" min={0.01} step="0.01" value={productForm.price} onChange={(event) => setProductForm((current) => ({ ...current, price: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
               <input type="number" min={0.01} step="0.01" value={productForm.memberPrice} onChange={(event) => setProductForm((current) => ({ ...current, memberPrice: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input placeholder={labels.productImagePlaceholder} value={productForm.image} onChange={(event) => setProductForm((current) => ({ ...current, image: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <div className="grid gap-3 md:col-span-2 md:grid-cols-2">
+                <label className="space-y-2">
+                  <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                    <LinkIcon className="h-4 w-4" />
+                    {imageLabels.url}
+                  </span>
+                  <input placeholder={labels.productImagePlaceholder} value={productForm.image} onChange={(event) => setProductForm((current) => ({ ...current, image: event.target.value }))} className="w-full rounded-xl border border-brand-primary/10 px-4 py-3" />
+                </label>
+                <label className="space-y-2">
+                  <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                    <ImageUp className="h-4 w-4" />
+                    {imageLabels.uploadMany}
+                  </span>
+                  <input type="file" accept="image/*" multiple onChange={(event) => setProductImageFiles(Array.from(event.target.files || []))} className="w-full rounded-xl border border-brand-primary/10 bg-white px-4 py-3 text-sm" />
+                </label>
+                <p className="text-xs leading-5 text-slate-500 md:col-span-2">
+                  {imageLabels.productHint}
+                  {productImageFiles.length
+                    ? ` ${imageLabels.selected}: ${productImageFiles.map((file) => file.name).join(", ")}`
+                    : ""}
+                </p>
+              </div>
               <textarea placeholder={labels.productDescriptionPlaceholder} value={productForm.description} onChange={(event) => setProductForm((current) => ({ ...current, description: event.target.value }))} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
               <textarea placeholder={labels.productLongDescriptionPlaceholder} value={productForm.longDescription} onChange={(event) => setProductForm((current) => ({ ...current, longDescription: event.target.value }))} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
               <Button loading={loadingAction === "create-product"} type="submit" className="md:col-span-2">
