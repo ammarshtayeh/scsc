@@ -18,6 +18,10 @@ function resolveRedirect(redirect: string | null, fallback: string) {
   return redirect;
 }
 
+function isValidSignupPassword(password: string) {
+  return password.length >= 8 && /\d/.test(password);
+}
+
 export function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -56,7 +60,7 @@ export function SignupForm() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (form.password.length < 6) {
+    if (!isValidSignupPassword(form.password)) {
       pushToast(dictionary.auth.passwordShort, "error");
       return;
     }

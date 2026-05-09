@@ -48,7 +48,12 @@ export function LoginForm() {
       return dictionary.auth.invalidCredentials;
     }
 
-    if (error.message === "auth/invalid-credentials") {
+    if (
+      error.message === "auth/invalid-credentials" ||
+      error.message.includes("auth/invalid-credential") ||
+      error.message.includes("auth/wrong-password") ||
+      error.message.includes("auth/user-not-found")
+    ) {
       return dictionary.auth.invalidCredentials;
     }
 
@@ -76,8 +81,17 @@ export function LoginForm() {
       pushToast(dictionary.auth.welcomeBack, "success");
       router.replace(resolveRedirect(redirect, nextPath));
     } catch (error) {
-      recordFailedLogin(email);
-      pushToast(getErrorMessage(error), "error");
+      const attempt = recordFailedLogin(email);
+      if (attempt.lockedUntil) {
+        pushToast(
+          `${dictionary.auth.lockoutPrefix} ${new Date(attempt.lockedUntil).toLocaleTimeString(
+            locale === "ar" ? "ar-PS" : "en-US"
+          )}.`,
+          "error"
+        );
+      } else {
+        pushToast(getErrorMessage(error), "error");
+      }
     } finally {
       setLoading(false);
     }

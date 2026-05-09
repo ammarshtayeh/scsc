@@ -57,6 +57,17 @@ export async function getAllArticles(category?: string): Promise<Article[]> {
   return snapshot.docs.map((doc) => convertDoc<Article>(doc.id, doc.data()));
 }
 
+export async function getArticlesForModeration(): Promise<Article[]> {
+  if (!isFirebaseAdminConfigured || !adminDb) {
+    return [];
+  }
+
+  const snapshot = await adminDb.collection("articles").orderBy("publishedAt", "desc").get();
+  return snapshot.docs
+    .map((doc) => convertDoc<Article>(doc.id, doc.data()))
+    .sort((a, b) => Number(a.approved) - Number(b.approved));
+}
+
 export async function getArticleBySlug(slug: string): Promise<Article | null> {
   if (!isFirebaseAdminConfigured || !adminDb) {
     return null;

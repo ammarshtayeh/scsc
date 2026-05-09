@@ -10,6 +10,7 @@ import { SmartImage } from "@/components/ui/smart-image";
 import { useToast } from "@/components/ui/toast";
 import { useCart } from "@/hooks/useCart";
 import { useLocale } from "@/hooks/useLocale";
+import { useMemberPricing } from "@/hooks/useMemberPricing";
 import { PRODUCT_CATEGORIES } from "@/lib/constants";
 import { translateProductCategory } from "@/lib/i18n/helpers";
 import { formatCurrency, formatNumber } from "@/lib/utils";
@@ -18,7 +19,11 @@ import type { Product } from "@/types";
 export function StoreShell({ products }: { products: Product[] }) {
   const { dictionary, locale } = useLocale();
   const { pushToast } = useToast();
-  const { items, total, addProduct, updateQuantity, checkout } = useCart(products);
+  const memberPricing = useMemberPricing();
+  const { items, total, addProduct, updateQuantity, checkout } = useCart(
+    products,
+    memberPricing.useMemberPricing
+  );
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [company, setCompany] = useState("All");
@@ -36,10 +41,18 @@ export function StoreShell({ products }: { products: Product[] }) {
         product.description.toLowerCase().includes(search.toLowerCase());
       const matchesCategory = category === "All" || product.category === category;
       const matchesCompany = company === "All" || product.company === company;
-      const matchesPrice = (product.memberPrice ?? product.price) <= maxPrice;
+      const matchesPrice =
+        (memberPricing.useMemberPricing ? product.memberPrice ?? product.price : product.price) <=
+        maxPrice;
       return matchesSearch && matchesCategory && matchesCompany && matchesPrice;
     });
-  }, [products, search, category, company, maxPrice]);
+  }, [products, search, category, company, maxPrice, memberPricing.useMemberPricing]);
+
+  const hasCartStockIssue = items.some((item) => item.product.stock < item.quantity);
+
+  function getDisplayPrice(product: Product) {
+    return memberPricing.useMemberPricing ? product.memberPrice ?? product.price : product.price;
+  }
 
   async function handleCheckout() {
     try {
@@ -62,6 +75,11 @@ export function StoreShell({ products }: { products: Product[] }) {
               {dictionary.store.filters}
             </h2>
             <p className="mt-2 text-sm text-slate-600">{dictionary.store.filtersText}</p>
+            {!memberPricing.useMemberPricing ? (
+              <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+                {dictionary.store.renewalPrompt}
+              </p>
+            ) : null}
           </div>
           <div>
             <label className="mb-2 block text-sm font-medium text-brand-primary">
@@ -149,9 +167,9 @@ export function StoreShell({ products }: { products: Product[] }) {
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-semibold text-brand-primary">
-                          {formatCurrency(product.memberPrice ?? product.price, "USD", locale)}
+                          {formatCurrency(getDisplayPrice(product), "USD", locale)}
                         </p>
-                        {product.memberPrice ? (
+                        {memberPricing.useMemberPricing && product.memberPrice ? (
                           <p className="text-xs text-slate-400 line-through">
                             {formatCurrency(product.price, "USD", locale)}
                           </p>
@@ -165,6 +183,7 @@ export function StoreShell({ products }: { products: Product[] }) {
                       </Link>
                       <Button
                         className="w-full sm:w-auto"
+                        disabled={product.stock <= 0}
                         onClick={async () => {
                           try {
                             await addProduct(product.id);
@@ -179,7 +198,7 @@ export function StoreShell({ products }: { products: Product[] }) {
                           }
                         }}
                       >
-                        {dictionary.store.addToCart}
+                        {product.stock <= 0 ? dictionary.store.outOfStock : dictionary.store.addToCart}
                       </Button>
                     </div>
                   </div>
@@ -209,6 +228,11 @@ export function StoreShell({ products }: { products: Product[] }) {
                   <p className="mt-1 text-sm text-slate-500">
                     {formatCurrency(item?.lineTotal || 0, "USD", locale)}
                   </p>
+                  {item.product.stock < item.quantity ? (
+                    <p className="mt-2 text-xs font-medium text-rose-600">
+                      {dictionary.store.cartStockWarning}
+                    </p>
+                  ) : null}
                   <div className="mt-3 flex items-center gap-3">
                     <Button
                       size="sm"
@@ -225,6 +249,7 @@ export function StoreShell({ products }: { products: Product[] }) {
                       size="sm"
                       variant="secondary"
                       className="h-10 w-10 rounded-full px-0"
+                      disabled={item.product.stock <= item.quantity}
                       onClick={() => updateQuantity(item!.product.id, item!.quantity + 1)}
                     >
                       +
@@ -242,7 +267,7 @@ export function StoreShell({ products }: { products: Product[] }) {
               {formatCurrency(total, "USD", locale)}
             </p>
           </div>
-          <Button className="w-full" disabled={!items.length} onClick={handleCheckout}>
+          <Button className="w-full" disabled={!items.length || hasCartStockIssue} onClick={handleCheckout}>
             {dictionary.store.checkout}
           </Button>
         </Card>

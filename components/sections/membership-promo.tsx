@@ -7,11 +7,14 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "@/hooks/useLocale";
 
 export function MembershipPromo() {
+  const { user } = useAuth();
   const { dictionary } = useLocale();
   const [expanded, setExpanded] = useState(false);
+  const joinHref = user ? "/profile" : "/auth/signup";
   const benefits = [
     {
       ...dictionary.membershipPromo.benefits[0],
@@ -113,7 +116,7 @@ export function MembershipPromo() {
               </motion.div>
             </div>
             <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap">
-              <Link href="/auth/signup" className="w-full sm:w-auto">
+              <Link href={joinHref} className="w-full sm:w-auto">
                 <Button variant="accent" size="lg" className="w-full font-semibold sm:w-auto">
                   {dictionary.membershipPromo.joinCta}
                 </Button>

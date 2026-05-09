@@ -16,6 +16,14 @@ import type { Article, ArticleCategory } from "@/types";
 
 type ArticleFilter = ArticleCategory | "All";
 
+function truncatePreview(value: string, maxLength = 150) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, maxLength - 3).trimEnd()}...`;
+}
+
 export function ArticleBrowser({ articles }: { articles: Article[] }) {
   const { dictionary, locale } = useLocale();
   const [activeCategory, setActiveCategory] = useState<ArticleFilter>("All");
@@ -80,7 +88,9 @@ export function ArticleBrowser({ articles }: { articles: Article[] }) {
                   <h2 className="font-heading text-2xl font-semibold text-brand-primary">
                     {article.title}
                   </h2>
-                  <p className="text-sm leading-7 text-slate-600">{article.excerpt}</p>
+                  <p className="text-sm leading-7 text-slate-600">
+                    {truncatePreview(article.excerpt)}
+                  </p>
                   <Link href={`/education/${article.slug}`}>
                     <Button variant="ghost">{dictionary.common.readMore}</Button>
                   </Link>

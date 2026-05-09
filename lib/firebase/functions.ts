@@ -95,6 +95,10 @@ export async function updateUserAdmin(payload: {
   return callAdminFunction("updateUserAdmin", payload);
 }
 
+export async function deleteUserAdmin(uid: string) {
+  return callAdminFunction<{ uid: string }>("deleteUserAdmin", { uid });
+}
+
 export async function updateOrderStatusAdmin(payload: {
   id: string;
   status: OrderStatus;

@@ -9,14 +9,25 @@ import { cn } from "@/lib/utils";
 export function Sidebar() {
   const pathname = usePathname();
   const { dictionary } = useLocale();
-  const dashboardLinks = [
-    { href: "/dashboard", label: dictionary.dashboard.overview },
-    { href: "/dashboard#events", label: dictionary.nav.events },
-    { href: "/dashboard#products", label: dictionary.store.eyebrow },
-    { href: "/dashboard#users", label: dictionary.dashboard.userManagement },
-    { href: "/dashboard#orders", label: dictionary.dashboard.orders },
-    { href: "/dashboard#moderation", label: dictionary.dashboard.moderation }
-  ];
+  const basePath = pathname.startsWith("/admin")
+    ? "/admin"
+    : pathname.startsWith("/moderator")
+      ? "/moderator"
+      : "/dashboard";
+  const isModeratorPanel = basePath === "/moderator";
+  const dashboardLinks = isModeratorPanel
+    ? [
+        { href: "/moderator", label: dictionary.dashboard.overview },
+        { href: "/moderator/moderation#moderation", label: dictionary.dashboard.moderation }
+      ]
+    : [
+        { href: basePath, label: dictionary.dashboard.overview },
+        { href: `${basePath}/events#events`, label: dictionary.nav.events },
+        { href: `${basePath}/products#products`, label: dictionary.store.eyebrow },
+        { href: `${basePath}/users#users`, label: dictionary.dashboard.userManagement },
+        { href: `${basePath}/orders#orders`, label: dictionary.dashboard.orders },
+        { href: `${basePath}/moderation#moderation`, label: dictionary.dashboard.moderation }
+      ];
 
   return (
     <aside className="rounded-[28px] border border-white/50 bg-white/80 p-5 shadow-soft backdrop-blur-xl">

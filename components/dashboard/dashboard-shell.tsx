@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/toast";
 import {
   deleteEventAdmin,
   deleteProductAdmin,
+  deleteUserAdmin,
   moderateArticleAdmin,
   updateOrderStatusAdmin,
   updateUserAdmin,
@@ -88,7 +89,8 @@ export function DashboardShell({
   orders,
   articles,
   locale,
-  labels
+  labels,
+  mode = "admin"
 }: {
   stats: DashboardStats;
   events: EventItem[];
@@ -97,6 +99,7 @@ export function DashboardShell({
   orders: Order[];
   articles: Article[];
   locale: Locale;
+  mode?: "admin" | "moderator";
   labels: {
     totalUsers: string;
     upcomingEvents: string;
@@ -178,6 +181,7 @@ export function DashboardShell({
           productHint: "Use an image URL or upload one or more images from your device.",
           selected: "Selected"
         };
+  const showManagementSections = mode === "admin";
 
   const statCards = useMemo(
     () => [
@@ -208,17 +212,20 @@ export function DashboardShell({
         <Sidebar />
 
         <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {statCards.map((card) => (
-              <Card key={card.label}>
-                <p className="text-sm text-slate-500">{card.label}</p>
-                <p className="mt-3 font-heading text-4xl font-bold text-brand-primary">
-                  {formatNumber(card.value, locale)}
-                </p>
-              </Card>
-            ))}
-          </div>
+          {showManagementSections ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {statCards.map((card) => (
+                <Card key={card.label}>
+                  <p className="text-sm text-slate-500">{card.label}</p>
+                  <p className="mt-3 font-heading text-4xl font-bold text-brand-primary">
+                    {formatNumber(card.value, locale)}
+                  </p>
+                </Card>
+              ))}
+            </div>
+          ) : null}
 
+          {showManagementSections ? (
           <Card id="events" className="space-y-5">
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">
               {labels.eventManagement}
@@ -298,7 +305,14 @@ export function DashboardShell({
                         variant="secondary"
                         size="sm"
                         loading={loadingAction === `delete-event-${event.id}`}
-                        onClick={() => runAction(`delete-event-${event.id}`, () => deleteEventAdmin(event.id))}
+                        onClick={() => {
+                          if (event.registeredCount > 0) {
+                            window.alert("This event has registrations and cannot be deleted safely.");
+                            return;
+                          }
+
+                          void runAction(`delete-event-${event.id}`, () => deleteEventAdmin(event.id));
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                         {labels.delete}
@@ -309,7 +323,9 @@ export function DashboardShell({
               ))}
             </div>
           </Card>
+          ) : null}
 
+          {showManagementSections ? (
           <Card id="products" className="space-y-5">
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">
               {labels.productManagement}
@@ -411,14 +427,16 @@ export function DashboardShell({
               ))}
             </div>
           </Card>
+          ) : null}
 
+          {showManagementSections ? (
           <Card id="users" className="space-y-4">
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">
               {labels.userManagement}
             </h2>
             <div className="grid gap-4">
               {users.map((entry) => (
-                <div key={entry.id} className="grid gap-3 rounded-2xl border border-brand-primary/10 p-4 md:grid-cols-[1fr_auto_auto_auto] md:items-center">
+                <div key={entry.id} className="grid gap-3 rounded-2xl border border-brand-primary/10 p-4 md:grid-cols-[1fr_auto_auto_auto_auto] md:items-center">
                   <div>
                     <p className="font-medium text-brand-primary">{entry.displayName}</p>
                     <p className="text-sm text-slate-500">{entry.email}</p>
@@ -456,11 +474,28 @@ export function DashboardShell({
                     <Save className="h-4 w-4" />
                     {labels.save}
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={loadingAction === `delete-user-${entry.id}`}
+                    onClick={() => {
+                      if (!window.confirm("Delete this user account?")) {
+                        return;
+                      }
+
+                      void runAction(`delete-user-${entry.id}`, () => deleteUserAdmin(entry.id));
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {labels.delete}
+                  </Button>
                 </div>
               ))}
             </div>
           </Card>
+          ) : null}
 
+          {showManagementSections ? (
           <Card id="orders" className="space-y-4">
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">
               {labels.orders}
@@ -502,6 +537,7 @@ export function DashboardShell({
               ))}
             </div>
           </Card>
+          ) : null}
 
           <Card id="moderation" className="space-y-4">
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">

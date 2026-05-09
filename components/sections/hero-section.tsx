@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ImageSlider } from "@/components/sections/image-slider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "@/hooks/useLocale";
 import type { EventItem } from "@/types";
 
@@ -31,7 +32,9 @@ const itemVariants = {
 };
 
 export function HeroSection({ slides, featuredEvent }: HeroSectionProps) {
+  const { user } = useAuth();
   const { dictionary, direction } = useLocale();
+  const joinHref = user ? "/profile" : "/auth/signup";
 
   return (
     <section className="relative overflow-hidden">
@@ -88,7 +91,7 @@ export function HeroSection({ slides, featuredEvent }: HeroSectionProps) {
             </motion.div>
 
             <motion.div variants={itemVariants} className="mt-7 grid gap-3 sm:mt-8 sm:flex sm:flex-wrap sm:gap-4">
-              <Link href="/auth/signup" className="w-full sm:w-auto">
+              <Link href={joinHref} className="w-full sm:w-auto">
                 <Button size="lg" className="group w-full sm:w-auto">
                   {dictionary.home.joinCta}
                   <ArrowRight

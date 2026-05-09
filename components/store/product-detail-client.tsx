@@ -8,6 +8,7 @@ import { SmartImage } from "@/components/ui/smart-image";
 import { useToast } from "@/components/ui/toast";
 import { useCart } from "@/hooks/useCart";
 import { useLocale } from "@/hooks/useLocale";
+import { useMemberPricing } from "@/hooks/useMemberPricing";
 import { translateProductCategory } from "@/lib/i18n/helpers";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import type { Product } from "@/types";
@@ -21,8 +22,12 @@ export function ProductDetailClient({
 }) {
   const { dictionary, locale } = useLocale();
   const { pushToast } = useToast();
-  const { addProduct } = useCart(allProducts);
+  const memberPricing = useMemberPricing();
+  const { addProduct } = useCart(allProducts, memberPricing.useMemberPricing);
   const [activeImage, setActiveImage] = useState(product.images[0]);
+  const displayPrice = memberPricing.useMemberPricing
+    ? product.memberPrice ?? product.price
+    : product.price;
 
   async function handleAdd() {
     try {
@@ -74,11 +79,16 @@ export function ProductDetailClient({
           </div>
           <div>
             <p className="font-heading text-3xl font-bold text-brand-primary">
-              {formatCurrency(product.memberPrice ?? product.price, "USD", locale)}
+              {formatCurrency(displayPrice, "USD", locale)}
             </p>
-            {product.memberPrice ? (
+            {memberPricing.useMemberPricing && product.memberPrice ? (
               <p className="mt-1 text-sm text-slate-400 line-through">
                 {formatCurrency(product.price, "USD", locale)}
+              </p>
+            ) : null}
+            {!memberPricing.useMemberPricing ? (
+              <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+                {dictionary.store.renewalPrompt}
               </p>
             ) : null}
           </div>

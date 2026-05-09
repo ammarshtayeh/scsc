@@ -532,6 +532,9 @@ export function ProfileShell({
                 ) : (
                   <p className="text-sm text-slate-500">{dictionary.profile.qrGenerating}</p>
                 )}
+                <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+                  {dictionary.profile.qrScreenshotWarning}
+                </p>
 
                 <div className="grid gap-3 text-sm text-slate-600">
                   <p>

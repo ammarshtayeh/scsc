@@ -12,7 +12,7 @@ import {
 import type { CartItem, Product } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 
-export function useCart(products: Product[]) {
+export function useCart(products: Product[], useMemberPricing = true) {
   const { user } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +43,9 @@ export function useCart(products: Product[]) {
         return {
           ...item,
           product,
-          lineTotal: (product.memberPrice ?? product.price) * item.quantity
+          lineTotal:
+            (useMemberPricing ? product.memberPrice ?? product.price : product.price) *
+            item.quantity
         };
       })
       .filter(
@@ -54,7 +56,7 @@ export function useCart(products: Product[]) {
           lineTotal: number;
         } => Boolean(item)
       );
-  }, [items, products]);
+  }, [items, products, useMemberPricing]);
 
   const total = useMemo(
     () => decoratedItems.reduce((sum, item) => sum + (item?.lineTotal || 0), 0),
@@ -65,6 +67,12 @@ export function useCart(products: Product[]) {
     if (!user) {
       throw new Error("Please login first.");
     }
+
+    const product = products.find((entry) => entry.id === productId);
+    if (!product || product.stock <= 0) {
+      throw new Error("This product is currently out of stock.");
+    }
+
     await addCartItem(user.id, productId, 1);
   }
 
@@ -83,7 +91,7 @@ export function useCart(products: Product[]) {
     if (!user) {
       throw new Error("Please login first.");
     }
-    return checkoutCodOrder(user.id, products);
+    return checkoutCodOrder(user.id, products, useMemberPricing);
   }
 
   return {

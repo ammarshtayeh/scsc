@@ -37,6 +37,10 @@ const imageSources = [
   "/board/member-08.jpg"
 ];
 
+function getMemberImage(index: number) {
+  return imageSources[index % imageSources.length];
+}
+
 const memberNames = [
   "Ahmad Natsheh",
   "Mohammad Abu Ghazaleh",
@@ -107,7 +111,7 @@ function MemberPhotoCard({
       }`}
     >
       <div
-        className={`relative overflow-hidden bg-[#08213d] ${
+        className={`relative min-h-[230px] overflow-hidden bg-[#08213d] sm:min-h-[260px] ${
           featured ? "aspect-[4/3] lg:aspect-[16/10]" : "aspect-[4/5]"
         }`}
       >
@@ -137,10 +141,10 @@ function MemberPhotoCard({
       </div>
       <div className="flex min-h-[132px] items-center justify-between gap-4 border-t border-white/10 bg-[#06172b]/68 p-4 sm:p-5">
         <div className="min-w-0">
-          <h3 className="font-heading text-xl font-bold leading-7 text-white">
+          <h3 className="break-words font-heading text-lg font-bold leading-7 text-white sm:text-xl">
             {name}
           </h3>
-          <p className="mt-2 text-sm font-semibold leading-6 text-white/68">
+          <p className="mt-2 break-words text-sm font-semibold leading-6 text-white/68">
             {role}
           </p>
         </div>
@@ -204,13 +208,13 @@ export function OrganizationStructure({
             >
               {leadershipTitle}
             </motion.p>
-            <motion.div variants={containerVariants} className="grid gap-5 md:grid-cols-3">
+            <motion.div variants={containerVariants} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {leadershipRoles.map((role, index) => (
-                  <MemberPhotoCard
-                    key={role}
-                    role={role}
+                <MemberPhotoCard
+                  key={role}
+                  role={role}
                   name={memberNames[index] || `Board Member ${index + 1}`}
-                  image={imageSources[index]}
+                  image={getMemberImage(index)}
                   index={index}
                   Icon={leadershipIcons[index]}
                   featured
@@ -238,7 +242,7 @@ export function OrganizationStructure({
                     key={role}
                     role={role}
                     name={memberNames[memberIndex] || `Board Member ${memberIndex + 1}`}
-                    image={imageSources[memberIndex]}
+                    image={getMemberImage(memberIndex)}
                     index={memberIndex}
                     Icon={Icon}
                   />

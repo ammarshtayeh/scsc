@@ -171,6 +171,7 @@ export async function getCartItems(userId: string): Promise<CartItem[]> {
 export async function checkoutCodOrder(
   userId: string,
   products: Product[],
+  useMemberPricing = true,
   membershipDiscountRate = MEMBER_DISCOUNT_RATE
 ) {
   const cartItems = await getCartItems(userId);
@@ -178,6 +179,24 @@ export async function checkoutCodOrder(
   if (!cartItems.length) {
     throw new Error("Your cart is empty.");
   }
+
+  const database = db;
+
+  if (!database) {
+    throw new Error("Firebase Firestore is not configured.");
+  }
+
+  const userSnap = await getDoc(doc(database, "users", userId));
+  const userData = userSnap.data() as
+    | {
+        membershipStatus?: string;
+        membershipExpiresAt?: string;
+      }
+    | undefined;
+  const hasActiveMembership =
+    (userData?.membershipStatus || "active") === "active" &&
+    (!userData?.membershipExpiresAt || new Date(userData.membershipExpiresAt).getTime() >= Date.now());
+  const shouldUseMemberPricing = useMemberPricing && hasActiveMembership;
 
   const lineItems: OrderLineItem[] = cartItems.map((item) => {
     const product = products.find((entry) => entry.id === item.productId);
@@ -189,20 +208,16 @@ export async function checkoutCodOrder(
     return {
       productId: product.id,
       name: product.name,
-      price: product.memberPrice ?? product.price,
+      price: shouldUseMemberPricing ? product.memberPrice ?? product.price : product.price,
       quantity: item.quantity
     };
   });
 
   const subtotal = lineItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discount = Number((subtotal * membershipDiscountRate).toFixed(2));
+  const discount = shouldUseMemberPricing
+    ? Number((subtotal * membershipDiscountRate).toFixed(2))
+    : 0;
   const total = Number((subtotal - discount).toFixed(2));
-
-  const database = db;
-
-  if (!database) {
-    throw new Error("Firebase Firestore is not configured.");
-  }
 
   const orderId = uuidv4();
 

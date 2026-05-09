@@ -65,8 +65,12 @@ export async function sendPasswordReset(email: string) {
 }
 
 export function getRoleRedirect(role: Role | undefined) {
-  if (role === "admin" || role === "moderator") {
-    return "/dashboard";
+  if (role === "admin") {
+    return "/admin";
+  }
+
+  if (role === "moderator") {
+    return "/moderator";
   }
 
   return "/profile";

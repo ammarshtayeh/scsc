@@ -28,6 +28,8 @@ export function Navbar() {
     { href: "/contact", label: dictionary.nav.contact },
     { href: "/store", label: dictionary.nav.store }
   ];
+  const accountHref =
+    user?.role === "admin" ? "/admin" : user?.role === "moderator" ? "/moderator" : "/profile";
 
   const linkClass = (href: string) =>
     cn(
@@ -76,7 +78,7 @@ export function Navbar() {
                   <span>{dictionary.nav.store}</span>
                 </Button>
               </Link>
-              <Link href={user.role === "admin" || user.role === "moderator" ? "/dashboard" : "/profile"}>
+              <Link href={accountHref}>
                 <Button variant="ghost" size="sm" className="whitespace-nowrap">
                   <User2 className="h-4 w-4" />
                   <span className="max-w-28 truncate">{user.displayName}</span>
@@ -137,7 +139,7 @@ export function Navbar() {
                     {dictionary.nav.profile}
                   </Link>
                   {(user.role === "admin" || user.role === "moderator") && (
-                    <Link href="/dashboard" onClick={() => setOpen(false)} className="text-sm font-medium text-slate-700 dark:text-brand-mist">
+                    <Link href={accountHref} onClick={() => setOpen(false)} className="text-sm font-medium text-slate-700 dark:text-brand-mist">
                       {dictionary.nav.dashboard}
                     </Link>
                   )}

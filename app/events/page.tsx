@@ -12,7 +12,7 @@ import { translateEventTag } from "@/lib/i18n/helpers";
 import { getServerDictionary, getServerLocale } from "@/lib/i18n/server";
 import { formatDateTime, safeNumber } from "@/lib/utils";
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 9;
 
 export default async function EventsPage({
   searchParams

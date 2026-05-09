@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.moderateArticle = exports.updateOrderStatus = exports.updateUserAdmin = exports.deleteProduct = exports.upsertProduct = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
+exports.moderateArticle = exports.updateOrderStatus = exports.deleteUserAdmin = exports.updateUserAdmin = exports.deleteProduct = exports.upsertProduct = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
 const crypto_1 = require("crypto");
 const app_1 = require("firebase-admin/app");
 const auth_1 = require("firebase-admin/auth");
@@ -381,6 +381,15 @@ exports.deleteEvent = (0, https_1.onCall)(publicCallableOptions, async (request)
     if (!id) {
         throw new https_1.HttpsError("invalid-argument", "Event ID is required.");
     }
+    const registrationsSnap = await db
+        .collection("events")
+        .doc(id)
+        .collection("registrations")
+        .limit(1)
+        .get();
+    if (!registrationsSnap.empty) {
+        throw new https_1.HttpsError("failed-precondition", "This event has registrations. Confirm cleanup before deleting it.");
+    }
     await db.collection("events").doc(id).delete();
     return { success: true };
 });
@@ -450,6 +459,20 @@ exports.updateUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
     await db.collection("users").doc(uid).set(payload, { merge: true });
     return { success: true };
 });
+exports.deleteUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (request) => {
+    var _a;
+    requireAdmin(request);
+    const { uid } = request.data;
+    if (!uid) {
+        throw new https_1.HttpsError("invalid-argument", "User ID is required.");
+    }
+    if (uid === ((_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid)) {
+        throw new https_1.HttpsError("failed-precondition", "Cannot delete your own admin account.");
+    }
+    await (0, auth_1.getAuth)().deleteUser(uid);
+    await db.collection("users").doc(uid).delete();
+    return { success: true };
+});
 exports.updateOrderStatus = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdminOrModerator(request);
     const { id, status } = request.data;
@@ -464,14 +487,27 @@ exports.updateOrderStatus = (0, https_1.onCall)(publicCallableOptions, async (re
     return { success: true };
 });
 exports.moderateArticle = (0, https_1.onCall)(publicCallableOptions, async (request) => {
+    var _a;
     requireAdminOrModerator(request);
     const { id, approved } = request.data;
     if (!id || typeof approved !== "boolean") {
         throw new https_1.HttpsError("invalid-argument", "Article ID and approval status are required.");
     }
-    await db.collection("articles").doc(id).set({
-        approved,
-        moderatedAt: new Date().toISOString()
-    }, { merge: true });
+    const moderatedAt = new Date().toISOString();
+    const moderatorId = ((_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid) || "unknown";
+    await db.runTransaction(async (transaction) => {
+        transaction.set(db.collection("articles").doc(id), {
+            approved,
+            moderatedAt,
+            moderatedBy: moderatorId
+        }, { merge: true });
+        transaction.set(db.collection("moderationLogs").doc(), {
+            targetType: "article",
+            targetId: id,
+            action: approved ? "approved" : "rejected",
+            moderatorId,
+            createdAt: moderatedAt
+        });
+    });
     return { success: true };
 });

@@ -519,6 +519,20 @@ export const deleteEvent = onCall(publicCallableOptions, async (request) => {
     throw new HttpsError("invalid-argument", "Event ID is required.");
   }
 
+  const registrationsSnap = await db
+    .collection("events")
+    .doc(id)
+    .collection("registrations")
+    .limit(1)
+    .get();
+
+  if (!registrationsSnap.empty) {
+    throw new HttpsError(
+      "failed-precondition",
+      "This event has registrations. Confirm cleanup before deleting it."
+    );
+  }
+
   await db.collection("events").doc(id).delete();
   return { success: true };
 });
@@ -610,6 +624,24 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
   return { success: true };
 });
 
+export const deleteUserAdmin = onCall(publicCallableOptions, async (request) => {
+  requireAdmin(request);
+
+  const { uid } = request.data as { uid?: string };
+
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "User ID is required.");
+  }
+
+  if (uid === request.auth?.uid) {
+    throw new HttpsError("failed-precondition", "Cannot delete your own admin account.");
+  }
+
+  await getAuth().deleteUser(uid);
+  await db.collection("users").doc(uid).delete();
+  return { success: true };
+});
+
 export const updateOrderStatus = onCall(publicCallableOptions, async (request) => {
   requireAdminOrModerator(request);
 
@@ -646,13 +678,27 @@ export const moderateArticle = onCall(publicCallableOptions, async (request) => 
     throw new HttpsError("invalid-argument", "Article ID and approval status are required.");
   }
 
-  await db.collection("articles").doc(id).set(
-    {
-      approved,
-      moderatedAt: new Date().toISOString()
-    },
-    { merge: true }
-  );
+  const moderatedAt = new Date().toISOString();
+  const moderatorId = request.auth?.uid || "unknown";
+
+  await db.runTransaction(async (transaction) => {
+    transaction.set(
+      db.collection("articles").doc(id),
+      {
+        approved,
+        moderatedAt,
+        moderatedBy: moderatorId
+      },
+      { merge: true }
+    );
+    transaction.set(db.collection("moderationLogs").doc(), {
+      targetType: "article",
+      targetId: id,
+      action: approved ? "approved" : "rejected",
+      moderatorId,
+      createdAt: moderatedAt
+    });
+  });
 
   return { success: true };
 });

@@ -18,6 +18,10 @@ function buildLoginRedirect(request: NextRequest) {
   return NextResponse.redirect(url);
 }
 
+function buildRoleRedirect(request: NextRequest) {
+  return NextResponse.redirect(new URL("/profile", request.url));
+}
+
 async function verifySession(request: NextRequest): Promise<SessionData | null> {
   const token = request.cookies.get(COOKIE_NAME)?.value;
 
@@ -54,6 +58,26 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  if (pathname.startsWith("/admin")) {
+    if (!session) {
+      return buildLoginRedirect(request);
+    }
+
+    if (session.role !== "admin") {
+      return buildRoleRedirect(request);
+    }
+  }
+
+  if (pathname.startsWith("/moderator")) {
+    if (!session) {
+      return buildLoginRedirect(request);
+    }
+
+    if (!["admin", "moderator"].includes(session.role)) {
+      return buildRoleRedirect(request);
+    }
+  }
+
   if (pathname.startsWith("/dashboard")) {
     if (!session || !["admin", "moderator"].includes(session.role)) {
       return buildLoginRedirect(request);
@@ -64,5 +88,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/store/:path*", "/profile/:path*", "/dashboard/:path*"]
+  matcher: ["/store/:path*", "/profile/:path*", "/admin/:path*", "/moderator/:path*", "/dashboard/:path*"]
 };
