@@ -28,6 +28,12 @@ export function StoreShell({ products }: { products: Product[] }) {
   const [category, setCategory] = useState("All");
   const [company, setCompany] = useState("All");
   const [maxPrice, setMaxPrice] = useState(100);
+  const [deliveryForm, setDeliveryForm] = useState({
+    contactName: "",
+    phone: "",
+    address: "",
+    notes: ""
+  });
 
   const companies = useMemo(
     () => [dictionary.common.all, ...Array.from(new Set(products.map((product) => product.company)))],
@@ -55,9 +61,24 @@ export function StoreShell({ products }: { products: Product[] }) {
   }
 
   async function handleCheckout() {
+    if (
+      !deliveryForm.contactName.trim() ||
+      !deliveryForm.phone.trim() ||
+      !deliveryForm.address.trim()
+    ) {
+      pushToast(dictionary.store.deliveryRequired, "error");
+      return;
+    }
+
     try {
-      const order = await checkout();
+      const order = await checkout(deliveryForm);
       pushToast(`${dictionary.store.orderConfirmedPrefix} ${order.id}.`, "success");
+      setDeliveryForm({
+        contactName: "",
+        phone: "",
+        address: "",
+        notes: ""
+      });
     } catch (error) {
       pushToast(
         error instanceof Error ? error.message : dictionary.store.checkoutError,
@@ -266,6 +287,75 @@ export function StoreShell({ products }: { products: Product[] }) {
             <p className="mt-2 font-heading text-3xl font-bold text-brand-primary">
               {formatCurrency(total, "USD", locale)}
             </p>
+          </div>
+          <div className="space-y-3">
+            <h3 className="font-heading text-xl font-semibold text-brand-primary">
+              {dictionary.store.deliveryTitle}
+            </h3>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-brand-primary">
+                {dictionary.store.deliveryName}
+              </span>
+              <input
+                value={deliveryForm.contactName}
+                onChange={(event) =>
+                  setDeliveryForm((current) => ({
+                    ...current,
+                    contactName: event.target.value
+                  }))
+                }
+                className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-brand-accent"
+                placeholder={dictionary.store.deliveryNamePlaceholder}
+              />
+            </label>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-brand-primary">
+                {dictionary.store.deliveryPhone}
+              </span>
+              <input
+                value={deliveryForm.phone}
+                onChange={(event) =>
+                  setDeliveryForm((current) => ({
+                    ...current,
+                    phone: event.target.value
+                  }))
+                }
+                className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-brand-accent"
+                placeholder={dictionary.store.deliveryPhonePlaceholder}
+              />
+            </label>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-brand-primary">
+                {dictionary.store.deliveryAddress}
+              </span>
+              <textarea
+                value={deliveryForm.address}
+                onChange={(event) =>
+                  setDeliveryForm((current) => ({
+                    ...current,
+                    address: event.target.value
+                  }))
+                }
+                className="min-h-24 w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-brand-accent"
+                placeholder={dictionary.store.deliveryAddressPlaceholder}
+              />
+            </label>
+            <label className="block space-y-2">
+              <span className="text-sm font-medium text-brand-primary">
+                {dictionary.store.deliveryNotes}
+              </span>
+              <textarea
+                value={deliveryForm.notes}
+                onChange={(event) =>
+                  setDeliveryForm((current) => ({
+                    ...current,
+                    notes: event.target.value
+                  }))
+                }
+                className="min-h-20 w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 text-sm outline-none transition focus:border-brand-accent"
+                placeholder={dictionary.store.deliveryNotesPlaceholder}
+              />
+            </label>
           </div>
           <Button className="w-full" disabled={!items.length || hasCartStockIssue} onClick={handleCheckout}>
             {dictionary.store.checkout}

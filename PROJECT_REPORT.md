@@ -1,499 +1,210 @@
-# تقرير مشروع SCSC Website
+# تقرير حالة مشروع SCSC Website
 
-تاريخ التقرير: 2026-05-04
+هذا التقرير يوضح حالة المشروع الحالية من ناحية ما يعمل الآن، وما يحتاج ضبطًا أو تطويرًا قبل اعتباره جاهزًا بالكامل للإنتاج.
 
-هذا التقرير يوضح حالة المشروع الحالية، ما تم تنفيذه من المتطلبات، ما بقي قبل الإطلاق الحقيقي، وخطوات ربط المشروع مع Firebase و Vercel.
+## نتيجة الفحوصات
 
-## ملخص سريع
+تم تشغيل الفحوصات التالية على حالة الكود الحالية:
 
-المشروع مبني بـ Next.js 14 ويدعم العمل بطريقتين:
+- `npm run typecheck`: ناجح.
+- `npm run functions:build`: ناجح.
+- `npm run build`: ناجح، وتم بناء مشروع Next.js بدون أخطاء.
+- `npm run firebase:admin:check`: ناجح، وتم التأكد من قراءة `FIREBASE_PRIVATE_KEY` وقبول Firebase Admin SDK للاعتماديات محليًا.
+- `npm run firebase:prod:check`: ناجح بعد السماح بالاتصال، وتم فحص بيانات Firestore الأساسية وFirebase Custom Claims في production.
+- `npm run firebase:deploy:rules`: ناجح، وتم نشر قواعد Firestore وStorage والفهارس.
 
-- وضع تجريبي محلي يعتمد على Mock Data عند عدم وجود إعدادات Firebase.
-- وضع إنتاجي يستخدم Firebase Authentication و Firestore و Storage و Cloud Functions عند إضافة متغيرات البيئة ونشر القواعد والـ Functions.
+ملاحظة: هذه الفحوصات تؤكد أن الكود يبني بنجاح، لكنها لا تعني أن كل تدفق في Firebase تم اختباره يدويًا على بيانات إنتاج حقيقية.
 
-الملفات الأساسية الجاهزة للربط:
+## تم إنجازه في هذه الجولة
 
-- `firebase.json`
-- `firestore.rules`
-- `firestore.indexes.json`
-- `storage.rules`
-- `functions/src/index.ts`
-- `lib/firebase/firebase.ts`
-- `lib/firebase/admin.ts`
-- `.env.example`
-- `FIREBASE.md`
-- `scripts/seed-firestore.mjs`
-- `vercel.json`
+- إصلاح النص العربي الخاص برفع الصور في لوحة التحكم.
+- جعل `/dashboard` يختار وضع `admin` أو `moderator` حسب دور المستخدم في جلسة Firebase.
+- إضافة إلغاء تسجيل المستخدم من الفعالية مع تحديث عدد المسجلين وملف المستخدم.
+- تحديث Firestore rules للسماح للمستخدم بحذف تسجيله الشخصي من الفعالية.
+- إضافة بيانات التوصيل إلى checkout وحفظها داخل الطلب.
+- إضافة صفحة تفاصيل طلب للمستخدم على `/profile/orders/[id]`.
+- توسيع عرض الطلبات في لوحة التحكم ليشمل العناصر، الإجمالي، وبيانات التوصيل.
+- نشر قواعد Firebase بعد تعديل صلاحيات إلغاء التسجيل.
+- إضافة تعديل كامل للفعاليات والمنتجات بعد إنشائها من لوحة التحكم.
+- إضافة إنشاء/تعديل/حذف المقالات من لوحة التحكم، مع بقاء الاعتماد والرفض للمشرفين.
+- إضافة إدارة أعضاء الهيئة الإدارية `boardMembers` من لوحة التحكم.
+- إضافة إدارة مسجلي الفعاليات مع تصدير CSV، تسجيل حضور، إلغاء حضور، وإزالة تسجيل.
+- إضافة خيار حذف فعالية مع تنظيف تسجيلاتها وتحديث ملفات المستخدمين.
+- إضافة إشعار بريد عند تحديث حالة الطلب إذا كانت SMTP مضبوطة في Cloud Functions.
 
-## حالة الربط الحالية
+## الأشياء الشغالة
 
-- Firebase Web App مربوط في `.env.local`.
-- `.firebaserc` مربوط على `cosmetics-association`.
-- Firestore Rules منشورة.
-- Storage Rules منشورة.
-- Firestore Indexes منشورة.
-- Cloud Functions منشورة على Node.js 22 وكلها بحالة `ACTIVE`.
-- Seed Data تم إدخاله إلى Firestore.
-- حسابات Auth الأولية تم إنشاؤها:
-  - `admin@example.com`
-  - `moderator@example.com`
-  - `user@example.com`
+### الواجهة والصفحات العامة
 
-## الصفحات والميزات المنفذة
+- الصفحة الرئيسية `/` تعمل وتعرض Hero، مزايا العضوية، الأخبار، ومعاينة الفعاليات.
+- صفحة من نحن `/about` تعمل وتعرض التعريف، المبادئ، الأهداف، العضوية، الهيكل التنظيمي، وأرشيف الهيئة الإدارية.
+- صفحة التعليم `/education` تعمل وتعرض المقالات المعتمدة عند وجود بيانات.
+- صفحة تفاصيل المقال `/education/[slug]` تعمل وتعرض المقال مع المراجع.
+- صفحة الفعاليات `/events` تعمل مع pagination وحالة فارغة عند عدم وجود فعاليات.
+- صفحة تفاصيل الفعالية `/events/[id]` تعمل وتعرض التفاصيل، السعة، وعدد المسجلين.
+- صفحة التواصل `/contact` تعمل من ناحية الواجهة والتحقق من الحقول.
+- صفحة التحقق من العضوية `/verify?pass=...` موجودة ومربوطة بمنطق Firebase Functions.
 
-### الصفحات العامة
+### اللغة والتصميم
 
-- `/` الصفحة الرئيسية: Hero، سلايدر صور، مزايا العضوية، الأخبار/ورش العمل، ومعاينة الفعاليات.
-- `/about` من نحن: نبذة الجمعية، أعضاء المجلس حسب السنة، وأعضاء الفريق.
-- `/education` المقالات والأبحاث مع فلترة حسب التصنيف.
-- `/education/[slug]` صفحة تفاصيل المقال.
-- `/events` قائمة الفعاليات.
-- `/events/[id]` تفاصيل الفعالية.
-- `/contact` نموذج التواصل.
-- `/verify?pass=...` صفحة التحقق من QR العضوية.
+- دعم العربية والإنجليزية موجود عبر `lib/i18n/dictionaries.ts`.
+- التنقل، الوضع الداكن، الصور الاحتياطية، وواجهة الموبايل مدعومة في أغلب الصفحات.
+- الهيكل التنظيمي تم تحديثه بالأسماء والمناصب الجديدة في الصفحة.
 
 ### المصادقة والصلاحيات
 
-- `/auth/login` تسجيل الدخول.
-- `/auth/signup` إنشاء حساب مستخدم.
-- Middleware يحمي:
+- تسجيل الدخول بالبريد وكلمة المرور موجود.
+- تسجيل الدخول عبر Google موجود.
+- إنشاء حساب جديد موجود.
+- إعادة تعيين كلمة المرور موجودة عند توفر Firebase Auth.
+- يوجد Middleware لحماية:
   - `/store`
   - `/profile`
+  - `/admin`
+  - `/moderator`
   - `/dashboard`
 - الأدوار المدعومة في الكود:
-  - Admin
-  - Moderator
-  - User
+  - `admin`
+  - `moderator`
+  - `user`
 
-### المتجر
+### الملف الشخصي والعضوية
 
-- `/store` قائمة المنتجات.
-- `/store/[slug]` تفاصيل المنتج.
-- فلترة حسب الشركة/التصنيف/السعر/الاسم.
-- سلة شراء محلية.
-- Checkout مع فكرة الدفع عند الاستلام.
-- سجل الطلبات يظهر في صفحة المستخدم.
-- أسعار/خصومات العضوية مدعومة في البيانات.
+- صفحة الملف الشخصي `/profile` تعرض بيانات العضو، حالة العضوية، الطلبات، الفعاليات المسجلة، والمقالات المحفوظة.
+- تعديل الاسم، الهاتف، الشركة، والصورة الشخصية موجود.
+- صفحة بطاقة العضوية `/profile/membership-card` موجودة.
+- QR العضوية ديناميكي وقصير العمر.
+- التحقق من QR يمنع الاستخدام المتكرر ويرفض الرموز المنتهية أو القديمة.
 
-### الملف الشخصي ونظام العضوية QR
+### الفعاليات
 
-- `/profile` لوحة المستخدم الشخصية:
-  - الاسم
-  - البريد
-  - حالة العضوية
-  - رقم العضوية
-  - تاريخ انتهاء العضوية
-  - الطلبات
-  - الفعاليات المسجل بها
-  - المقالات المحفوظة
-  - تعديل بيانات المستخدم
-- `/profile/membership-card` بطاقة العضوية الرقمية.
-- QR ديناميكي يحتوي على:
-  - Member ID
-  - Full Name
-  - Membership Expiry Date
-  - Encrypted Temporary Access Token
-- خصائص الأمان المطبقة:
-  - QR قصير العمر، الافتراضي 45 ثانية.
-  - QR يتجدد تلقائياً عند انتهاء المدة.
-  - QR يصبح غير صالح بعد أول Scan ناجح.
-  - يتم إبطال الجلسة القديمة عند إصدار QR جديد.
-  - يتم تسجيل محاولات الاستخدام المكرر.
-  - السيرفر يتحقق من التوكن قبل القبول.
+- عرض الفعاليات القادمة موجود.
+- التسجيل في الفعالية موجود للمستخدمين المسجلين.
+- منع التسجيل المكرر موجود عبر Firestore Transaction.
+- منع التسجيل عند امتلاء السعة موجود.
+- حفظ الفعالية داخل `registeredEventIds` في ملف المستخدم موجود.
+- إلغاء التسجيل من الفعالية موجود للمستخدم المسجل.
 
-ملاحظة مهمة: منع Screenshot بنسبة 100% من داخل المتصفح غير مضمون تقنياً، لذلك الحماية الصحيحة هنا هي جعل أي Screenshot قديم غير صالح عبر QR قصير العمر و One-time-use.
+### المتجر والطلبات
+
+- صفحة المتجر `/store` موجودة ومحمية بتسجيل الدخول.
+- فلترة المنتجات حسب البحث، التصنيف، الشركة، والسعر موجودة.
+- صفحة تفاصيل المنتج `/store/[slug]` موجودة.
+- السلة محفوظة في Firestore حسب المستخدم.
+- إضافة، تحديث، وحذف عناصر السلة موجود.
+- Checkout بنظام الدفع عند الاستلام موجود.
+- Checkout يحفظ اسم المستلم، رقم الهاتف، عنوان التوصيل، والملاحظات.
+- يتم تقليل المخزون عند إنشاء الطلب.
+- خصم/سعر الأعضاء موجود ويعتمد على حالة العضوية.
+- صفحة تفاصيل طلب للمستخدم موجودة عبر `/profile/orders/[id]`.
 
 ### لوحة التحكم
 
-- `/dashboard` تعرض:
+- صفحة الإدارة `/admin` موجودة.
+- صفحة المشرف `/moderator` موجودة وتعرض وضع moderation.
+- صفحة `/dashboard` تقرأ دور المستخدم وتعرض وضع admin أو moderator حسب الجلسة.
+- الإحصائيات الأساسية موجودة:
   - عدد المستخدمين.
   - عدد الفعاليات.
   - عدد الطلبات.
   - عدد الشركات.
-  - إضافة وحذف الفعاليات من Firebase.
-  - إضافة وحذف المنتجات من Firebase.
-  - تعديل دور المستخدم وحالة العضوية.
-  - تعديل حالة الطلب.
-  - قبول/رفض المقالات.
+- إضافة وحذف فعالية موجود.
+- تعديل فعالية موجود.
+- إضافة وحذف منتج موجود.
+- تعديل منتج موجود.
+- إنشاء/تعديل/حذف مقالات موجود.
+- إدارة أعضاء الهيئة الإدارية موجودة.
+- إدارة وتصدير مسجلي الفعاليات موجودة.
+- تسجيل حضور المسجلين في الفعاليات موجود.
+- رفع صور للفعاليات والمنتجات إلى Firebase Storage موجود.
+- تعديل دور المستخدم وحالة العضوية موجود.
+- حذف المستخدم موجود للـ admin.
+- تعديل حالة الطلب موجود.
+- تفاصيل الطلب داخل لوحة التحكم تعرض العناصر، المجاميع، وبيانات التوصيل.
+- قبول/رفض المقالات موجود.
 
-ملاحظة: لوحة التحكم أصبحت مرتبطة بـ Cloud Functions للإدارة الإنتاجية. تعديل كل حقل لكل سجل موجود عبر نماذج مبسطة، ويمكن توسيعها لاحقاً لتجربة تحرير أكثر تفصيلاً.
+### Firebase
 
-### Firebase Functions
+- إعدادات Firebase client موجودة في `.env.local`.
+- مشروع Firebase المحلي مضبوط في `.firebaserc` على `cosmetics-association`.
+- Firestore rules موجودة.
+- Storage rules موجودة.
+- Firestore indexes موجودة.
+- Cloud Functions موجودة وتشمل:
+  - `sendContactEmail`
+  - `issueMembershipQrPass`
+  - `verifyMembership`
+  - `setUserRole`
+  - `upsertEvent`
+  - `deleteEvent`
+  - `upsertProduct`
+  - `deleteProduct`
+  - `updateUserAdmin`
+  - `deleteUserAdmin`
+  - `updateOrderStatus`
+  - `upsertArticle`
+  - `deleteArticle`
+  - `upsertBoardMember`
+  - `deleteBoardMember`
+  - `setEventRegistrationCheckIn`
+  - `removeEventRegistration`
+  - `moderateArticle`
 
-الموجود حالياً في `functions/src/index.ts`:
+## أشياء تعمل لكن تعتمد على الإعدادات
 
-- `sendContactEmail`
-  - يحفظ رسائل التواصل في Firestore.
-  - يرسل بريد عند ضبط SMTP.
-- `issueMembershipQrPass`
-  - يصدر QR عضوية آمن ومشفّر.
-- `verifyMembership`
-  - يتحقق من QR ويمنع التكرار والرموز القديمة والمنتهية.
-- `setUserRole`
-  - يغير صلاحيات المستخدم عبر Custom Claims.
-- `upsertEvent`
-  - يضيف أو يحدث فعالية.
-- `deleteEvent`
-  - يحذف فعالية.
-- `upsertProduct`
-  - يضيف أو يحدث منتج.
-- `deleteProduct`
-  - يحذف منتج.
-- `updateUserAdmin`
-  - يحدث دور المستخدم وحالة العضوية.
-- `updateOrderStatus`
-  - يحدث حالة الطلب.
-- `moderateArticle`
-  - يقبل أو يرفض المقالات.
+- قراءة البيانات server-side من Firestore تعتمد على Firebase Admin SDK. محليًا، `FIREBASE_CLIENT_EMAIL` و `FIREBASE_PRIVATE_KEY` مضبوطين في `.env.local` وتم التحقق من الصيغة بنجاح. في Vercel يجب إضافة نفس القيم كـ Environment Variables.
+- نموذج التواصل يحفظ الرسائل في Firestore عبر Function، لكن إرسال البريد الفعلي يحتاج SMTP. محليًا، قيم SMTP الأساسية و `CONTACT_EMAIL` موجودة في `.env.local`، و `CONTACT_EMAIL` موجود أيضًا في `functions/.env`. بيئة Cloud Functions production تحتاج ضبط نفس القيم عند النشر.
+- رابط Instagram اختياري، و `NEXT_PUBLIC_INSTAGRAM_URL` مضبوط محليًا.
+- QR العضوية يحتاج `MEMBERSHIP_QR_SECRET` في بيئة Cloud Functions، وهو موجود محليًا في `.env.local` و `functions/.env`.
+- صلاحيات admin و moderator تحتاج Firebase Custom Claims صحيحة، وليس فقط قيمة الدور داخل وثيقة المستخدم. تم التحقق من claims لحسابات seed في production.
 
-## ما بقي ولم يكتمل بعد
+## الأشياء التي لسا مش شغالة أو ناقصة
 
-### بيانات الإنتاج
+### بيانات وإعدادات الإنتاج
 
-- إنشاء مشروع Firebase حقيقي.
-- إنشاء Collections فعلية في Firestore أو تشغيل Seed Script الجاهز:
-  - `users`
-  - `events`
-  - `articles`
-  - `products`
-  - `orders`
-  - `boardMembers`
-  - `contacts`
-- تشغيل `npm run firebase:seed` لإدخال بيانات أولية.
-- رفع صور حقيقية إلى Firebase Storage أو CDN.
+- Firebase Admin SDK مكتمل محليًا الآن، وتم إصلاح قراءة المفتاح لتقبل الأسطر الفعلية أو `\n` أو الاقتباسات الزائدة.
+- تم تشغيل فحص production أساسي: يوجد 2 مقالات، 4 فعاليات، 2 منتجات، 2 أعضاء هيئة، و3 مستخدمين بدون حقول ناقصة ضمن الحقول المطلوبة. مجموعة الطلبات فارغة وقت الفحص.
+- لم يتم تشغيل اختبار يدوي شامل على Firebase production داخل هذا التقرير.
 
 ### لوحة التحكم
 
-- تحسين تجربة التحرير المتقدم لتكون Modal أو صفحات تفاصيل بدلاً من النماذج السريعة الحالية.
-- إضافة حذف/تعطيل مستخدم من لوحة التحكم إذا كانت سياسة الجمعية تسمح بذلك.
-- إضافة إدارة تعليقات وصور منفصلة عند إضافة نظام تعليقات/صور مستقل.
-- إضافة صفحة تفاصيل الطلب الكاملة.
-
-### المصادقة والأمان
-
-- ضبط أول Admin حقيقي في Firebase Custom Claims.
-- تطبيق Account lock أو Rate Limiting حقيقي لمحاولات الدخول الفاشلة. يوجد منطق/توجه عام، لكن يلزم ربط إنتاجي كامل.
-- مراجعة قواعد Firestore بعد تحديد كل حقول البيانات النهائية.
-- إضافة App Check لحماية Firestore/Functions من الاستخدام غير المصرح.
-- جعل `MEMBERSHIP_QR_SECRET` سر إنتاج قوي في Firebase Functions.
-- معالجة تحذيرات `npm audit` بترقية مدروسة لـ Next/Firebase بدون كسر المشروع.
-
-### التواصل والبريد
-
-- SMTP أصبح اختيارياً وليس مطلوباً الآن.
-- يمكن استخدام `NEXT_PUBLIC_INSTAGRAM_URL` كرابط تواصل أساسي في صفحة التواصل والفوتر.
-- عند نشر Functions بدون SMTP سيتم حفظ الرسائل في Firestore، لكن لن يتم إرسال بريد فعلي.
-- لاحقاً يمكن إضافة قوالب بريد وSMTP إذا احتاجت الجمعية ذلك.
+- تم إضافة واجهات تحرير للفعاليات والمنتجات والمقالات، وإدارة أعضاء الهيئة، وإدارة مسجلي الفعاليات.
+- ما زالت تجربة التحرير قابلة للتحسين لاحقًا بصفحات منفصلة ومحرر نص غني للمقالات بدل النماذج المباشرة داخل لوحة التحكم.
 
 ### الفعاليات
 
-- حفظ تسجيل الفعاليات في Firestore بشكل إنتاجي كامل.
-- منع التسجيل المكرر عبر Transaction.
-- تعطيل التسجيل عند امتلاء الفعالية.
-- صفحة أو جدول لإدارة المسجلين.
+- قائمة الحضور و check-in اليدوي موجودة الآن داخل لوحة التحكم.
+- حذف فعالية فيها تسجيلات أصبح ممكنًا من خيار تنظيف التسجيلات، لكن لا توجد بعد واجهة نقل التسجيلات إلى فعالية أخرى.
 
 ### المتجر والطلبات
 
-- حفظ السلة أو الطلبات في Firestore بشكل نهائي عند ضبط Firebase.
-- إدارة حالة الطلب من لوحة التحكم.
-- صفحة تفاصيل الطلب للمستخدم والإدارة.
-- إشعارات تأكيد الطلب.
-- سياسة خصومات الأعضاء من قاعدة بيانات وليس Mock فقط.
+- لا يوجد دفع إلكتروني؛ النظام الحالي Cash on Delivery فقط.
+- إشعار البريد عند تحديث حالة الطلب موجود في Cloud Functions إذا كانت SMTP مضبوطة.
+- لا توجد إدارة كوبونات أو خصومات متقدمة.
 
-### الجودة قبل التسليم
+### الأمان والجودة
 
-- اختبارات للـ QR Functions.
-- اختبارات لتسجيل الفعاليات والطلبات.
-- اختبار صلاحيات Firestore Rules.
-- اختبار Responsive نهائي على Mobile/Tablet/Desktop.
-- مراجعة SEO و Metadata لكل الصفحات.
+- Lockout تسجيل الدخول موجود في `localStorage` فقط، وليس rate limiting حقيقي من السيرفر.
+- Firebase App Check غير مضاف بعد.
+- لا توجد اختبارات آلية لـ Firestore rules.
+- لا توجد اختبارات آلية لـ Cloud Functions.
+- لا توجد اختبارات end-to-end لمسارات التسجيل، الطلب، وQR.
+- منع screenshots للـ QR غير مضمون تقنيًا، والحماية الحالية تعتمد على انتهاء الصلاحية والاستخدام لمرة واحدة.
 
-## خطوات ربط Firebase
+### تجربة المستخدم
 
-### 1. إنشاء مشروع Firebase
+- بعض أخطاء Firebase تظهر للمستخدم كنصوص تقنية إن لم تتم ترجمتها.
+- لا توجد شاشة إعداد أولية إذا كانت Firebase غير مضبوطة؛ الصفحات تعرض حالات فارغة أو رسائل إعداد.
+- لا توجد صفحة مركزية تعرض حالة النظام أو صحة الاتصال بـ Firebase.
 
-1. افتح Firebase Console.
-2. أنشئ مشروع جديد باسم مناسب، مثال: `scsc-association`.
-3. فعّل الخدمات التالية:
-   - Authentication
-   - Firestore Database
-   - Storage
-   - Functions
+## الأولويات المقترحة
 
-### 2. تفعيل Authentication
+1. ضبط Firebase Admin SDK في Vercel حتى تظهر بيانات Firestore server-side بشكل ثابت في الإنتاج.
+2. ضبط SMTP في Cloud Functions production ثم إعادة نشر Functions.
+3. إضافة اختبارات Firestore rules وCloud Functions.
+4. تفعيل App Check وrate limiting حقيقي قبل الإطلاق العام.
+5. دراسة الدفع الإلكتروني والكوبونات إذا كانت مطلوبة للإطلاق.
 
-1. من Firebase Console افتح Authentication.
-2. فعّل Email/Password.
-3. أنشئ مستخدم Admin أولي من Console أو من صفحة Signup.
-4. بعد نشر Functions، أعط المستخدم دور Admin باستخدام `setUserRole` أو عبر سكربت Admin SDK.
+## خلاصة
 
-الأدوار يجب أن تكون Custom Claims:
-
-```json
-{
-  "role": "admin"
-}
-```
-
-أو:
-
-```json
-{
-  "role": "moderator"
-}
-```
-
-المستخدم العادي يكون:
-
-```json
-{
-  "role": "user"
-}
-```
-
-### 3. إضافة تطبيق Web في Firebase
-
-1. من Project Settings اختر Add app ثم Web.
-2. انسخ Firebase config.
-3. أنشئ ملف `.env.local` من `.env.example`.
-4. عبئ القيم التالية:
-
-```env
-NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
-NEXT_PUBLIC_FIREBASE_APP_ID=
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
-NEXT_PUBLIC_FUNCTIONS_REGION=us-central1
-NEXT_PUBLIC_INSTAGRAM_URL=
-```
-
-### 4. إعداد Firebase Admin داخل Next.js
-
-1. من Firebase Console افتح Project Settings.
-2. افتح Service Accounts.
-3. أنشئ Private Key.
-4. أضف القيم في `.env.local`:
-
-```env
-FIREBASE_PROJECT_ID=
-FIREBASE_CLIENT_EMAIL=
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-```
-
-مهم: في Vercel يجب وضع المفتاح الخاص كسطر واحد مع `\n` بدل الأسطر الحقيقية.
-
-### 5. ربط Firebase CLI
-
-ثبت Firebase Tools إن لم تكن مثبتة:
-
-```powershell
-npm install
-```
-
-ثم سجل الدخول:
-
-```powershell
-npx firebase login
-```
-
-اربط المشروع:
-
-```powershell
-npx firebase use --add
-```
-
-اختر Project ID الحقيقي واجعل alias مثلاً `default`.
-
-### 6. نشر قواعد Firestore و Storage
-
-```powershell
-npm run firebase:deploy:rules
-```
-
-هذا ينشر:
-
-- `firestore.rules`
-- `firestore.indexes.json`
-- `storage.rules`
-
-### 7. إعداد متغيرات Cloud Functions
-
-الكود الحالي في `functions/src/index.ts` يقرأ القيم من `process.env` مباشرة. لذلك قبل نشر Functions أنشئ ملف بيئة داخل مجلد `functions`، مثل `functions/.env`, ولا ترفعه إلى Git.
-
-القيم المطلوبة:
-
-```env
-MEMBERSHIP_QR_SECRET=
-```
-
-لبيئة الإنتاج، اجعل `MEMBERSHIP_QR_SECRET` قيمة طويلة وعشوائية. مثال توليد قيمة محلية:
-
-```powershell
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-### 8. بناء ونشر Cloud Functions
-
-```powershell
-npm run functions:build
-npx firebase deploy --only functions
-```
-
-بعد النشر جرّب:
-
-- Contact form.
-- إصدار QR من `/profile/membership-card`.
-- فتح `/verify?pass=...`.
-- إعادة استخدام نفس QR والتأكد أنه يرفضه.
-
-### 9. اختبار محلي مع Firebase Emulators
-
-```powershell
-npm run firebase:emulators
-```
-
-واجهة Emulators تعمل عادة على:
-
-```text
-http://localhost:4000
-```
-
-## خطوات النشر على Vercel
-
-### 1. رفع المشروع إلى GitHub
-
-ارفع المشروع إلى Repository على GitHub أو GitLab أو Bitbucket.
-
-### 2. إنشاء مشروع في Vercel
-
-1. افتح Vercel Dashboard.
-2. اختر New Project.
-3. اربط Repository.
-4. Framework يجب أن يتعرف تلقائياً على Next.js.
-
-### 3. إعداد Build Settings
-
-القيم المناسبة:
-
-```text
-Install Command: npm install
-Build Command: npm run build
-Output Directory: .next
-Node.js Version: 20 أو 22
-```
-
-### 4. إضافة Environment Variables في Vercel
-
-أضف نفس قيم `.env.local` داخل:
-
-Project Settings -> Environment Variables
-
-القيم المطلوبة:
-
-```env
-NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
-NEXT_PUBLIC_FIREBASE_APP_ID=
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
-NEXT_PUBLIC_FUNCTIONS_REGION=us-central1
-FIREBASE_PROJECT_ID=
-FIREBASE_CLIENT_EMAIL=
-FIREBASE_PRIVATE_KEY=
-```
-
-لا ترفع `.env.local` إلى Git.
-
-### 5. إضافة Domain
-
-بعد أول Deploy:
-
-1. افتح Project Settings.
-2. Domains.
-3. أضف دومين الجمعية.
-4. اتبع DNS Records التي يعطيها Vercel.
-
-### 6. ربط Firebase Auth مع دومين Vercel
-
-من Firebase Console:
-
-Authentication -> Settings -> Authorized domains
-
-أضف:
-
-- دومين Vercel المؤقت.
-- دومين الجمعية النهائي.
-
-مثال:
-
-```text
-scsc-association.vercel.app
-example.org
-```
-
-## أوامر التشغيل المحلية
-
-تثبيت الحزم:
-
-```powershell
-npm install
-```
-
-الحزمة الجديدة التي تمت إضافتها:
-
-```text
-dotenv
-```
-
-سبب الإضافة: تشغيل سكربت Seed وقراءة متغيرات البيئة بسهولة.
-
-تشغيل محلي:
-
-```powershell
-npm run run:local
-```
-
-فحص TypeScript:
-
-```powershell
-npm run typecheck:local
-```
-
-بناء الإنتاج محلياً:
-
-```powershell
-npm run build:local
-```
-
-## حسابات Mock التجريبية
-
-عند عدم ضبط Firebase، يمكن تجربة الموقع بالحسابات التالية.
-
-كلمة المرور لكل الحسابات:
-
-```text
-admin123
-```
-
-- Admin: `admin@example.com`
-- Moderator: `moderator@example.com`
-- User: `user@example.com`
-- User إضافي: `aseel@example.com`
-- User إضافي: `lamar@example.com`
-
-## توصية العمل القادمة
-
-أفضل ترتيب قبل التسليم النهائي:
-
-1. إنشاء Firebase Project وربط `.env.local`.
-2. نشر Rules و Functions.
-3. إنشاء أول Admin Custom Claim.
-4. إدخال Seed Data حقيقية في Firestore.
-5. تحويل لوحة التحكم من Preview إلى CRUD كامل.
-6. اختبار QR والتسجيل والطلبات على Firebase الحقيقي.
-7. نشر Vercel وإضافة الدومين إلى Firebase Authorized Domains.
+المشروع يبني بنجاح، والهيكل الأساسي للموقع، العضوية، QR، المتجر، الفعاليات، ولوحة التحكم موجود ومربوط بالكود. تم تقوية لوحة التحكم بإدارة وتعديل معظم المحتوى التشغيلي. الجزء الأكبر الذي يحتاج إكمال الآن هو ضبط بيئة Vercel وSMTP في الإنتاج، إضافة اختبارات وأدوات تشغيل إنتاجية، وتفعيل طبقات الأمان مثل App Check وrate limiting قبل التسليم النهائي.

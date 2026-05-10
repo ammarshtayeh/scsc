@@ -1,5 +1,11 @@
+import { cookies } from "next/headers";
+
 import { DashboardPageContent } from "@/components/dashboard/dashboard-page-content";
+import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/firebase/session";
 
 export default async function DashboardPage() {
-  return <DashboardPageContent mode="admin" />;
+  const session = await verifySessionToken(cookies().get(SESSION_COOKIE_NAME)?.value);
+  const mode = session?.role === "moderator" ? "moderator" : "admin";
+
+  return <DashboardPageContent mode={mode} />;
 }

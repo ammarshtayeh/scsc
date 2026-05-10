@@ -151,9 +151,35 @@ Node.js Version: 22
 
 تمت إضافة `vercel.json` بهذه الإعدادات حتى يتعرف Vercel عليها تلقائياً.
 
-5. أضف Environment Variables في Vercel بنفس قيم `.env.local`.
-6. بعد أول Deploy، خذ دومين Vercel وأضفه إلى Firebase:
+5. أضف Environment Variables في Vercel بنفس قيم `.env.local` من:
 
+```text
+Project Settings -> Environment Variables
+```
+
+ضع القيم السرية مثل `FIREBASE_PRIVATE_KEY` و `FIREBASE_CLIENT_EMAIL` و `MEMBERSHIP_QR_SECRET` كـ Sensitive/Encrypted variables، وفعّلها على الأقل لـ Production و Preview.
+
+بالنسبة إلى `FIREBASE_PRIVATE_KEY` في Vercel:
+
+- اسم المتغير: `FIREBASE_PRIVATE_KEY`
+- القيمة: المفتاح من `-----BEGIN PRIVATE KEY-----` إلى `-----END PRIVATE KEY-----`.
+- لا تضع علامات اقتباس حول القيمة داخل Vercel.
+- يمكن لصق المفتاح بأسطر فعلية أو كسطر واحد يحتوي `\n`؛ الكود الحالي يدعم الطريقتين.
+- بديل أكثر أمانًا ضد أخطاء النسخ: ضع JSON كامل service account كـ `FIREBASE_SERVICE_ACCOUNT_BASE64` بعد تحويله إلى Base64.
+
+الأمر المحلي للتأكد من صيغة Admin SDK:
+
+```powershell
+npm run firebase:admin:check
+```
+
+والأمر المحلي لفحص Firestore/Auth production:
+
+```powershell
+npm run firebase:prod:check
+```
+
+6. بعد أول Deploy، خذ دومين Vercel وأضفه إلى Firebase:
 ```text
 Authentication -> Settings -> Authorized domains
 ```

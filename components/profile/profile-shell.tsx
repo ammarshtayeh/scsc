@@ -120,6 +120,11 @@ function normalizeUserProfile(id: string, data: Record<string, unknown>): UserPr
 }
 
 function normalizeOrder(id: string, data: Record<string, unknown>): Order {
+  const deliveryInfo =
+    typeof data.deliveryInfo === "object" && data.deliveryInfo !== null
+      ? (data.deliveryInfo as Order["deliveryInfo"])
+      : undefined;
+
   return {
     id,
     userId: typeof data.userId === "string" ? data.userId : "",
@@ -128,7 +133,8 @@ function normalizeOrder(id: string, data: Record<string, unknown>): Order {
     subtotal: typeof data.subtotal === "number" ? data.subtotal : 0,
     discount: typeof data.discount === "number" ? data.discount : 0,
     total: typeof data.total === "number" ? data.total : 0,
-    items: Array.isArray(data.items) ? (data.items as Order["items"]) : []
+    items: Array.isArray(data.items) ? (data.items as Order["items"]) : [],
+    deliveryInfo
   };
 }
 
@@ -873,6 +879,12 @@ export function ProfileShell({
                       <p className="text-sm text-slate-500">{translateOrderStatus(order.status, locale)}</p>
                     </div>
                   </div>
+                  <Link
+                    href={`/profile/orders/${order.id}`}
+                    className="mt-4 inline-flex text-sm font-medium text-brand-primary underline decoration-brand-accent underline-offset-4"
+                  >
+                    {dictionary.common.readMore}
+                  </Link>
                 </div>
               ))
             ) : (

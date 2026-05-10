@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  deleteDoc,
   doc,
   getDoc,
   onSnapshot,
@@ -13,7 +12,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { MEMBER_DISCOUNT_RATE } from "@/lib/constants";
 import { db } from "@/lib/firebase/firebase";
-import type { CartItem, Order, OrderLineItem, Product } from "@/types";
+import type { CartItem, Order, OrderDeliveryInfo, OrderLineItem, Product } from "@/types";
 
 function requireDb() {
   if (!db) {
@@ -86,6 +85,55 @@ export async function isUserRegisteredForEvent(eventId: string, userId: string) 
   const database = requireDb();
   const snapshot = await getDoc(doc(database, "events", eventId, "registrations", userId));
   return snapshot.exists();
+}
+
+export async function cancelEventRegistration(eventId: string, userId: string) {
+  const database = requireDb();
+
+  await runTransaction(database, async (transaction) => {
+    const eventRef = doc(database, "events", eventId);
+    const registrationRef = doc(database, "events", eventId, "registrations", userId);
+    const userRef = doc(database, "users", userId);
+
+    const [eventSnap, registrationSnap, userSnap] = await Promise.all([
+      transaction.get(eventRef),
+      transaction.get(registrationRef),
+      transaction.get(userRef)
+    ]);
+
+    if (!eventSnap.exists()) {
+      throw new Error("Event not found.");
+    }
+
+    if (!registrationSnap.exists()) {
+      throw new Error("You are not registered for this event.");
+    }
+
+    const eventData = (eventSnap.data() || {}) as {
+      registeredCount?: number;
+    };
+    const registeredCount = Number(eventData.registeredCount || 0);
+
+    transaction.delete(registrationRef);
+    transaction.update(eventRef, {
+      registeredCount: Math.max(0, registeredCount - 1)
+    });
+    const currentUserData = (userSnap.data() || {}) as {
+      registeredEventIds?: string[];
+    };
+    transaction.set(
+      userRef,
+      {
+        registeredEventIds: (currentUserData.registeredEventIds || []).filter(
+          (registeredEventId) => registeredEventId !== eventId
+        ),
+        lastEventCancellationAt: new Date().toISOString()
+      },
+      { merge: true }
+    );
+  });
+
+  return { success: true };
 }
 
 export function subscribeToCart(userId: string, callback: (items: CartItem[]) => void) {
@@ -172,7 +220,8 @@ export async function checkoutCodOrder(
   userId: string,
   products: Product[],
   useMemberPricing = true,
-  membershipDiscountRate = MEMBER_DISCOUNT_RATE
+  membershipDiscountRate = MEMBER_DISCOUNT_RATE,
+  deliveryInfo?: OrderDeliveryInfo
 ) {
   const cartItems = await getCartItems(userId);
 
@@ -243,7 +292,15 @@ export async function checkoutCodOrder(
       subtotal,
       discount,
       total,
-      items: lineItems
+      items: lineItems,
+      deliveryInfo: deliveryInfo
+        ? {
+            contactName: deliveryInfo.contactName.trim(),
+            phone: deliveryInfo.phone.trim(),
+            address: deliveryInfo.address.trim(),
+            notes: deliveryInfo.notes?.trim() || ""
+          }
+        : null
     });
 
     transaction.delete(doc(database, "carts", userId));

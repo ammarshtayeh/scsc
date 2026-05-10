@@ -1,16 +1,6 @@
-import { createRemoteJWKSet, jwtVerify } from "jose";
 import { NextResponse, type NextRequest } from "next/server";
 
-const COOKIE_NAME = "scsc_token";
-const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-const firebaseJwks = createRemoteJWKSet(
-  new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com")
-);
-
-type SessionData = {
-  uid: string;
-  role: string;
-};
+import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/firebase/session";
 
 function buildLoginRedirect(request: NextRequest) {
   const redirect = `${request.nextUrl.pathname}${request.nextUrl.search}`;
@@ -22,34 +12,8 @@ function buildRoleRedirect(request: NextRequest) {
   return NextResponse.redirect(new URL("/profile", request.url));
 }
 
-async function verifySession(request: NextRequest): Promise<SessionData | null> {
-  const token = request.cookies.get(COOKIE_NAME)?.value;
-
-  if (!token) {
-    return null;
-  }
-
-  if (!projectId) {
-    return null;
-  }
-
-  try {
-    const { payload } = await jwtVerify(token, firebaseJwks, {
-      issuer: `https://securetoken.google.com/${projectId}`,
-      audience: projectId
-    });
-
-    return {
-      uid: String(payload.user_id || payload.sub),
-      role: String(payload.role || "user")
-    };
-  } catch {
-    return null;
-  }
-}
-
 export async function middleware(request: NextRequest) {
-  const session = await verifySession(request);
+  const session = await verifySessionToken(request.cookies.get(SESSION_COOKIE_NAME)?.value);
   const pathname = request.nextUrl.pathname;
 
   if (pathname.startsWith("/store") || pathname.startsWith("/profile")) {

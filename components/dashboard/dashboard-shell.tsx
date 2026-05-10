@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, ImageUp, LinkIcon, Save, Trash2 } from "lucide-react";
+import { CheckCircle2, Download, ImageUp, LinkIcon, Save, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -11,11 +11,17 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import {
   deleteEventAdmin,
+  deleteArticleAdmin,
+  deleteBoardMemberAdmin,
   deleteProductAdmin,
   deleteUserAdmin,
   moderateArticleAdmin,
+  removeEventRegistrationAdmin,
+  setEventRegistrationCheckInAdmin,
   updateOrderStatusAdmin,
   updateUserAdmin,
+  upsertArticleAdmin,
+  upsertBoardMemberAdmin,
   upsertEventAdmin,
   upsertProductAdmin
 } from "@/lib/firebase/functions";
@@ -30,7 +36,10 @@ import {
 import { formatCurrency, formatDateLong, formatDateTime, formatNumber } from "@/lib/utils";
 import type {
   Article,
+  ArticleCategory,
+  BoardMember,
   DashboardStats,
+  EventRegistration,
   EventItem,
   Order,
   OrderStatus,
@@ -43,6 +52,7 @@ import type {
 type Locale = "en" | "ar";
 
 const productCategories: ProductCategory[] = ["Skin Care", "Body Care", "Makeup", "Masks"];
+const articleCategories: ArticleCategory[] = ["Skin Care", "Makeup", "Hair Care", "Others"];
 const orderStatuses: OrderStatus[] = ["pending", "confirmed", "processing", "delivered"];
 const roles: Role[] = ["admin", "moderator", "user"];
 const membershipStatuses: UserProfile["membershipStatus"][] = [
@@ -63,6 +73,60 @@ function splitCsv(value: string) {
     .split(",")
     .map((entry) => entry.trim())
     .filter(Boolean);
+}
+
+function toInputDateTime(value?: string) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value.slice(0, 16);
+  }
+
+  return date.toISOString().slice(0, 16);
+}
+
+function getText(formData: FormData, key: string) {
+  return String(formData.get(key) || "").trim();
+}
+
+function getNumber(formData: FormData, key: string, fallback = 0) {
+  const value = Number(formData.get(key));
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function getCsvData(filename: string, rows: Record<string, unknown>[]) {
+  const headers = Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
+  const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const csv = [headers.join(","), ...rows.map((row) => headers.map((header) => escape(row[header])).join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function parseReferences(value: string) {
+  return value
+    .split("\n")
+    .map((line) => {
+      const [label, ...urlParts] = line.split("|");
+      return {
+        label: label?.trim() || "",
+        url: urlParts.join("|").trim()
+      };
+    })
+    .filter((entry) => entry.label && entry.url);
+}
+
+function referencesToText(article: Article) {
+  return (article.references || [])
+    .map((reference) => `${reference.label} | ${reference.url}`)
+    .join("\n");
 }
 
 function cleanFileName(value: string) {
@@ -88,6 +152,8 @@ export function DashboardShell({
   users,
   orders,
   articles,
+  boardMembers,
+  eventRegistrations,
   locale,
   labels,
   mode = "admin"
@@ -98,6 +164,8 @@ export function DashboardShell({
   users: UserProfile[];
   orders: Order[];
   articles: Article[];
+  boardMembers: BoardMember[];
+  eventRegistrations: EventRegistration[];
   locale: Locale;
   mode?: "admin" | "moderator";
   labels: {
@@ -170,7 +238,7 @@ export function DashboardShell({
           upload: "رفع صورة",
           uploadMany: "رفع صور",
           eventHint: "يمكنك وضع رابط صورة أو رفع صورة من جهازك.",
-          productHint: "يمكنك وضع رابط صورة أو رفع صورة/صور من جهازك.",
+          productHint: "يمكنك وضع رابط صورة أو رفع صورة واحدة أو عدة صور من جهازك.",
           selected: "تم اختيار"
         }
       : {
@@ -181,7 +249,87 @@ export function DashboardShell({
           productHint: "Use an image URL or upload one or more images from your device.",
           selected: "Selected"
         };
+  const orderDetailLabels =
+    locale === "ar"
+      ? {
+          orderItems: "عناصر الطلب",
+          delivery: "بيانات التوصيل",
+          subtotal: "المجموع الفرعي",
+          discount: "الخصم",
+          total: "الإجمالي",
+          recipient: "المستلم",
+          phone: "الهاتف",
+          address: "العنوان",
+          notes: "ملاحظات",
+          noDelivery: "لا توجد بيانات توصيل"
+        }
+      : {
+          orderItems: "Order items",
+          delivery: "Delivery details",
+          subtotal: "Subtotal",
+          discount: "Discount",
+          total: "Total",
+          recipient: "Recipient",
+          phone: "Phone",
+          address: "Address",
+          notes: "Notes",
+          noDelivery: "No delivery details"
+        };
   const showManagementSections = mode === "admin";
+  const adminLabels =
+    locale === "ar"
+      ? {
+          edit: "تعديل",
+          saveChanges: "حفظ التعديلات",
+          cleanupDelete: "حذف مع تنظيف التسجيلات",
+          registrants: "مسجلو الفعاليات",
+          exportCsv: "تصدير CSV",
+          checkIn: "تسجيل حضور",
+          undoCheckIn: "إلغاء الحضور",
+          removeRegistration: "إزالة التسجيل",
+          boardMembers: "إدارة الهيئة الإدارية",
+          addBoardMember: "إضافة عضو هيئة",
+          articles: "إنشاء وتعديل المقالات",
+          addArticle: "إضافة مقال",
+          references: "المراجع: مرجع ورابط في كل سطر",
+          featured: "مميز",
+          approved: "معتمد",
+          image: "رابط الصورة",
+          author: "الكاتب",
+          year: "السنة",
+          role: "المنصب",
+          bio: "نبذة"
+        }
+      : {
+          edit: "Edit",
+          saveChanges: "Save changes",
+          cleanupDelete: "Delete and clean registrations",
+          registrants: "Event registrants",
+          exportCsv: "Export CSV",
+          checkIn: "Check in",
+          undoCheckIn: "Undo check-in",
+          removeRegistration: "Remove registration",
+          boardMembers: "Board members",
+          addBoardMember: "Add board member",
+          articles: "Create and edit articles",
+          addArticle: "Add article",
+          references: "References: one label and URL per line",
+          featured: "Featured",
+          approved: "Approved",
+          image: "Image URL",
+          author: "Author",
+          year: "Year",
+          role: "Role",
+          bio: "Bio"
+        };
+  const registrationsByEvent = useMemo(() => {
+    return eventRegistrations.reduce<Record<string, EventRegistration[]>>((acc, registration) => {
+      acc[registration.eventId] = acc[registration.eventId]
+        ? [...acc[registration.eventId], registration]
+        : [registration];
+      return acc;
+    }, {});
+  }, [eventRegistrations]);
 
   const statCards = useMemo(
     () => [
@@ -317,10 +465,172 @@ export function DashboardShell({
                         <Trash2 className="h-4 w-4" />
                         {labels.delete}
                       </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        loading={loadingAction === `cleanup-delete-event-${event.id}`}
+                        onClick={() => {
+                          if (!window.confirm("Delete this event and remove all registrations?")) {
+                            return;
+                          }
+
+                          void runAction(`cleanup-delete-event-${event.id}`, () =>
+                            deleteEventAdmin(event.id, true)
+                          );
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {adminLabels.cleanupDelete}
+                      </Button>
                     </div>
                   </div>
+                  <details className="mt-4 rounded-xl bg-brand-sky/50 p-4">
+                    <summary className="cursor-pointer text-sm font-semibold text-brand-primary">
+                      {adminLabels.edit}
+                    </summary>
+                    <form
+                      className="mt-4 grid gap-3 md:grid-cols-2"
+                      onSubmit={(submitEvent) => {
+                        submitEvent.preventDefault();
+                        const formData = new FormData(submitEvent.currentTarget);
+                        void runAction(`edit-event-${event.id}`, () =>
+                          upsertEventAdmin({
+                            id: event.id,
+                            title: getText(formData, "title"),
+                            startsAt: getText(formData, "startsAt"),
+                            venue: getText(formData, "venue"),
+                            capacity: getNumber(formData, "capacity", event.capacity),
+                            coverImage: getText(formData, "coverImage"),
+                            excerpt: getText(formData, "excerpt"),
+                            description: splitLines(getText(formData, "description")),
+                            tags: splitCsv(getText(formData, "tags")),
+                            registeredCount: event.registeredCount,
+                            isFeatured: formData.get("isFeatured") === "on"
+                          })
+                        );
+                      }}
+                    >
+                      <input name="title" required defaultValue={event.title} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+                      <input name="startsAt" required type="datetime-local" defaultValue={toInputDateTime(event.startsAt)} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+                      <input name="venue" defaultValue={event.venue} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+                      <input name="capacity" required type="number" min={1} defaultValue={event.capacity} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+                      <input name="coverImage" defaultValue={event.coverImage} className="rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+                      <textarea name="excerpt" defaultValue={event.excerpt} className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+                      <textarea name="description" defaultValue={event.description.join("\n")} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+                      <input name="tags" defaultValue={event.tags.join(", ")} className="rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+                      <label className="flex items-center gap-2 text-sm text-slate-600">
+                        <input name="isFeatured" type="checkbox" defaultChecked={Boolean(event.isFeatured)} />
+                        {adminLabels.featured}
+                      </label>
+                      <Button loading={loadingAction === `edit-event-${event.id}`} type="submit">
+                        <Save className="h-4 w-4" />
+                        {adminLabels.saveChanges}
+                      </Button>
+                    </form>
+                  </details>
                 </div>
               ))}
+            </div>
+          </Card>
+          ) : null}
+
+          {showManagementSections ? (
+          <Card id="registrants" className="space-y-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <h2 className="font-heading text-2xl font-semibold text-brand-primary">
+                {adminLabels.registrants}
+              </h2>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  getCsvData(
+                    "event-registrations.csv",
+                    eventRegistrations.map((registration) => ({
+                      eventId: registration.eventId,
+                      eventTitle: events.find((event) => event.id === registration.eventId)?.title || "",
+                      userId: registration.userId,
+                      name: registration.displayName || "",
+                      email: registration.email || "",
+                      registeredAt: registration.registeredAt || "",
+                      checkedInAt: registration.checkedInAt || ""
+                    }))
+                  )
+                }
+              >
+                <Download className="h-4 w-4" />
+                {adminLabels.exportCsv}
+              </Button>
+            </div>
+            <div className="grid gap-4">
+              {events.map((event) => {
+                const registrations = registrationsByEvent[event.id] || [];
+                return (
+                  <details key={event.id} className="rounded-2xl border border-brand-primary/10 p-4">
+                    <summary className="cursor-pointer font-medium text-brand-primary">
+                      {event.title} ({formatNumber(registrations.length, locale)})
+                    </summary>
+                    <div className="mt-4 grid gap-3">
+                      {registrations.length ? (
+                        registrations.map((registration) => (
+                          <div key={`${registration.eventId}-${registration.userId}`} className="grid gap-3 rounded-xl bg-brand-sky/50 p-3 md:grid-cols-[1fr_auto_auto] md:items-center">
+                            <div className="text-sm">
+                              <p className="font-medium text-brand-primary">
+                                {registration.displayName || registration.userId}
+                              </p>
+                              <p className="text-slate-500">{registration.email || registration.userId}</p>
+                              {registration.checkedInAt ? (
+                                <p className="text-emerald-700">
+                                  {adminLabels.checkIn}: {formatDateTime(registration.checkedInAt, locale)}
+                                </p>
+                              ) : null}
+                            </div>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              loading={loadingAction === `check-in-${registration.eventId}-${registration.userId}`}
+                              onClick={() =>
+                                runAction(`check-in-${registration.eventId}-${registration.userId}`, () =>
+                                  setEventRegistrationCheckInAdmin({
+                                    eventId: registration.eventId,
+                                    userId: registration.userId,
+                                    checkedIn: !registration.checkedInAt
+                                  })
+                                )
+                              }
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                              {registration.checkedInAt ? adminLabels.undoCheckIn : adminLabels.checkIn}
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              loading={loadingAction === `remove-registration-${registration.eventId}-${registration.userId}`}
+                              onClick={() => {
+                                if (!window.confirm("Remove this registration?")) {
+                                  return;
+                                }
+
+                                void runAction(`remove-registration-${registration.eventId}-${registration.userId}`, () =>
+                                  removeEventRegistrationAdmin({
+                                    eventId: registration.eventId,
+                                    userId: registration.userId
+                                  })
+                                );
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              {adminLabels.removeRegistration}
+                            </Button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-slate-500">No registrations yet.</p>
+                      )}
+                    </div>
+                  </details>
+                );
+              })}
             </div>
           </Card>
           ) : null}
@@ -423,6 +733,147 @@ export function DashboardShell({
                       {labels.delete}
                     </Button>
                   </div>
+                  <details className="md:col-span-2 mt-2 rounded-xl bg-brand-sky/50 p-4">
+                    <summary className="cursor-pointer text-sm font-semibold text-brand-primary">
+                      {adminLabels.edit}
+                    </summary>
+                    <form
+                      className="mt-4 grid gap-3 md:grid-cols-2"
+                      onSubmit={(submitEvent) => {
+                        submitEvent.preventDefault();
+                        const formData = new FormData(submitEvent.currentTarget);
+                        void runAction(`edit-product-${product.id}`, () =>
+                          upsertProductAdmin({
+                            id: product.id,
+                            name: getText(formData, "name"),
+                            price: getNumber(formData, "price", product.price),
+                            memberPrice: getNumber(formData, "memberPrice", product.memberPrice ?? product.price),
+                            stock: getNumber(formData, "stock", product.stock),
+                            category: getText(formData, "category") as ProductCategory,
+                            company: getText(formData, "company"),
+                            images: splitLines(getText(formData, "images")),
+                            description: getText(formData, "description"),
+                            longDescription: splitLines(getText(formData, "longDescription")),
+                            featured: formData.get("featured") === "on"
+                          })
+                        );
+                      }}
+                    >
+                      <input name="name" required defaultValue={product.name} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+                      <input name="company" defaultValue={product.company} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+                      <select name="category" defaultValue={product.category} className="rounded-xl border border-brand-primary/10 px-4 py-3">
+                        {productCategories.map((entry) => (
+                          <option key={entry} value={entry}>
+                            {translateProductCategory(entry, locale)}
+                          </option>
+                        ))}
+                      </select>
+                      <input name="stock" required type="number" min={0} defaultValue={product.stock} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+                      <input name="price" required type="number" min={0.01} step="0.01" defaultValue={product.price} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+                      <input name="memberPrice" type="number" min={0.01} step="0.01" defaultValue={product.memberPrice ?? product.price} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+                      <textarea name="images" defaultValue={product.images.join("\n")} className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+                      <textarea name="description" defaultValue={product.description} className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+                      <textarea name="longDescription" defaultValue={product.longDescription.join("\n")} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+                      <label className="flex items-center gap-2 text-sm text-slate-600">
+                        <input name="featured" type="checkbox" defaultChecked={Boolean(product.featured)} />
+                        {adminLabels.featured}
+                      </label>
+                      <Button loading={loadingAction === `edit-product-${product.id}`} type="submit">
+                        <Save className="h-4 w-4" />
+                        {adminLabels.saveChanges}
+                      </Button>
+                    </form>
+                  </details>
+                </div>
+              ))}
+            </div>
+          </Card>
+          ) : null}
+
+          {showManagementSections ? (
+          <Card id="board-members" className="space-y-5">
+            <h2 className="font-heading text-2xl font-semibold text-brand-primary">
+              {adminLabels.boardMembers}
+            </h2>
+            <form
+              className="grid gap-3 md:grid-cols-2"
+              onSubmit={(submitEvent) => {
+                submitEvent.preventDefault();
+                const formData = new FormData(submitEvent.currentTarget);
+                void runAction("create-board-member", async () => {
+                  await upsertBoardMemberAdmin({
+                    name: getText(formData, "name"),
+                    role: getText(formData, "role"),
+                    year: getText(formData, "year"),
+                    image: getText(formData, "image"),
+                    bio: getText(formData, "bio")
+                  });
+                  submitEvent.currentTarget.reset();
+                });
+              }}
+            >
+              <input name="name" required placeholder={adminLabels.addBoardMember} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+              <input name="role" required placeholder={adminLabels.role} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+              <input name="year" required placeholder={adminLabels.year} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+              <input name="image" placeholder={adminLabels.image} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+              <textarea name="bio" placeholder={adminLabels.bio} className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <Button loading={loadingAction === "create-board-member"} type="submit" className="md:col-span-2">
+                <Save className="h-4 w-4" />
+                {adminLabels.addBoardMember}
+              </Button>
+            </form>
+            <div className="grid gap-4">
+              {boardMembers.map((member) => (
+                <div key={member.id} className="rounded-2xl border border-brand-primary/10 p-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="font-medium text-brand-primary">{member.name}</p>
+                      <p className="text-sm text-slate-500">
+                        {member.role} - {member.year}
+                      </p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      loading={loadingAction === `delete-board-member-${member.id}`}
+                      onClick={() => runAction(`delete-board-member-${member.id}`, () => deleteBoardMemberAdmin(member.id))}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {labels.delete}
+                    </Button>
+                  </div>
+                  <details className="mt-4 rounded-xl bg-brand-sky/50 p-4">
+                    <summary className="cursor-pointer text-sm font-semibold text-brand-primary">
+                      {adminLabels.edit}
+                    </summary>
+                    <form
+                      className="mt-4 grid gap-3 md:grid-cols-2"
+                      onSubmit={(submitEvent) => {
+                        submitEvent.preventDefault();
+                        const formData = new FormData(submitEvent.currentTarget);
+                        void runAction(`edit-board-member-${member.id}`, () =>
+                          upsertBoardMemberAdmin({
+                            id: member.id,
+                            name: getText(formData, "name"),
+                            role: getText(formData, "role"),
+                            year: getText(formData, "year"),
+                            image: getText(formData, "image"),
+                            bio: getText(formData, "bio")
+                          })
+                        );
+                      }}
+                    >
+                      <input name="name" required defaultValue={member.name} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+                      <input name="role" required defaultValue={member.role} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+                      <input name="year" required defaultValue={member.year} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+                      <input name="image" defaultValue={member.image} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+                      <textarea name="bio" defaultValue={member.bio} className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+                      <Button loading={loadingAction === `edit-board-member-${member.id}`} type="submit" className="md:col-span-2">
+                        <Save className="h-4 w-4" />
+                        {adminLabels.saveChanges}
+                      </Button>
+                    </form>
+                  </details>
                 </div>
               ))}
             </div>
@@ -502,37 +953,82 @@ export function DashboardShell({
             </h2>
             <div className="grid gap-4">
               {orders.map((order) => (
-                <div key={order.id} className="grid gap-3 rounded-2xl border border-brand-primary/10 p-4 md:grid-cols-[1fr_auto_auto] md:items-center">
-                  <div>
-                    <p className="font-medium text-brand-primary">{order.id}</p>
-                    <p className="text-sm text-slate-500">
-                      {formatDateLong(order.createdAt, locale)} - {formatNumber(order.items.length, locale)} {labels.items}
-                    </p>
+                <div key={order.id} className="rounded-2xl border border-brand-primary/10 p-4">
+                  <div className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-center">
+                    <div>
+                      <p className="font-medium text-brand-primary">{order.id}</p>
+                      <p className="text-sm text-slate-500">
+                        {formatDateLong(order.createdAt, locale)} - {formatNumber(order.items.length, locale)} {labels.items}
+                      </p>
+                    </div>
+                    <select defaultValue={order.status} id={`order-${order.id}`} className="rounded-xl border border-brand-primary/10 px-3 py-2">
+                      {orderStatuses.map((status) => (
+                        <option key={status} value={status}>
+                          {translateOrderStatus(status, locale)}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      loading={loadingAction === `order-${order.id}`}
+                      onClick={() => {
+                        const status = (document.getElementById(`order-${order.id}`) as HTMLSelectElement).value as OrderStatus;
+                        void runAction(`order-${order.id}`, () =>
+                          updateOrderStatusAdmin({
+                            id: order.id,
+                            status
+                          })
+                        );
+                      }}
+                    >
+                      <Save className="h-4 w-4" />
+                      {labels.save}
+                    </Button>
                   </div>
-                  <select defaultValue={order.status} id={`order-${order.id}`} className="rounded-xl border border-brand-primary/10 px-3 py-2">
-                    {orderStatuses.map((status) => (
-                      <option key={status} value={status}>
-                        {translateOrderStatus(status, locale)}
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    loading={loadingAction === `order-${order.id}`}
-                    onClick={() => {
-                      const status = (document.getElementById(`order-${order.id}`) as HTMLSelectElement).value as OrderStatus;
-                      void runAction(`order-${order.id}`, () =>
-                        updateOrderStatusAdmin({
-                          id: order.id,
-                          status
-                        })
-                      );
-                    }}
-                  >
-                    <Save className="h-4 w-4" />
-                    {labels.save}
-                  </Button>
+
+                  <div className="mt-4 grid gap-4 border-t border-brand-primary/10 pt-4 lg:grid-cols-2">
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-bold text-brand-primary">
+                        {orderDetailLabels.orderItems}
+                      </h3>
+                      <div className="grid gap-2">
+                        {order.items.map((item) => (
+                          <div key={item.productId} className="rounded-xl bg-brand-sky/60 p-3 text-sm text-slate-600">
+                            <p className="font-medium text-brand-primary">{item.name}</p>
+                            <p>
+                              {formatNumber(item.quantity, locale)} x {formatCurrency(item.price, "USD", locale)}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="grid gap-1 text-sm text-slate-600">
+                        <p>{orderDetailLabels.subtotal}: {formatCurrency(order.subtotal, "USD", locale)}</p>
+                        <p>{orderDetailLabels.discount}: {formatCurrency(order.discount, "USD", locale)}</p>
+                        <p className="font-semibold text-brand-primary">
+                          {orderDetailLabels.total}: {formatCurrency(order.total, "USD", locale)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-bold text-brand-primary">
+                        {orderDetailLabels.delivery}
+                      </h3>
+                      {order.deliveryInfo ? (
+                        <div className="grid gap-2 text-sm text-slate-600">
+                          <p>{orderDetailLabels.recipient}: {order.deliveryInfo.contactName}</p>
+                          <p>{orderDetailLabels.phone}: {order.deliveryInfo.phone}</p>
+                          <p>{orderDetailLabels.address}: {order.deliveryInfo.address}</p>
+                          {order.deliveryInfo.notes ? (
+                            <p>{orderDetailLabels.notes}: {order.deliveryInfo.notes}</p>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-500">{orderDetailLabels.noDelivery}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -541,36 +1037,146 @@ export function DashboardShell({
 
           <Card id="moderation" className="space-y-4">
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">
-              {labels.moderation}
+              {adminLabels.articles}
             </h2>
+            <form
+              className="grid gap-3 md:grid-cols-2"
+              onSubmit={(submitEvent) => {
+                submitEvent.preventDefault();
+                const formData = new FormData(submitEvent.currentTarget);
+                void runAction("create-article", async () => {
+                  await upsertArticleAdmin({
+                    title: getText(formData, "title"),
+                    excerpt: getText(formData, "excerpt"),
+                    category: getText(formData, "category") as ArticleCategory,
+                    coverImage: getText(formData, "coverImage"),
+                    authorName: getText(formData, "authorName"),
+                    content: splitLines(getText(formData, "content")),
+                    references: parseReferences(getText(formData, "references")),
+                    approved: formData.get("approved") === "on"
+                  });
+                  submitEvent.currentTarget.reset();
+                });
+              }}
+            >
+              <input name="title" required placeholder="Article title" className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+              <input name="authorName" placeholder={adminLabels.author} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+              <select name="category" className="rounded-xl border border-brand-primary/10 px-4 py-3">
+                {articleCategories.map((entry) => (
+                  <option key={entry} value={entry}>
+                    {translateArticleCategory(entry, locale)}
+                  </option>
+                ))}
+              </select>
+              <input name="coverImage" placeholder={adminLabels.image} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+              <textarea name="excerpt" required placeholder="Excerpt" className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <textarea name="content" placeholder="Content, one paragraph per line" className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <textarea name="references" placeholder={adminLabels.references} className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input name="approved" type="checkbox" />
+                {adminLabels.approved}
+              </label>
+              <Button loading={loadingAction === "create-article"} type="submit">
+                <Save className="h-4 w-4" />
+                {adminLabels.addArticle}
+              </Button>
+            </form>
             <div className="grid gap-4">
               {articles.map((article) => (
-                <div key={article.id} className="flex flex-col gap-3 rounded-2xl border border-brand-primary/10 p-4 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="font-medium text-brand-primary">{article.title}</p>
-                    <p className="text-sm text-slate-500">
-                      {translateArticleCategory(article.category, locale)}
-                    </p>
+                <div key={article.id} className="rounded-2xl border border-brand-primary/10 p-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="font-medium text-brand-primary">{article.title}</p>
+                      <p className="text-sm text-slate-500">
+                        {translateArticleCategory(article.category, locale)}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Badge>{article.approved ? labels.approved : labels.pending}</Badge>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        loading={loadingAction === `article-${article.id}`}
+                        onClick={() =>
+                          runAction(`article-${article.id}`, () =>
+                            moderateArticleAdmin({
+                              id: article.id,
+                              approved: !article.approved
+                            })
+                          )
+                        }
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        {article.approved ? labels.reject : labels.approve}
+                      </Button>
+                      {showManagementSections ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          loading={loadingAction === `delete-article-${article.id}`}
+                          onClick={() => {
+                            if (!window.confirm("Delete this article?")) {
+                              return;
+                            }
+
+                            void runAction(`delete-article-${article.id}`, () => deleteArticleAdmin(article.id));
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          {labels.delete}
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <Badge>{article.approved ? labels.approved : labels.pending}</Badge>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      loading={loadingAction === `article-${article.id}`}
-                      onClick={() =>
-                        runAction(`article-${article.id}`, () =>
-                          moderateArticleAdmin({
+                  <details className="mt-4 rounded-xl bg-brand-sky/50 p-4">
+                    <summary className="cursor-pointer text-sm font-semibold text-brand-primary">
+                      {adminLabels.edit}
+                    </summary>
+                    <form
+                      className="mt-4 grid gap-3 md:grid-cols-2"
+                      onSubmit={(submitEvent) => {
+                        submitEvent.preventDefault();
+                        const formData = new FormData(submitEvent.currentTarget);
+                        void runAction(`edit-article-${article.id}`, () =>
+                          upsertArticleAdmin({
                             id: article.id,
-                            approved: !article.approved
+                            title: getText(formData, "title"),
+                            excerpt: getText(formData, "excerpt"),
+                            category: getText(formData, "category") as ArticleCategory,
+                            coverImage: getText(formData, "coverImage"),
+                            authorName: getText(formData, "authorName"),
+                            publishedAt: getText(formData, "publishedAt"),
+                            content: splitLines(getText(formData, "content")),
+                            references: parseReferences(getText(formData, "references")),
+                            approved: formData.get("approved") === "on"
                           })
-                        )
-                      }
+                        );
+                      }}
                     >
-                      <CheckCircle2 className="h-4 w-4" />
-                      {article.approved ? labels.reject : labels.approve}
-                    </Button>
-                  </div>
+                      <input name="title" required defaultValue={article.title} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+                      <input name="authorName" defaultValue={article.authorName} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+                      <select name="category" defaultValue={article.category} className="rounded-xl border border-brand-primary/10 px-4 py-3">
+                        {articleCategories.map((entry) => (
+                          <option key={entry} value={entry}>
+                            {translateArticleCategory(entry, locale)}
+                          </option>
+                        ))}
+                      </select>
+                      <input name="publishedAt" type="datetime-local" defaultValue={toInputDateTime(article.publishedAt)} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+                      <input name="coverImage" defaultValue={article.coverImage} className="rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+                      <textarea name="excerpt" required defaultValue={article.excerpt} className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+                      <textarea name="content" defaultValue={article.content.join("\n")} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+                      <textarea name="references" defaultValue={referencesToText(article)} className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+                      <label className="flex items-center gap-2 text-sm text-slate-600">
+                        <input name="approved" type="checkbox" defaultChecked={article.approved} />
+                        {adminLabels.approved}
+                      </label>
+                      <Button loading={loadingAction === `edit-article-${article.id}`} type="submit">
+                        <Save className="h-4 w-4" />
+                        {adminLabels.saveChanges}
+                      </Button>
+                    </form>
+                  </details>
                 </div>
               ))}
             </div>

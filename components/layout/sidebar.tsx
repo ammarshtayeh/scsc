@@ -23,7 +23,9 @@ export function Sidebar() {
     : [
         { href: basePath, label: dictionary.dashboard.overview },
         { href: `${basePath}/events#events`, label: dictionary.nav.events },
+        { href: `${basePath}/registrants#registrants`, label: dictionary.dashboard.eventRegistrants || "Registrants" },
         { href: `${basePath}/products#products`, label: dictionary.store.eyebrow },
+        { href: `${basePath}/board-members#board-members`, label: dictionary.dashboard.boardMembers || "Board" },
         { href: `${basePath}/users#users`, label: dictionary.dashboard.userManagement },
         { href: `${basePath}/orders#orders`, label: dictionary.dashboard.orders },
         { href: `${basePath}/moderation#moderation`, label: dictionary.dashboard.moderation }

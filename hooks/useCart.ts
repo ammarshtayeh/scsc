@@ -9,7 +9,7 @@ import {
   subscribeToCart,
   updateCartItem
 } from "@/lib/firebase/firestore";
-import type { CartItem, Product } from "@/types";
+import type { CartItem, OrderDeliveryInfo, Product } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 
 export function useCart(products: Product[], useMemberPricing = true) {
@@ -87,11 +87,11 @@ export function useCart(products: Product[], useMemberPricing = true) {
     await updateCartItem(user.id, productId, quantity);
   }
 
-  async function checkout() {
+  async function checkout(deliveryInfo?: OrderDeliveryInfo) {
     if (!user) {
       throw new Error("Please login first.");
     }
-    return checkoutCodOrder(user.id, products, useMemberPricing);
+    return checkoutCodOrder(user.id, products, useMemberPricing, undefined, deliveryInfo);
   }
 
   return {

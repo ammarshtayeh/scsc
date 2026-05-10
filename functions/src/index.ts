@@ -2,7 +2,7 @@ import { createHash, createCipheriv, createDecipheriv, randomBytes } from "crypt
 
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import nodemailer from "nodemailer";
 import { v4 as uuidv4 } from "uuid";
@@ -16,6 +16,7 @@ const publicCallableOptions = { invoker: "public" as const };
 type MembershipStatus = "active" | "expired" | "pendingRenewal";
 type Role = "admin" | "moderator" | "user";
 type OrderStatus = "pending" | "confirmed" | "processing" | "delivered";
+type ArticleCategory = "Skin Care" | "Makeup" | "Hair Care" | "Others";
 
 interface EncryptedMembershipPayload {
   userId: string;
@@ -157,6 +158,49 @@ function slugify(value: string) {
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+async function deleteQueryBatch(query: FirebaseFirestore.Query, batchSize = 300): Promise<number> {
+  const snapshot = await query.limit(batchSize).get();
+
+  if (snapshot.empty) {
+    return 0;
+  }
+
+  const batch = db.batch();
+  snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+  await batch.commit();
+
+  return snapshot.size + (snapshot.size >= batchSize ? await deleteQueryBatch(query, batchSize) : 0);
+}
+
+async function sendOrderStatusEmail(orderId: string, status: OrderStatus) {
+  const transporter = createTransport();
+
+  if (!transporter || !process.env.CONTACT_EMAIL) {
+    return;
+  }
+
+  const orderSnap = await db.collection("orders").doc(orderId).get();
+  const orderData = orderSnap.data() as { userId?: string; total?: number } | undefined;
+
+  if (!orderData?.userId) {
+    return;
+  }
+
+  const userSnap = await db.collection("users").doc(orderData.userId).get();
+  const userData = userSnap.data() as { email?: string; displayName?: string } | undefined;
+
+  if (!userData?.email) {
+    return;
+  }
+
+  await transporter.sendMail({
+    from: process.env.SMTP_USER,
+    to: userData.email,
+    subject: `SCSC Order ${orderId} is ${status}`,
+    text: `Hello ${userData.displayName || "SCSC member"},\n\nYour order ${orderId} status is now ${status}.\n\nTotal: ${orderData.total ?? ""}\n\nSCSC`
+  });
 }
 
 export const sendContactEmail = onCall(publicCallableOptions, async (request) => {
@@ -513,7 +557,10 @@ export const upsertEvent = onCall(publicCallableOptions, async (request) => {
 
 export const deleteEvent = onCall(publicCallableOptions, async (request) => {
   requireAdminOrModerator(request);
-  const { id } = request.data as { id?: string };
+  const { id, cleanupRegistrations } = request.data as {
+    id?: string;
+    cleanupRegistrations?: boolean;
+  };
 
   if (!id) {
     throw new HttpsError("invalid-argument", "Event ID is required.");
@@ -526,11 +573,30 @@ export const deleteEvent = onCall(publicCallableOptions, async (request) => {
     .limit(1)
     .get();
 
-  if (!registrationsSnap.empty) {
+  if (!registrationsSnap.empty && !cleanupRegistrations) {
     throw new HttpsError(
       "failed-precondition",
       "This event has registrations. Confirm cleanup before deleting it."
     );
+  }
+
+  if (cleanupRegistrations) {
+    const allRegistrationsSnap = await db.collection("events").doc(id).collection("registrations").get();
+    const batch = db.batch();
+
+    allRegistrationsSnap.docs.forEach((registrationDoc) => {
+      batch.delete(registrationDoc.ref);
+      batch.set(
+        db.collection("users").doc(registrationDoc.id),
+        {
+          registeredEventIds: FieldValue.arrayRemove(id),
+          lastEventCancellationAt: new Date().toISOString()
+        },
+        { merge: true }
+      );
+    });
+
+    await batch.commit();
   }
 
   await db.collection("events").doc(id).delete();
@@ -578,6 +644,46 @@ export const deleteProduct = onCall(publicCallableOptions, async (request) => {
   }
 
   await db.collection("products").doc(id).delete();
+  return { success: true };
+});
+
+export const upsertBoardMember = onCall(publicCallableOptions, async (request) => {
+  requireAdmin(request);
+
+  const data = request.data as Record<string, unknown>;
+  const id = cleanString(data.id) || db.collection("boardMembers").doc().id;
+  const name = cleanString(data.name);
+  const role = cleanString(data.role);
+  const year = cleanString(data.year);
+
+  if (!name || !role || !year) {
+    throw new HttpsError("invalid-argument", "Board member name, role, and year are required.");
+  }
+
+  await db.collection("boardMembers").doc(id).set(
+    {
+      name,
+      role,
+      year,
+      image: cleanString(data.image),
+      bio: cleanString(data.bio),
+      updatedAt: new Date().toISOString()
+    },
+    { merge: true }
+  );
+
+  return { success: true, id };
+});
+
+export const deleteBoardMember = onCall(publicCallableOptions, async (request) => {
+  requireAdmin(request);
+  const { id } = request.data as { id?: string };
+
+  if (!id) {
+    throw new HttpsError("invalid-argument", "Board member ID is required.");
+  }
+
+  await db.collection("boardMembers").doc(id).delete();
   return { success: true };
 });
 
@@ -662,6 +768,140 @@ export const updateOrderStatus = onCall(publicCallableOptions, async (request) =
     },
     { merge: true }
   );
+
+  await sendOrderStatusEmail(id, status);
+
+  return { success: true };
+});
+
+export const upsertArticle = onCall(publicCallableOptions, async (request) => {
+  requireAdminOrModerator(request);
+
+  const data = request.data as Record<string, unknown>;
+  const id = cleanString(data.id) || db.collection("articles").doc().id;
+  const title = cleanString(data.title);
+  const excerpt = cleanString(data.excerpt);
+  const category = cleanString(data.category, "Others") as ArticleCategory;
+  const allowedCategories: ArticleCategory[] = ["Skin Care", "Makeup", "Hair Care", "Others"];
+
+  if (!title || !excerpt || !allowedCategories.includes(category)) {
+    throw new HttpsError("invalid-argument", "Article title, excerpt, and category are required.");
+  }
+
+  const references = Array.isArray(data.references)
+    ? data.references
+        .map((entry) => {
+          const reference = entry as { label?: unknown; url?: unknown };
+          return {
+            label: cleanString(reference.label),
+            url: cleanString(reference.url)
+          };
+        })
+        .filter((entry) => entry.label && entry.url)
+    : [];
+
+  await db.collection("articles").doc(id).set(
+    {
+      slug: cleanString(data.slug) || slugify(title) || id,
+      title,
+      excerpt,
+      content: cleanStringArray(data.content),
+      coverImage: cleanString(data.coverImage),
+      category,
+      publishedAt: cleanString(data.publishedAt) || new Date().toISOString(),
+      authorName: cleanString(data.authorName, "SCSC Editorial Team"),
+      approved: Boolean(data.approved),
+      references,
+      updatedAt: new Date().toISOString()
+    },
+    { merge: true }
+  );
+
+  return { success: true, id };
+});
+
+export const deleteArticle = onCall(publicCallableOptions, async (request) => {
+  requireAdmin(request);
+  const { id } = request.data as { id?: string };
+
+  if (!id) {
+    throw new HttpsError("invalid-argument", "Article ID is required.");
+  }
+
+  await db.collection("articles").doc(id).delete();
+  await deleteQueryBatch(db.collection("moderationLogs").where("targetId", "==", id));
+  return { success: true };
+});
+
+export const setEventRegistrationCheckIn = onCall(publicCallableOptions, async (request) => {
+  requireAdminOrModerator(request);
+
+  const { eventId, userId, checkedIn } = request.data as {
+    eventId?: string;
+    userId?: string;
+    checkedIn?: boolean;
+  };
+
+  if (!eventId || !userId || typeof checkedIn !== "boolean") {
+    throw new HttpsError("invalid-argument", "Event ID, user ID, and check-in status are required.");
+  }
+
+  await db
+    .collection("events")
+    .doc(eventId)
+    .collection("registrations")
+    .doc(userId)
+    .set(
+      {
+        checkedInAt: checkedIn ? new Date().toISOString() : null,
+        checkedInBy: checkedIn ? request.auth?.uid || "unknown" : null
+      },
+      { merge: true }
+    );
+
+  return { success: true };
+});
+
+export const removeEventRegistration = onCall(publicCallableOptions, async (request) => {
+  requireAdminOrModerator(request);
+
+  const { eventId, userId } = request.data as {
+    eventId?: string;
+    userId?: string;
+  };
+
+  if (!eventId || !userId) {
+    throw new HttpsError("invalid-argument", "Event ID and user ID are required.");
+  }
+
+  const eventRef = db.collection("events").doc(eventId);
+  const registrationRef = eventRef.collection("registrations").doc(userId);
+  const userRef = db.collection("users").doc(userId);
+
+  await db.runTransaction(async (transaction) => {
+    const [eventSnap, registrationSnap] = await Promise.all([
+      transaction.get(eventRef),
+      transaction.get(registrationRef)
+    ]);
+
+    if (!eventSnap.exists || !registrationSnap.exists) {
+      return;
+    }
+
+    const registeredCount = Number(eventSnap.data()?.registeredCount || 0);
+    transaction.delete(registrationRef);
+    transaction.update(eventRef, {
+      registeredCount: Math.max(0, registeredCount - 1)
+    });
+    transaction.set(
+      userRef,
+      {
+        registeredEventIds: FieldValue.arrayRemove(eventId),
+        lastEventCancellationAt: new Date().toISOString()
+      },
+      { merge: true }
+    );
+  });
 
   return { success: true };
 });

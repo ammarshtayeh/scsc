@@ -8,7 +8,11 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "@/hooks/useLocale";
-import { isUserRegisteredForEvent, registerForEvent } from "@/lib/firebase/firestore";
+import {
+  cancelEventRegistration,
+  isUserRegisteredForEvent,
+  registerForEvent
+} from "@/lib/firebase/firestore";
 import { formatNumber } from "@/lib/utils";
 
 interface EventRegisterCardProps {
@@ -29,8 +33,13 @@ export function EventRegisterCard({
   const { pushToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [currentRegisteredCount, setCurrentRegisteredCount] = useState(registeredCount);
 
-  const isFull = registeredCount >= capacity;
+  const isFull = currentRegisteredCount >= capacity;
+
+  useEffect(() => {
+    setCurrentRegisteredCount(registeredCount);
+  }, [registeredCount]);
 
   useEffect(() => {
     if (!user) {
@@ -66,7 +75,29 @@ export function EventRegisterCard({
       setLoading(true);
       await registerForEvent(eventId, user.id);
       setIsRegistered(true);
+      setCurrentRegisteredCount((current) => Math.min(capacity, current + 1));
       pushToast(dictionary.eventRegistration.success, "success");
+    } catch (error) {
+      pushToast(
+        error instanceof Error ? error.message : dictionary.eventRegistration.genericError,
+        "error"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCancelRegistration() {
+    if (!user || !isRegistered) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await cancelEventRegistration(eventId, user.id);
+      setIsRegistered(false);
+      setCurrentRegisteredCount((current) => Math.max(0, current - 1));
+      pushToast(dictionary.eventRegistration.cancelSuccess, "success");
     } catch (error) {
       pushToast(
         error instanceof Error ? error.message : dictionary.eventRegistration.genericError,
@@ -90,23 +121,32 @@ export function EventRegisterCard({
       <p className="text-sm text-slate-600">
         {isRegistered
           ? dictionary.eventRegistration.reserved
-          : capacity - registeredCount > 0
-          ? `${formatNumber(capacity - registeredCount, locale)} ${dictionary.eventRegistration.seatsRemaining}`
+          : capacity - currentRegisteredCount > 0
+          ? `${formatNumber(capacity - currentRegisteredCount, locale)} ${dictionary.eventRegistration.seatsRemaining}`
           : dictionary.eventRegistration.full}
       </p>
       {user ? (
-        <Button
-          className="w-full"
-          loading={loading}
-          disabled={isFull || isRegistered}
-          onClick={handleRegister}
-        >
-          {isFull
-            ? dictionary.eventRegistration.fullButton
-            : isRegistered
-              ? dictionary.eventRegistration.alreadyRegistered
+        isRegistered ? (
+          <Button
+            className="w-full"
+            variant="secondary"
+            loading={loading}
+            onClick={handleCancelRegistration}
+          >
+            {dictionary.eventRegistration.cancelRegistration}
+          </Button>
+        ) : (
+          <Button
+            className="w-full"
+            loading={loading}
+            disabled={isFull}
+            onClick={handleRegister}
+          >
+            {isFull
+              ? dictionary.eventRegistration.fullButton
               : dictionary.eventRegistration.registerNow}
-        </Button>
+          </Button>
+        )
       ) : (
         <Link href={`/auth/login?redirect=/events/${eventSlug}`} className="block">
           <Button className="w-full">{dictionary.eventRegistration.loginToRegister}</Button>

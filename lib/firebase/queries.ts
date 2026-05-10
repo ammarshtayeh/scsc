@@ -7,6 +7,7 @@ import type {
   Article,
   BoardMember,
   DashboardStats,
+  EventRegistration,
   EventItem,
   Order,
   Product,
@@ -37,11 +38,12 @@ export async function getLatestArticles(limit = 3): Promise<Article[]> {
   const snapshot = await adminDb
     .collection("articles")
     .where("approved", "==", true)
-    .orderBy("publishedAt", "desc")
-    .limit(limit)
     .get();
 
-  return snapshot.docs.map((doc) => convertDoc<Article>(doc.id, doc.data()));
+  return sortByDate(
+    snapshot.docs.map((doc) => convertDoc<Article>(doc.id, doc.data())),
+    "publishedAt"
+  ).slice(0, limit);
 }
 
 export async function getAllArticles(category?: string): Promise<Article[]> {
@@ -53,8 +55,11 @@ export async function getAllArticles(category?: string): Promise<Article[]> {
   if (category) {
     query = query.where("category", "==", category);
   }
-  const snapshot = await query.orderBy("publishedAt", "desc").get();
-  return snapshot.docs.map((doc) => convertDoc<Article>(doc.id, doc.data()));
+  const snapshot = await query.get();
+  return sortByDate(
+    snapshot.docs.map((doc) => convertDoc<Article>(doc.id, doc.data())),
+    "publishedAt"
+  );
 }
 
 export async function getArticlesForModeration(): Promise<Article[]> {
@@ -76,7 +81,6 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
   const snapshot = await adminDb
     .collection("articles")
     .where("slug", "==", slug)
-    .where("approved", "==", true)
     .limit(1)
     .get();
 
@@ -85,7 +89,8 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
   }
 
   const doc = snapshot.docs[0];
-  return convertDoc<Article>(doc.id, doc.data());
+  const article = convertDoc<Article>(doc.id, doc.data());
+  return article.approved ? article : null;
 }
 
 export async function getUpcomingEvents(limit?: number): Promise<EventItem[]> {
@@ -149,6 +154,53 @@ export async function getBoardMembersByYear(): Promise<Record<string, BoardMembe
     acc[member.year] = acc[member.year] ? [...acc[member.year], member] : [member];
     return acc;
   }, {});
+}
+
+export async function getAllBoardMembers(): Promise<BoardMember[]> {
+  if (!isFirebaseAdminConfigured || !adminDb) {
+    return [];
+  }
+
+  const snapshot = await adminDb.collection("boardMembers").orderBy("year", "desc").get();
+  return snapshot.docs.map((doc) => convertDoc<BoardMember>(doc.id, doc.data()));
+}
+
+export async function getEventRegistrationsForDashboard(): Promise<EventRegistration[]> {
+  if (!isFirebaseAdminConfigured || !adminDb) {
+    return [];
+  }
+
+  const [eventsSnapshot, usersSnapshot] = await Promise.all([
+    adminDb.collection("events").get(),
+    adminDb.collection("users").get()
+  ]);
+  const usersById = new Map(usersSnapshot.docs.map((doc) => [doc.id, doc.data()]));
+  const registrations = await Promise.all(
+    eventsSnapshot.docs.map(async (eventDoc) => {
+      const snapshot = await eventDoc.ref.collection("registrations").get();
+      return snapshot.docs.map((doc) => {
+        const user = usersById.get(doc.id) as { displayName?: string; email?: string } | undefined;
+        const data = doc.data();
+        const registeredAt =
+          typeof data.registeredAt === "string"
+            ? data.registeredAt
+            : typeof data.createdAt?.toDate === "function"
+              ? data.createdAt.toDate().toISOString()
+              : undefined;
+
+        return convertDoc<EventRegistration>(doc.id, {
+          ...doc.data(),
+          eventId: eventDoc.id,
+          userId: doc.id,
+          displayName: data.displayName || user?.displayName,
+          email: data.email || user?.email,
+          registeredAt
+        });
+      });
+    })
+  );
+
+  return registrations.flat();
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {

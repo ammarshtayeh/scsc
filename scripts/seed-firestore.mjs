@@ -10,12 +10,28 @@ const credentialPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 const credentialFile = credentialPath
   ? JSON.parse(readFileSync(credentialPath, "utf8"))
   : null;
+
+function normalizePrivateKey(value) {
+  if (!value) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  const unquoted =
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+      ? trimmed.slice(1, -1)
+      : trimmed;
+
+  return unquoted.replace(/\\n/g, "\n");
+}
+
 const projectId =
   process.env.FIREBASE_PROJECT_ID ||
   process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
   credentialFile?.project_id;
 const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+const privateKey = normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY);
 
 if (!projectId) {
   console.error("Missing FIREBASE_PROJECT_ID or project_id in GOOGLE_APPLICATION_CREDENTIALS.");

@@ -39,6 +39,17 @@ export interface EventItem {
   isFeatured?: boolean;
 }
 
+export interface EventRegistration {
+  id: string;
+  eventId: string;
+  userId: string;
+  displayName?: string;
+  email?: string;
+  registeredAt?: string;
+  checkedInAt?: string | null;
+  checkedInBy?: string | null;
+}
+
 export interface Product {
   id: string;
   slug: string;
@@ -66,6 +77,13 @@ export interface OrderLineItem {
   quantity: number;
 }
 
+export interface OrderDeliveryInfo {
+  contactName: string;
+  phone: string;
+  address: string;
+  notes?: string;
+}
+
 export interface Order {
   id: string;
   userId: string;
@@ -75,6 +93,7 @@ export interface Order {
   discount: number;
   total: number;
   items: OrderLineItem[];
+  deliveryInfo?: OrderDeliveryInfo;
 }
 
 export interface BoardMember {

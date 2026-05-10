@@ -42,15 +42,15 @@ function getMemberImage(index: number) {
 }
 
 const memberNames = [
-  "Ahmad Natsheh",
-  "Mohammad Abu Ghazaleh",
-  "Dana Qawasmi",
-  "Leen Awad",
-  "Jana Shahin",
-  "Rama Daraghmeh",
-  "Hala Nassar",
-  "Tala Abu Sneineh",
-  "SCSC Research Team"
+  "الطالب زيد أبو الرب",
+  "الطالبة آمنة حسن",
+  "الطالبة نورا المصري",
+  "الطالبة تولين هندية",
+  "الطالبة جنى أبو حجلة",
+  "الطالبة يسرى خليل",
+  "الطالبة آيات أقطيش",
+  "الطالبة سارة جبر",
+  "الطالب زيد بلالم"
 ];
 
 const leadershipIcons = [Crown, ShieldCheck, WalletCards];

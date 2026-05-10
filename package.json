@@ -20,6 +20,8 @@
     "run:local": "powershell -ExecutionPolicy Bypass -File .\\scripts\\run-local.ps1",
     "firebase:emulators": ".\\node_modules\\node\\bin\\node.exe .\\node_modules\\firebase-tools\\lib\\bin\\firebase.js emulators:start",
     "firebase:deploy:rules": ".\\node_modules\\node\\bin\\node.exe .\\node_modules\\firebase-tools\\lib\\bin\\firebase.js deploy --only firestore:rules,firestore:indexes,storage",
+    "firebase:admin:check": "node scripts/check-firebase-admin-env.mjs",
+    "firebase:prod:check": "node scripts/check-production-firebase.mjs",
     "firebase:seed": "node --env-file=.env.local scripts/seed-firestore.mjs",
     "functions:build": "npm --prefix functions run build"
   },

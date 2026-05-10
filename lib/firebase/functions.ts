@@ -5,8 +5,10 @@ import { httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase/firebase";
 import type {
   Article,
+  BoardMember,
   ContactMessagePayload,
   EventItem,
+  EventRegistration,
   MembershipQrSession,
   MembershipStatus,
   OrderStatus,
@@ -26,6 +28,8 @@ interface IssueMembershipQrInput {
 
 type AdminEventInput = Partial<EventItem> & Pick<EventItem, "title" | "startsAt" | "capacity">;
 type AdminProductInput = Partial<Product> & Pick<Product, "name" | "price" | "stock">;
+type AdminArticleInput = Partial<Article> & Pick<Article, "title" | "excerpt" | "category">;
+type AdminBoardMemberInput = Partial<BoardMember> & Pick<BoardMember, "name" | "role" | "year">;
 
 function requireFunctions() {
   if (!functions) {
@@ -74,8 +78,11 @@ export async function upsertEventAdmin(payload: AdminEventInput) {
   return callAdminFunction<AdminEventInput>("upsertEvent", payload);
 }
 
-export async function deleteEventAdmin(id: string) {
-  return callAdminFunction<{ id: string }>("deleteEvent", { id });
+export async function deleteEventAdmin(id: string, cleanupRegistrations = false) {
+  return callAdminFunction<{ id: string; cleanupRegistrations?: boolean }>("deleteEvent", {
+    id,
+    cleanupRegistrations
+  });
 }
 
 export async function upsertProductAdmin(payload: AdminProductInput) {
@@ -84,6 +91,34 @@ export async function upsertProductAdmin(payload: AdminProductInput) {
 
 export async function deleteProductAdmin(id: string) {
   return callAdminFunction<{ id: string }>("deleteProduct", { id });
+}
+
+export async function upsertArticleAdmin(payload: AdminArticleInput) {
+  return callAdminFunction<AdminArticleInput>("upsertArticle", payload);
+}
+
+export async function deleteArticleAdmin(id: string) {
+  return callAdminFunction<{ id: string }>("deleteArticle", { id });
+}
+
+export async function upsertBoardMemberAdmin(payload: AdminBoardMemberInput) {
+  return callAdminFunction<AdminBoardMemberInput>("upsertBoardMember", payload);
+}
+
+export async function deleteBoardMemberAdmin(id: string) {
+  return callAdminFunction<{ id: string }>("deleteBoardMember", { id });
+}
+
+export async function setEventRegistrationCheckInAdmin(payload: {
+  eventId: string;
+  userId: string;
+  checkedIn: boolean;
+}) {
+  return callAdminFunction("setEventRegistrationCheckIn", payload);
+}
+
+export async function removeEventRegistrationAdmin(payload: Pick<EventRegistration, "eventId" | "userId">) {
+  return callAdminFunction("removeEventRegistration", payload);
 }
 
 export async function updateUserAdmin(payload: {

@@ -38,7 +38,8 @@ service cloud.firestore {
           "photoURL",
           "registeredEventIds",
           "savedArticleIds",
-          "lastEventRegistrationAt"
+          "lastEventRegistrationAt",
+          "lastEventCancellationAt"
         ])
       );
       allow delete: if isAdmin();
@@ -50,8 +51,17 @@ service cloud.firestore {
       allow update: if isAdminOrModerator() || (
         isSignedIn() &&
         request.resource.data.diff(resource.data).changedKeys().hasOnly(["registeredCount"]) &&
-        request.resource.data.registeredCount == resource.data.registeredCount + 1 &&
-        resource.data.registeredCount < resource.data.capacity
+        (
+          (
+            request.resource.data.registeredCount == resource.data.registeredCount + 1 &&
+            resource.data.registeredCount < resource.data.capacity
+          ) ||
+          (
+            request.resource.data.registeredCount == resource.data.registeredCount - 1 &&
+            resource.data.registeredCount > 0 &&
+            exists(/databases/$(database)/documents/events/$(eventId)/registrations/$(request.auth.uid))
+          )
+        )
       );
 
       match /registrations/{userId} {
@@ -60,7 +70,7 @@ service cloud.firestore {
           !exists(/databases/$(database)/documents/events/$(eventId)/registrations/$(userId)) &&
           get(/databases/$(database)/documents/events/$(eventId)).data.registeredCount <
             get(/databases/$(database)/documents/events/$(eventId)).data.capacity;
-        allow delete: if isAdminOrModerator();
+        allow delete: if isSelf(userId) || isAdminOrModerator();
       }
     }
 
