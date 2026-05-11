@@ -42,6 +42,10 @@ function normalizeClientProduct(id: string, data: Record<string, unknown>): Prod
   };
 }
 
+function getProductDetailHref(product: Product) {
+  return `/store/${encodeURIComponent(product.slug || product.id)}`;
+}
+
 export function StoreShell({ products: initialProducts }: { products: Product[] }) {
   const { dictionary, locale } = useLocale();
   const { pushToast } = useToast();
@@ -275,7 +279,7 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
                     </div>
                     <p className="text-sm leading-7 text-slate-600">{product.description}</p>
                     <div className="grid gap-3 sm:flex sm:flex-wrap">
-                      <Link href={`/store/${product.slug}`} className="w-full sm:w-auto">
+                      <Link href={getProductDetailHref(product)} className="w-full sm:w-auto">
                         <Button variant="secondary" className="w-full sm:w-auto">{dictionary.store.viewDetails}</Button>
                       </Link>
                       <Button

@@ -29,6 +29,11 @@ service firebase.storage {
       allow write: if isAdminOrModerator();
     }
 
+    match /images/board/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdminOrModerator();
+    }
+
     match /images/members/{userId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && (request.auth.uid == userId || isAdminOrModerator());

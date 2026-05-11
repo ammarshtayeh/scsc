@@ -1,6 +1,5 @@
-import { notFound } from "next/navigation";
-
 import { ProductDetailClient } from "@/components/store/product-detail-client";
+import { ProductDetailResolver } from "@/components/store/product-detail-resolver";
 import { PageHero } from "@/components/ui/page-hero";
 import { getAllProducts, getProductBySlug } from "@/lib/firebase/queries";
 import { getServerDictionary } from "@/lib/i18n/server";
@@ -19,7 +18,16 @@ export default async function ProductDetailPage({
   ]);
 
   if (!product) {
-    notFound();
+    return (
+      <>
+        <PageHero
+          eyebrow={dictionary.store.detailEyebrow}
+          title={dictionary.store.title}
+          description={dictionary.store.description}
+        />
+        <ProductDetailResolver slug={params.slug} />
+      </>
+    );
   }
 
   return (

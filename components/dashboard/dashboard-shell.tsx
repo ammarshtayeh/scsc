@@ -161,7 +161,7 @@ function cleanFileName(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-async function uploadDashboardImage(folder: "events" | "products", file: File) {
+async function uploadDashboardImage(folder: "events" | "products" | "board", file: File) {
   const safeName = cleanFileName(file.name) || "image";
   const extension = safeName.includes(".") ? "" : ".jpg";
   return uploadFileToStorage(
@@ -296,6 +296,7 @@ export function DashboardShell({
     longDescription: ""
   });
   const [productImageFiles, setProductImageFiles] = useState<File[]>([]);
+  const [boardMemberImageFile, setBoardMemberImageFile] = useState<File | null>(null);
   const imageLabels =
     locale === "ar"
       ? {
@@ -340,6 +341,27 @@ export function DashboardShell({
           notes: "Notes",
           noDelivery: "No delivery details"
         };
+  const boardRolePresets =
+    locale === "ar"
+      ? [
+          "رئيس الهيئة الإدارية",
+          "نائب الرئيس",
+          "أمين الصندوق",
+          "مسؤول العلاقات العامة",
+          "مسؤول الفعاليات",
+          "مسؤول التثقيف",
+          "عضو هيئة إدارية"
+        ]
+      : [
+          "Board president",
+          "Vice president",
+          "Treasurer",
+          "Public relations lead",
+          "Events lead",
+          "Education lead",
+          "Board member"
+        ];
+  const currentBoardYear = String(new Date().getFullYear());
   const showManagementSections = mode === "admin";
   const showOverview = showManagementSections && activeSection === "overview";
   const showModerationSection = mode === "moderator" || activeSection === "moderation";
@@ -990,22 +1012,36 @@ export function DashboardShell({
 
           {showAdminSection("board-members") ? (
           <Card id="board-members" className="space-y-5">
-            <h2 className="font-heading text-2xl font-semibold text-brand-primary">
-              {adminLabels.boardMembers}
-            </h2>
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h2 className="font-heading text-2xl font-semibold text-brand-primary">
+                  {adminLabels.boardMembers}
+                </h2>
+                <p className={`mt-2 max-w-2xl text-sm leading-7 ${dashboardMutedTextClass}`}>
+                  {locale === "ar"
+                    ? "أي تعديل هنا يظهر في صفحة من نحن والهيكل التنظيمي. ارفع الصورة، اختر المنصب، ثم احفظ بدون الحاجة لأي تعديل برمجي."
+                    : "Changes here power the About page and organizational structure. Upload a photo, choose a role, and save without touching code."}
+                </p>
+              </div>
+              <Badge>{locale === "ar" ? "يعرض أحدث سنة تلقائياً" : "Latest year shown automatically"}</Badge>
+            </div>
             <form
               className="grid gap-3 md:grid-cols-2"
               onSubmit={(submitEvent) => {
                 submitEvent.preventDefault();
                 const formData = new FormData(submitEvent.currentTarget);
                 void runAction("create-board-member", async () => {
+                  const uploadedImage = boardMemberImageFile
+                    ? await uploadDashboardImage("board", boardMemberImageFile)
+                    : "";
                   await upsertBoardMemberAdmin({
                     name: getText(formData, "name"),
                     role: getText(formData, "role"),
                     year: getText(formData, "year"),
-                    image: getText(formData, "image"),
+                    image: uploadedImage || getText(formData, "image"),
                     bio: getText(formData, "bio")
                   });
+                  setBoardMemberImageFile(null);
                   submitEvent.currentTarget.reset();
                 });
               }}
@@ -1014,13 +1050,32 @@ export function DashboardShell({
                 <input name="name" required placeholder={adminLabels.addBoardMember} className={dashboardFieldClass} />
               </DashboardFieldLabel>
               <DashboardFieldLabel label={adminLabels.role}>
-                <input name="role" required placeholder={adminLabels.role} className={dashboardFieldClass} />
+                <select name="role" required className={dashboardFieldClass} defaultValue={boardRolePresets[0]}>
+                  {boardRolePresets.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
               </DashboardFieldLabel>
               <DashboardFieldLabel label={adminLabels.year}>
-                <input name="year" required placeholder={adminLabels.year} className={dashboardFieldClass} />
+                <input name="year" required defaultValue={currentBoardYear} placeholder={adminLabels.year} className={dashboardFieldClass} />
               </DashboardFieldLabel>
               <DashboardFieldLabel label={adminLabels.image}>
                 <input name="image" placeholder={adminLabels.image} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "رفع صورة من الجهاز" : "Upload photo"} className="md:col-span-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => setBoardMemberImageFile(event.target.files?.[0] || null)}
+                  className={dashboardFieldClass}
+                />
+                {boardMemberImageFile ? (
+                  <span className={`block text-xs ${dashboardMutedTextClass}`}>
+                    {locale === "ar" ? "تم اختيار" : "Selected"}: {boardMemberImageFile.name}
+                  </span>
+                ) : null}
               </DashboardFieldLabel>
               <DashboardFieldLabel label={adminLabels.bio} className="md:col-span-2">
                 <textarea name="bio" placeholder={adminLabels.bio} className={`${dashboardEditTextAreaClass} w-full`} />
@@ -1059,22 +1114,34 @@ export function DashboardShell({
                       onSubmit={(submitEvent) => {
                         submitEvent.preventDefault();
                         const formData = new FormData(submitEvent.currentTarget);
-                        void runAction(`edit-board-member-${member.id}`, () =>
-                          upsertBoardMemberAdmin({
+                        void runAction(`edit-board-member-${member.id}`, async () => {
+                          const imageFile = formData.get("imageFile");
+                          const uploadedImage =
+                            imageFile instanceof File && imageFile.size > 0
+                              ? await uploadDashboardImage("board", imageFile)
+                              : "";
+                          return upsertBoardMemberAdmin({
                             id: member.id,
                             name: getText(formData, "name"),
                             role: getText(formData, "role"),
                             year: getText(formData, "year"),
-                            image: getText(formData, "image"),
+                            image: uploadedImage || getText(formData, "image"),
                             bio: getText(formData, "bio")
-                          })
-                        );
+                          });
+                        });
                       }}
                     >
                       <input name="name" required defaultValue={member.name} className={dashboardEditFieldClass} />
-                      <input name="role" required defaultValue={member.role} className={dashboardEditFieldClass} />
+                      <select name="role" required defaultValue={member.role} className={dashboardEditFieldClass}>
+                        {[member.role, ...boardRolePresets.filter((role) => role !== member.role)].map((role) => (
+                          <option key={role} value={role}>
+                            {role}
+                          </option>
+                        ))}
+                      </select>
                       <input name="year" required defaultValue={member.year} className={dashboardEditFieldClass} />
                       <input name="image" defaultValue={member.image} className={dashboardEditFieldClass} />
+                      <input name="imageFile" type="file" accept="image/*" className={`${dashboardEditFieldClass} md:col-span-2`} />
                       <textarea name="bio" defaultValue={member.bio} className={`${dashboardEditTextAreaClass} md:col-span-2`} />
                       <Button loading={loadingAction === `edit-board-member-${member.id}`} type="submit" className="md:col-span-2">
                         <Save className="h-4 w-4" />

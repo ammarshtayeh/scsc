@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { SmartImage } from "@/components/ui/smart-image";
+import type { BoardMember } from "@/types";
 
 interface OrganizationStructureProps {
   title: string;
@@ -24,6 +25,7 @@ interface OrganizationStructureProps {
   leadershipTitle: string;
   committeesTitle: string;
   roles: readonly string[];
+  members?: BoardMember[];
 }
 
 const imageSources = [
@@ -161,8 +163,21 @@ export function OrganizationStructure({
   foundingBody,
   leadershipTitle,
   committeesTitle,
-  roles
+  roles,
+  members = []
 }: OrganizationStructureProps) {
+  const managedMembers = members.length
+    ? [...members].sort((a, b) => {
+        const yearDiff = Number(b.year) - Number(a.year);
+        return yearDiff || a.name.localeCompare(b.name);
+      })
+    : [];
+  const latestYear = managedMembers[0]?.year;
+  const visibleMembers = latestYear
+    ? managedMembers.filter((member) => member.year === latestYear)
+    : [];
+  const leadershipMembers = visibleMembers.slice(0, 3);
+  const committeeMembers = visibleMembers.slice(3);
   const leadershipRoles = roles.slice(0, 3);
   const committeeRoles = roles.slice(3);
 
@@ -209,17 +224,21 @@ export function OrganizationStructure({
               {leadershipTitle}
             </motion.p>
             <motion.div variants={containerVariants} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {leadershipRoles.map((role, index) => (
+              {(leadershipMembers.length ? leadershipMembers : leadershipRoles).map((entry, index) => {
+                const member = typeof entry === "string" ? null : entry;
+                const role = member?.role || (entry as string);
+                return (
                 <MemberPhotoCard
-                  key={role}
+                  key={member?.id || role}
                   role={role}
-                  name={memberNames[index] || `Board Member ${index + 1}`}
-                  image={getMemberImage(index)}
+                  name={member?.name || memberNames[index] || `Board Member ${index + 1}`}
+                  image={member?.image || getMemberImage(index)}
                   index={index}
                   Icon={leadershipIcons[index]}
                   featured
                 />
-              ))}
+                );
+              })}
             </motion.div>
           </div>
 
@@ -234,15 +253,17 @@ export function OrganizationStructure({
               variants={containerVariants}
               className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
             >
-              {committeeRoles.map((role, index) => {
+              {(committeeMembers.length ? committeeMembers : committeeRoles).map((entry, index) => {
+                const member = typeof entry === "string" ? null : entry;
+                const role = member?.role || (entry as string);
                 const Icon = committeeIcons[index] || UsersRound;
                 const memberIndex = index + leadershipRoles.length;
                 return (
                   <MemberPhotoCard
-                    key={role}
+                    key={member?.id || role}
                     role={role}
-                    name={memberNames[memberIndex] || `Board Member ${memberIndex + 1}`}
-                    image={getMemberImage(memberIndex)}
+                    name={member?.name || memberNames[memberIndex] || `Board Member ${memberIndex + 1}`}
+                    image={member?.image || getMemberImage(memberIndex)}
                     index={memberIndex}
                     Icon={Icon}
                   />

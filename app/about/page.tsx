@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function AboutPage() {
   const dictionary = getServerDictionary();
   const groupedMembers = await getBoardMembersByYear();
+  const managedBoardMembers = Object.values(groupedMembers).flat();
 
   return (
     <>
@@ -116,6 +117,7 @@ export default async function AboutPage() {
         leadershipTitle={dictionary.about.structureLeadershipTitle}
         committeesTitle={dictionary.about.structureCommitteesTitle}
         roles={dictionary.about.structure}
+        members={managedBoardMembers}
       />
 
       <BoardMembers groupedMembers={groupedMembers} />
