@@ -292,6 +292,7 @@ export function DashboardShell({
     category: "Skin Care" as ProductCategory,
     company: "",
     image: "",
+    imageTwo: "",
     description: "",
     longDescription: ""
   });
@@ -852,7 +853,11 @@ export function DashboardShell({
                   const uploadedImages = await Promise.all(
                     productImageFiles.map((file) => uploadDashboardImage("products", file))
                   );
-                  const images = [...(productForm.image ? [productForm.image] : []), ...uploadedImages];
+                  const images = [
+                    ...(productForm.image ? [productForm.image] : []),
+                    ...(productForm.imageTwo ? [productForm.imageTwo] : []),
+                    ...uploadedImages
+                  ];
 
                   await upsertProductAdmin({
                     name: productForm.name,
@@ -900,6 +905,12 @@ export function DashboardShell({
                     {imageLabels.url}
                   </span>
                   <input placeholder={labels.productImagePlaceholder} value={productForm.image} onChange={(event) => setProductForm((current) => ({ ...current, image: event.target.value }))} className={dashboardFieldClass} />
+                  <input
+                    placeholder={labels.productImagePlaceholder}
+                    value={productForm.imageTwo}
+                    onChange={(event) => setProductForm((current) => ({ ...current, imageTwo: event.target.value }))}
+                    className={`${dashboardFieldClass} mt-3`}
+                  />
                 </label>
                 <label className="space-y-2">
                   <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">

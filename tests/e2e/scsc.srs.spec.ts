@@ -373,8 +373,8 @@ test.describe("GROUP 9 — Admin Dashboard @admin", () => {
 
     await page.getByPlaceholder(/product name|اسم المنتج/i).fill(name);
     await page.getByPlaceholder(/company|الشركة/i).first().fill("QA Co");
-    await page.locator("input[type='number']").nth(2).fill("15");
-    await page.locator("input[type='number']").nth(3).fill("11");
+    await page.getByLabel(/stock quantity|ÙƒÙ…ÙŠØ© Ø§Ù„Ù…Ø®Ø²ÙˆÙ†/i).fill("15");
+    await page.getByLabel(/member price|Ø³Ø¹Ø± Ø§Ù„Ø£Ø¹Ø¶Ø§Ø¡/i).fill("11");
     await page.getByPlaceholder(/image url|رابط الصورة/i).nth(1).fill("https://placehold.co/600x400");
     await page
       .getByPlaceholder(/description|الوصف/i)
