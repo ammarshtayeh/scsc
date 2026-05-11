@@ -42,7 +42,7 @@ function normalizeDigits(value: string) {
   return value.replace(arabicIndicDigits, (digit) => digitMap[digit] || digit);
 }
 
-export function formatCurrency(amount: number, currency = "USD", locale: AppLocale = "en") {
+export function formatCurrency(amount: number, currency = "ILS", locale: AppLocale = "en") {
   return new Intl.NumberFormat(getLatinNumberLocale(locale), {
     style: "currency",
     currency,

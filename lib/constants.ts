@@ -32,5 +32,6 @@ export const PRODUCT_CATEGORIES: ProductCategory[] = [
 export const ROLES: Role[] = ["admin", "moderator", "user"];
 
 export const MEMBER_DISCOUNT_RATE = 0.12;
+export const STORE_CURRENCY = "ILS";
 export const LOGIN_LOCK_DURATION_MINUTES = 15;
 export const LOGIN_LOCK_MAX_ATTEMPTS = 5;

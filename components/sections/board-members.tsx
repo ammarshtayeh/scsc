@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
 
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SmartImage } from "@/components/ui/smart-image";
+import { db } from "@/lib/firebase/firebase";
 import { useLocale } from "@/hooks/useLocale";
 import { translateBoardRole } from "@/lib/i18n/helpers";
 import { cn } from "@/lib/utils";
@@ -14,19 +16,88 @@ interface BoardMembersProps {
   groupedMembers: Record<string, BoardMember[]>;
 }
 
+function normalizeBoardMember(id: string, data: Record<string, unknown>): BoardMember {
+  const order = Number(data.order);
+
+  return {
+    id,
+    name: typeof data.name === "string" && data.name.trim() ? data.name.trim() : "Board member",
+    role: typeof data.role === "string" && data.role.trim() ? data.role.trim() : "Board member",
+    year: typeof data.year === "string" && data.year.trim()
+      ? data.year.trim()
+      : String(new Date().getFullYear()),
+    order: Number.isFinite(order) ? order : 99,
+    image: typeof data.image === "string" ? data.image : "",
+    bio: typeof data.bio === "string" ? data.bio : ""
+  };
+}
+
+function groupMembersByYear(members: BoardMember[]) {
+  return members.reduce<Record<string, BoardMember[]>>((acc, member) => {
+    acc[member.year] = acc[member.year] ? [...acc[member.year], member] : [member];
+    return acc;
+  }, {});
+}
+
 export function BoardMembers({ groupedMembers }: BoardMembersProps) {
   const { dictionary, locale } = useLocale();
+  const [clientGroupedMembers, setClientGroupedMembers] = useState(groupedMembers);
   const years = useMemo(
-    () => Object.keys(groupedMembers).sort((a, b) => Number(b) - Number(a)),
-    [groupedMembers]
+    () => Object.keys(clientGroupedMembers).sort((a, b) => Number(b) - Number(a)),
+    [clientGroupedMembers]
   );
   const [selectedYear, setSelectedYear] = useState(years[0] || "");
+
+  useEffect(() => {
+    setClientGroupedMembers(groupedMembers);
+  }, [groupedMembers]);
+
+  useEffect(() => {
+    if (!db) {
+      return;
+    }
+
+    let mounted = true;
+
+    async function loadMembers() {
+      const snapshot = await getDocs(query(collection(db!, "boardMembers"), orderBy("year", "desc")));
+      if (!mounted) {
+        return;
+      }
+
+      setClientGroupedMembers(
+        groupMembersByYear(
+          snapshot.docs.map((entry) =>
+            normalizeBoardMember(entry.id, entry.data() as Record<string, unknown>)
+          )
+        )
+      );
+    }
+
+    void loadMembers().catch(() => undefined);
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!years.length) {
+      setSelectedYear("");
+      return;
+    }
+
+    if (!years.includes(selectedYear)) {
+      setSelectedYear(years[0]);
+    }
+  }, [selectedYear, years]);
+
   const members = useMemo(
     () =>
-      [...(groupedMembers[selectedYear] || [])].sort(
+      [...(clientGroupedMembers[selectedYear] || [])].sort(
         (a, b) => (a.order ?? 99) - (b.order ?? 99) || a.name.localeCompare(b.name)
       ),
-    [groupedMembers, selectedYear]
+    [clientGroupedMembers, selectedYear]
   );
 
   return (

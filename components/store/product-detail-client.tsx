@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/toast";
 import { useCart } from "@/hooks/useCart";
 import { useLocale } from "@/hooks/useLocale";
 import { useMemberPricing } from "@/hooks/useMemberPricing";
+import { STORE_CURRENCY } from "@/lib/constants";
 import { translateProductCategory } from "@/lib/i18n/helpers";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import type { Product } from "@/types";
@@ -83,11 +84,11 @@ export function ProductDetailClient({
           </div>
           <div>
             <p className="font-heading text-3xl font-bold text-brand-primary">
-              {formatCurrency(displayPrice, "USD", locale)}
+              {formatCurrency(displayPrice, STORE_CURRENCY, locale)}
             </p>
             {memberPricing.useMemberPricing && product.memberPrice ? (
               <p className="mt-1 text-sm text-slate-400 line-through">
-                {formatCurrency(product.price, "USD", locale)}
+                {formatCurrency(product.price, STORE_CURRENCY, locale)}
               </p>
             ) : null}
             {!memberPricing.useMemberPricing ? (

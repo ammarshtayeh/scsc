@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "@/hooks/useLocale";
+import { STORE_CURRENCY } from "@/lib/constants";
 import { db } from "@/lib/firebase/firebase";
 import { translateOrderStatus } from "@/lib/i18n/helpers";
 import { formatCurrency, formatDateLong, formatNumber } from "@/lib/utils";
@@ -134,11 +135,11 @@ export function OrderDetailShell({ orderId }: { orderId: string }) {
                 <div>
                   <p className="font-medium text-brand-primary">{item.name}</p>
                   <p className="mt-1 text-sm text-slate-500">
-                    {formatNumber(item.quantity, locale)} x {formatCurrency(item.price, "USD", locale)}
+                    {formatNumber(item.quantity, locale)} x {formatCurrency(item.price, STORE_CURRENCY, locale)}
                   </p>
                 </div>
                 <p className="font-medium text-brand-primary">
-                  {formatCurrency(item.price * item.quantity, "USD", locale)}
+                  {formatCurrency(item.price * item.quantity, STORE_CURRENCY, locale)}
                 </p>
               </div>
             ))}
@@ -151,10 +152,10 @@ export function OrderDetailShell({ orderId }: { orderId: string }) {
               {dictionary.store.estimatedTotal}
             </h2>
             <div className="grid gap-2 text-sm text-slate-600">
-              <p>{dictionary.store.subtotal}: {formatCurrency(order.subtotal, "USD", locale)}</p>
-              <p>{dictionary.store.discount}: {formatCurrency(order.discount, "USD", locale)}</p>
+              <p>{dictionary.store.subtotal}: {formatCurrency(order.subtotal, STORE_CURRENCY, locale)}</p>
+              <p>{dictionary.store.discount}: {formatCurrency(order.discount, STORE_CURRENCY, locale)}</p>
               <p className="text-lg font-semibold text-brand-primary">
-                {dictionary.store.total}: {formatCurrency(order.total, "USD", locale)}
+                {dictionary.store.total}: {formatCurrency(order.total, STORE_CURRENCY, locale)}
               </p>
             </div>
           </Card>

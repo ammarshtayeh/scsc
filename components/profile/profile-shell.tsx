@@ -32,6 +32,7 @@ import { SmartImage } from "@/components/ui/smart-image";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "@/hooks/useLocale";
+import { STORE_CURRENCY } from "@/lib/constants";
 import { issueMembershipQrPass } from "@/lib/firebase/functions";
 import { db } from "@/lib/firebase/firebase";
 import { uploadFileToStorage } from "@/lib/firebase/storage";
@@ -860,7 +861,7 @@ export function ProfileShell({
               <h2 className="font-heading text-2xl font-semibold text-brand-primary">
                 {dictionary.profile.orderHistory}
               </h2>
-              <Badge>{formatCurrency(orderTotal, "USD", locale)}</Badge>
+              <Badge>{formatCurrency(orderTotal, STORE_CURRENCY, locale)}</Badge>
             </div>
             {orders.length ? (
               orders.map((order) => (
@@ -874,7 +875,7 @@ export function ProfileShell({
                     </div>
                     <div className="text-right">
                       <p className="font-medium text-brand-primary">
-                        {formatCurrency(order.total, "USD", locale)}
+                        {formatCurrency(order.total, STORE_CURRENCY, locale)}
                       </p>
                       <p className="text-sm text-slate-500">{translateOrderStatus(order.status, locale)}</p>
                     </div>

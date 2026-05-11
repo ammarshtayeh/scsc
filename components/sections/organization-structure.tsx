@@ -1,7 +1,9 @@
 "use client";
 
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { motion } from "framer-motion";
 import type { ComponentType } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   Crown,
@@ -17,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { SmartImage } from "@/components/ui/smart-image";
+import { db } from "@/lib/firebase/firebase";
 import type { BoardMember } from "@/types";
 
 interface OrganizationStructureProps {
@@ -27,33 +30,6 @@ interface OrganizationStructureProps {
   roles: readonly string[];
   members?: BoardMember[];
 }
-
-const imageSources = [
-  "/board/member-01.jpg",
-  "/board/member-02.jpg",
-  "/board/member-03.jpg",
-  "/board/member-04.jpg",
-  "/board/member-05.jpg",
-  "/board/member-06.jpg",
-  "/board/member-07.jpg",
-  "/board/member-08.jpg"
-];
-
-function getMemberImage(index: number) {
-  return imageSources[index % imageSources.length];
-}
-
-const memberNames = [
-  "الطالب زيد أبو الرب",
-  "الطالبة آمنة حسن",
-  "الطالبة نورا المصري",
-  "الطالبة تولين هندية",
-  "الطالبة جنى أبو حجلة",
-  "الطالبة يسرى خليل",
-  "الطالبة آيات أقطيش",
-  "الطالبة سارة جبر",
-  "الطالب زيد بلالم"
-];
 
 const leadershipIcons = [Crown, ShieldCheck, WalletCards];
 const committeeIcons = [
@@ -79,6 +55,22 @@ const cardVariants = {
   hidden: { opacity: 0, y: 22, scale: 0.96 },
   visible: { opacity: 1, y: 0, scale: 1 }
 };
+
+function normalizeBoardMember(id: string, data: Record<string, unknown>): BoardMember {
+  const order = Number(data.order);
+
+  return {
+    id,
+    name: typeof data.name === "string" && data.name.trim() ? data.name.trim() : "Board member",
+    role: typeof data.role === "string" && data.role.trim() ? data.role.trim() : "Board member",
+    year: typeof data.year === "string" && data.year.trim()
+      ? data.year.trim()
+      : String(new Date().getFullYear()),
+    order: Number.isFinite(order) ? order : 99,
+    image: typeof data.image === "string" ? data.image : "",
+    bio: typeof data.bio === "string" ? data.bio : ""
+  };
+}
 
 function MemberPhotoCard({
   role,
@@ -166,12 +158,47 @@ export function OrganizationStructure({
   roles,
   members = []
 }: OrganizationStructureProps) {
-  const managedMembers = members.length
-    ? [...members].sort((a, b) => {
+  const [clientMembers, setClientMembers] = useState(members);
+
+  useEffect(() => {
+    setClientMembers(members);
+  }, [members]);
+
+  useEffect(() => {
+    if (!db) {
+      return;
+    }
+
+    let mounted = true;
+
+    async function loadMembers() {
+      const snapshot = await getDocs(query(collection(db!, "boardMembers"), orderBy("year", "desc")));
+      if (!mounted) {
+        return;
+      }
+
+      setClientMembers(
+        snapshot.docs.map((entry) =>
+          normalizeBoardMember(entry.id, entry.data() as Record<string, unknown>)
+        )
+      );
+    }
+
+    void loadMembers().catch(() => undefined);
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const managedMembers = useMemo(
+    () =>
+      [...clientMembers].sort((a, b) => {
         const yearDiff = Number(b.year) - Number(a.year);
         return yearDiff || (a.order ?? 99) - (b.order ?? 99) || a.name.localeCompare(b.name);
-      })
-    : [];
+      }),
+    [clientMembers]
+  );
   const latestYear = managedMembers[0]?.year;
   const visibleMembers = latestYear
     ? managedMembers.filter((member) => member.year === latestYear)
@@ -179,7 +206,10 @@ export function OrganizationStructure({
   const leadershipMembers = visibleMembers.slice(0, 3);
   const committeeMembers = visibleMembers.slice(3);
   const leadershipRoles = roles.slice(0, 3);
-  const committeeRoles = roles.slice(3);
+  const isArabic = /[\u0600-\u06FF]/.test(roles[0] || "");
+  const emptyText = isArabic
+    ? "لم تتم إضافة أعضاء للهيئة الإدارية بعد. يمكن إدارتهم من لوحة الأدمن."
+    : "No board members have been added yet. Manage them from the admin dashboard.";
 
   return (
     <motion.section
@@ -216,61 +246,65 @@ export function OrganizationStructure({
         </motion.div>
 
         <div className="relative mt-10 space-y-10">
-          <div>
-            <motion.p
-              variants={cardVariants}
-              className="mb-4 text-xs font-bold uppercase tracking-[0.22em] text-white/62"
-            >
-              {leadershipTitle}
-            </motion.p>
-            <motion.div variants={containerVariants} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {(leadershipMembers.length ? leadershipMembers : leadershipRoles).map((entry, index) => {
-                const member = typeof entry === "string" ? null : entry;
-                const role = member?.role || (entry as string);
-                return (
-                <MemberPhotoCard
-                  key={member?.id || role}
-                  role={role}
-                  name={member?.name || memberNames[index] || `Board Member ${index + 1}`}
-                  image={member?.image || getMemberImage(index)}
-                  index={index}
-                  Icon={leadershipIcons[index]}
-                  featured
-                />
-                );
-              })}
-            </motion.div>
-          </div>
+          {visibleMembers.length ? (
+            <>
+              <div>
+                <motion.p
+                  variants={cardVariants}
+                  className="mb-4 text-xs font-bold uppercase tracking-[0.22em] text-white/62"
+                >
+                  {leadershipTitle}
+                </motion.p>
+                <motion.div variants={containerVariants} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {leadershipMembers.map((member, index) => (
+                    <MemberPhotoCard
+                      key={member.id}
+                      role={member.role}
+                      name={member.name}
+                      image={member.image}
+                      index={index}
+                      Icon={leadershipIcons[index] || UsersRound}
+                      featured
+                    />
+                  ))}
+                </motion.div>
+              </div>
 
-          <div>
-            <motion.p
-              variants={cardVariants}
-              className="mb-4 text-xs font-bold uppercase tracking-[0.22em] text-white/62"
-            >
-              {committeesTitle}
-            </motion.p>
-            <motion.div
-              variants={containerVariants}
-              className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
-            >
-              {(committeeMembers.length ? committeeMembers : committeeRoles).map((entry, index) => {
-                const member = typeof entry === "string" ? null : entry;
-                const role = member?.role || (entry as string);
-                const Icon = committeeIcons[index] || UsersRound;
-                const memberIndex = index + leadershipRoles.length;
-                return (
-                  <MemberPhotoCard
-                    key={member?.id || role}
-                    role={role}
-                    name={member?.name || memberNames[memberIndex] || `Board Member ${memberIndex + 1}`}
-                    image={member?.image || getMemberImage(memberIndex)}
-                    index={memberIndex}
-                    Icon={Icon}
-                  />
-                );
-              })}
+              {committeeMembers.length ? (
+                <div>
+                  <motion.p
+                    variants={cardVariants}
+                    className="mb-4 text-xs font-bold uppercase tracking-[0.22em] text-white/62"
+                  >
+                    {committeesTitle}
+                  </motion.p>
+                  <motion.div
+                    variants={containerVariants}
+                    className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+                  >
+                    {committeeMembers.map((member, index) => {
+                      const Icon = committeeIcons[index] || UsersRound;
+                      const memberIndex = index + leadershipRoles.length;
+                      return (
+                        <MemberPhotoCard
+                          key={member.id}
+                          role={member.role}
+                          name={member.name}
+                          image={member.image}
+                          index={memberIndex}
+                          Icon={Icon}
+                        />
+                      );
+                    })}
+                  </motion.div>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <motion.div variants={cardVariants} className="rounded-2xl border border-white/12 bg-white/8 p-6 text-sm leading-7 text-white/74">
+              {emptyText}
             </motion.div>
-          </div>
+          )}
         </div>
       </div>
     </motion.section>

@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/toast";
 import { useCart } from "@/hooks/useCart";
 import { useLocale } from "@/hooks/useLocale";
 import { useMemberPricing } from "@/hooks/useMemberPricing";
-import { PRODUCT_CATEGORIES } from "@/lib/constants";
+import { PRODUCT_CATEGORIES, STORE_CURRENCY } from "@/lib/constants";
 import { db } from "@/lib/firebase/firebase";
 import { translateProductCategory } from "@/lib/i18n/helpers";
 import { formatCurrency, formatNumber } from "@/lib/utils";
@@ -225,7 +225,7 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
           </div>
           <div>
             <label className="mb-2 block text-sm font-medium text-brand-primary">
-              {dictionary.store.maxPrice}: {formatCurrency(maxPrice, "USD", locale)}
+              {dictionary.store.maxPrice}: {formatCurrency(maxPrice, STORE_CURRENCY, locale)}
             </label>
             <input
               type="range"
@@ -238,8 +238,8 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
               className="w-full accent-[#0B3B78]"
             />
             <div className="mt-2 flex items-center justify-between text-xs font-medium text-slate-500">
-              <span>{formatCurrency(0, "USD", locale)}</span>
-              <span>{formatCurrency(priceCeiling, "USD", locale)}</span>
+              <span>{formatCurrency(0, STORE_CURRENCY, locale)}</span>
+              <span>{formatCurrency(priceCeiling, STORE_CURRENCY, locale)}</span>
             </div>
           </div>
         </Card>
@@ -268,11 +268,11 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-semibold text-brand-primary">
-                          {formatCurrency(getDisplayPrice(product), "USD", locale)}
+                          {formatCurrency(getDisplayPrice(product), STORE_CURRENCY, locale)}
                         </p>
                         {memberPricing.useMemberPricing && product.memberPrice ? (
                           <p className="text-xs text-slate-400 line-through">
-                            {formatCurrency(product.price, "USD", locale)}
+                            {formatCurrency(product.price, STORE_CURRENCY, locale)}
                           </p>
                         ) : null}
                       </div>
@@ -327,7 +327,7 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
                 <div key={item?.product.id} className="rounded-2xl border border-brand-primary/10 p-4">
                   <h3 className="font-medium text-brand-primary">{item?.product.name}</h3>
                   <p className="mt-1 text-sm text-slate-500">
-                    {formatCurrency(item?.lineTotal || 0, "USD", locale)}
+                    {formatCurrency(item?.lineTotal || 0, STORE_CURRENCY, locale)}
                   </p>
                   {item.product.stock < item.quantity ? (
                     <p className="mt-2 text-xs font-medium text-rose-600">
@@ -365,7 +365,7 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
           <div className="rounded-2xl bg-brand-sky p-4">
             <p className="text-sm text-slate-600">{dictionary.store.estimatedTotal}</p>
             <p className="mt-2 font-heading text-3xl font-bold text-brand-primary">
-              {formatCurrency(total, "USD", locale)}
+              {formatCurrency(total, STORE_CURRENCY, locale)}
             </p>
           </div>
           <div className="space-y-3">

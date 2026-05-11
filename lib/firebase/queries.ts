@@ -251,9 +251,10 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     };
   }
 
+  const now = new Date().toISOString();
   const [users, events, orders, products] = await Promise.all([
     adminDb.collection("users").count().get(),
-    adminDb.collection("events").count().get(),
+    adminDb.collection("events").where("startsAt", ">=", now).count().get(),
     adminDb.collection("orders").count().get(),
     adminDb.collection("products").select("company").get()
   ]);
