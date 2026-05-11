@@ -16,7 +16,7 @@ import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 
 export function Navbar() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const { dictionary, locale } = useLocale();
   const [open, setOpen] = useState(false);
 
@@ -25,8 +25,7 @@ export function Navbar() {
     { href: "/about", label: dictionary.nav.about },
     { href: "/education", label: dictionary.nav.education },
     { href: "/events", label: dictionary.nav.events },
-    { href: "/contact", label: dictionary.nav.contact },
-    { href: "/store", label: dictionary.nav.store }
+    { href: "/contact", label: dictionary.nav.contact }
   ];
   const accountHref =
     user?.role === "admin" ? "/admin" : user?.role === "moderator" ? "/moderator" : "/profile";
@@ -70,7 +69,7 @@ export function Navbar() {
         <div className="hidden shrink-0 items-center gap-2.5 lg:flex">
           <ThemeSwitcher />
           <LanguageToggle />
-          {user ? (
+          {!authLoading && user ? (
             <>
               <Link href="/store">
                 <Button variant="secondary" size="sm" className="whitespace-nowrap">
@@ -88,7 +87,7 @@ export function Navbar() {
                 {dictionary.nav.logout}
               </Button>
             </>
-          ) : (
+          ) : !authLoading ? (
             <>
               <Link href="/auth/login">
                 <Button variant="ghost" size="sm" className="whitespace-nowrap">
@@ -101,7 +100,7 @@ export function Navbar() {
                 </Button>
               </Link>
             </>
-          )}
+          ) : null}
         </div>
 
         <Button
@@ -133,8 +132,11 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
-              {user ? (
+              {!authLoading && user ? (
                 <>
+                  <Link href="/store" onClick={() => setOpen(false)} className="text-sm font-medium text-slate-700 dark:text-brand-mist">
+                    {dictionary.nav.store}
+                  </Link>
                   <Link href="/profile" onClick={() => setOpen(false)} className="text-sm font-medium text-slate-700 dark:text-brand-mist">
                     {dictionary.nav.profile}
                   </Link>
@@ -147,7 +149,7 @@ export function Navbar() {
                     {dictionary.nav.logout}
                   </Button>
                 </>
-              ) : (
+              ) : !authLoading ? (
                 <>
                   <Link href="/auth/login" onClick={() => setOpen(false)}>
                     <Button variant="secondary" size="sm" className="w-full">
@@ -160,7 +162,7 @@ export function Navbar() {
                     </Button>
                   </Link>
                 </>
-              )}
+              ) : null}
             </nav>
           </motion.div>
         ) : null}

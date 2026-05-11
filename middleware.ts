@@ -3,8 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/firebase/session";
 
 function buildLoginRedirect(request: NextRequest) {
-  const redirect = `${request.nextUrl.pathname}${request.nextUrl.search}`;
-  const url = new URL(`/auth/login?redirect=${encodeURIComponent(redirect)}`, request.url);
+  const url = new URL("/auth/login", request.url);
+  const pathname = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  url.searchParams.set("redirect", pathname);
   return NextResponse.redirect(url);
 }
 
@@ -43,8 +44,12 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith("/dashboard")) {
-    if (!session || !["admin", "moderator"].includes(session.role)) {
+    if (!session) {
       return buildLoginRedirect(request);
+    }
+
+    if (!["admin", "moderator"].includes(session.role)) {
+      return buildRoleRedirect(request);
     }
   }
 

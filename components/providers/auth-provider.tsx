@@ -6,13 +6,13 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { v4 as uuidv4 } from "uuid";
 
 import {
-  getRoleRedirect,
   signInWithEmail,
   signInWithGoogle,
   signOutUser,
   signUpWithEmail
 } from "@/lib/firebase/auth";
 import { auth, db, isFirebaseClientConfigured } from "@/lib/firebase/firebase";
+import { getDefaultRedirectByRole } from "@/lib/auth-redirect";
 import type { AppSessionUser, Role, UserProfile } from "@/types";
 
 interface AuthContextValue {
@@ -32,15 +32,25 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 async function syncSessionCookie(token: string) {
-  await fetch("/api/session", {
+  const response = await fetch("/api/session", {
     method: "POST",
+    cache: "no-store",
+    credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token })
   });
+
+  if (!response.ok) {
+    throw new Error("Unable to sync the authenticated session.");
+  }
 }
 
 async function clearSessionCookie() {
-  await fetch("/api/session/logout", { method: "POST" });
+  await fetch("/api/session/logout", {
+    method: "POST",
+    cache: "no-store",
+    credentials: "same-origin"
+  });
 }
 
 async function buildFirebaseSessionUser(firebaseUser: FirebaseUser): Promise<AppSessionUser> {
@@ -129,13 +139,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const [sessionUser, token] = await Promise.all([
-        buildFirebaseSessionUser(firebaseUser),
-        firebaseUser.getIdToken()
-      ]);
-      setUser(sessionUser);
-      await syncSessionCookie(token);
-      setLoading(false);
+      try {
+        const [sessionUser, token] = await Promise.all([
+          buildFirebaseSessionUser(firebaseUser),
+          firebaseUser.getIdToken()
+        ]);
+        await syncSessionCookie(token);
+        setUser(sessionUser);
+      } catch {
+        setUser(null);
+        await clearSessionCookie();
+      } finally {
+        setLoading(false);
+      }
     });
 
     return () => unsubscribe();
@@ -148,9 +164,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const credential = await signInWithEmail(email, password);
     const sessionUser = await buildFirebaseSessionUser(credential.user);
-    setUser(sessionUser);
     await syncSessionCookie(await credential.user.getIdToken());
-    return getRoleRedirect(sessionUser.role);
+    setUser(sessionUser);
+    return getDefaultRedirectByRole(sessionUser.role);
   }, []);
 
   const loginWithGoogle = useCallback(async () => {
@@ -161,9 +177,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const credential = await signInWithGoogle();
     await ensureFirebaseUserProfile(credential.user);
     const sessionUser = await buildFirebaseSessionUser(credential.user);
-    setUser(sessionUser);
     await syncSessionCookie(await credential.user.getIdToken());
-    return getRoleRedirect(sessionUser.role);
+    setUser(sessionUser);
+    return getDefaultRedirectByRole(sessionUser.role);
   }, []);
 
   const signup = useCallback(
@@ -197,9 +213,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const sessionUser = await buildFirebaseSessionUser(credential.user);
-      setUser(sessionUser);
       await syncSessionCookie(await credential.user.getIdToken());
-      return "/profile";
+      setUser(sessionUser);
+      return getDefaultRedirectByRole(sessionUser.role);
     },
     []
   );

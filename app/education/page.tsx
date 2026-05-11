@@ -3,6 +3,8 @@ import { PageHero } from "@/components/ui/page-hero";
 import { getAllArticles } from "@/lib/firebase/queries";
 import { getServerDictionary } from "@/lib/i18n/server";
 
+export const dynamic = "force-dynamic";
+
 export default async function EducationPage() {
   const dictionary = getServerDictionary();
   const articles = await getAllArticles();

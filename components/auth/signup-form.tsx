@@ -1,6 +1,7 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -8,15 +9,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { useLocale } from "@/hooks/useLocale";
 import { useAuth } from "@/hooks/useAuth";
-import { getRoleRedirect } from "@/lib/firebase/auth";
-
-function resolveRedirect(redirect: string | null, fallback: string) {
-  if (!redirect || !redirect.startsWith("/") || redirect.startsWith("/auth/")) {
-    return fallback;
-  }
-
-  return redirect;
-}
+import { getPostAuthRedirect } from "@/lib/auth-redirect";
 
 function isValidSignupPassword(password: string) {
   return password.length >= 8 && /\d/.test(password);
@@ -25,7 +18,6 @@ function isValidSignupPassword(password: string) {
 export function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect");
   const { user, loading: authLoading, signup, loginWithGoogle } = useAuth();
   const { dictionary } = useLocale();
   const { pushToast } = useToast();
@@ -42,8 +34,9 @@ export function SignupForm() {
       return;
     }
 
-    router.replace(resolveRedirect(redirect, getRoleRedirect(user.role)));
-  }, [authLoading, redirect, router, user]);
+    const redirect = getPostAuthRedirect(user.role, searchParams.get("redirect"));
+    router.replace(redirect);
+  }, [authLoading, router, searchParams, user]);
 
   function getErrorMessage(error: unknown) {
     if (!(error instanceof Error)) {
@@ -67,9 +60,11 @@ export function SignupForm() {
 
     try {
       setLoading(true);
-      const nextPath = await signup(form);
+      const authRedirect = await signup(form);
       pushToast(dictionary.auth.createSuccess, "success");
-      router.replace(resolveRedirect(redirect, nextPath));
+      const redirect = getPostAuthRedirect(null, searchParams.get("redirect"));
+      const finalRedirect = searchParams.get("redirect") ? redirect : authRedirect;
+      router.replace(finalRedirect);
     } catch (error) {
       pushToast(getErrorMessage(error), "error");
     } finally {
@@ -80,9 +75,11 @@ export function SignupForm() {
   async function handleGoogleSignup() {
     try {
       setLoading(true);
-      const nextPath = await loginWithGoogle();
+      const authRedirect = await loginWithGoogle();
       pushToast(dictionary.auth.createSuccess, "success");
-      router.replace(resolveRedirect(redirect, nextPath));
+      const redirect = getPostAuthRedirect(null, searchParams.get("redirect"));
+      const finalRedirect = searchParams.get("redirect") ? redirect : authRedirect;
+      router.replace(finalRedirect);
     } catch (error) {
       pushToast(getErrorMessage(error), "error");
     } finally {

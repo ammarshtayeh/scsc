@@ -17,14 +17,12 @@ import { formatNumber } from "@/lib/utils";
 
 interface EventRegisterCardProps {
   eventId: string;
-  eventSlug: string;
   capacity: number;
   registeredCount: number;
 }
 
 export function EventRegisterCard({
   eventId,
-  eventSlug,
   capacity,
   registeredCount
 }: EventRegisterCardProps) {
@@ -148,7 +146,7 @@ export function EventRegisterCard({
           </Button>
         )
       ) : (
-        <Link href={`/auth/login?redirect=/events/${eventSlug}`} className="block">
+        <Link href="/auth/login" className="block">
           <Button className="w-full">{dictionary.eventRegistration.loginToRegister}</Button>
         </Link>
       )}

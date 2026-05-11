@@ -7,6 +7,8 @@ import { getBoardMembersByYear } from "@/lib/firebase/queries";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { CheckCircle2, UsersRound } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function AboutPage() {
   const dictionary = getServerDictionary();
   const groupedMembers = await getBoardMembersByYear();

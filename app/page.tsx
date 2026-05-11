@@ -5,6 +5,8 @@ import { NewsSection } from "@/components/sections/news-section";
 import { getLatestArticles, getUpcomingEvents } from "@/lib/firebase/queries";
 import { getServerDictionary } from "@/lib/i18n/server";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const dictionary = getServerDictionary();
   const [articles, events] = await Promise.all([getLatestArticles(3), getUpcomingEvents(4)]);

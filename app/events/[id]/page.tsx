@@ -11,6 +11,8 @@ import { translateEventTag } from "@/lib/i18n/helpers";
 import { getServerDictionary, getServerLocale } from "@/lib/i18n/server";
 import { formatDateTime, formatNumber } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function EventDetailPage({
   params
 }: {
@@ -74,7 +76,6 @@ export default async function EventDetailPage({
           <div className="space-y-6">
             <EventRegisterCard
               eventId={event.id}
-              eventSlug={event.slug}
               capacity={event.capacity}
               registeredCount={event.registeredCount}
             />

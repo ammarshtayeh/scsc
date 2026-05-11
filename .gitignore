@@ -35,4 +35,8 @@ Thumbs.db
 # Local QA / tooling
 .logs/
 .playwright-mcp/
+playwright-report/
+test-results/
+dev-server*.log
+scsc-server-error.png
 qa-*.png

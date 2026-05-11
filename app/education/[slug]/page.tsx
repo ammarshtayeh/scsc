@@ -9,6 +9,8 @@ import { translateArticleCategory } from "@/lib/i18n/helpers";
 import { getServerDictionary, getServerLocale } from "@/lib/i18n/server";
 import { formatDateShort } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function ArticleDetailPage({
   params
 }: {

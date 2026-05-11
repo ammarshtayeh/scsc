@@ -12,6 +12,8 @@ import { translateEventTag } from "@/lib/i18n/helpers";
 import { getServerDictionary, getServerLocale } from "@/lib/i18n/server";
 import { formatDateTime, safeNumber } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 const PAGE_SIZE = 9;
 
 export default async function EventsPage({

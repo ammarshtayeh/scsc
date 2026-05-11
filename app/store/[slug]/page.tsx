@@ -5,6 +5,8 @@ import { PageHero } from "@/components/ui/page-hero";
 import { getAllProducts, getProductBySlug } from "@/lib/firebase/queries";
 import { getServerDictionary } from "@/lib/i18n/server";
 
+export const dynamic = "force-dynamic";
+
 export default async function ProductDetailPage({
   params
 }: {
