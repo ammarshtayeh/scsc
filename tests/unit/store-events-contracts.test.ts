@@ -60,8 +60,10 @@ describe("Store enterprise QA contracts", () => {
     expect(productBlock).toContain("images,");
     expect(productBlock).toContain("id: product.id");
     expect(productBlock).toContain("getAll(\"imageFiles\")");
+    expect(productBlock).toContain("getTexts(formData, \"images\")");
+    expect(productBlock).toContain("getTexts(formData, \"removeImages\")");
     expect(productBlock).toContain("uploadDashboardImage(\"products\", file)");
-    expect(productBlock).toContain("images: [...splitLines(getText(formData, \"images\")), ...uploadedImages]");
+    expect(productBlock).toContain("images: [...imageUrls, ...uploadedImages]");
   });
 
   it("requires elevated callable auth for product admin APIs", () => {

@@ -46,21 +46,14 @@ function getProductDetailHref(product: Product) {
   return `/store/${encodeURIComponent(product.slug || product.id)}`;
 }
 
+const STORE_MAX_PRICE = 20000;
+
 export function StoreShell({ products: initialProducts }: { products: Product[] }) {
   const { dictionary, locale } = useLocale();
   const { pushToast } = useToast();
   const memberPricing = useMemberPricing();
   const [products, setProducts] = useState(initialProducts);
-  const priceCeiling = useMemo(() => {
-    const highestProductPrice = products.reduce((highest, product) => {
-      const displayPrice = memberPricing.useMemberPricing
-        ? product.memberPrice ?? product.price
-        : product.price;
-      return Math.max(highest, displayPrice);
-    }, 0);
-
-    return Math.ceil(highestProductPrice);
-  }, [products, memberPricing.useMemberPricing]);
+  const priceCeiling = STORE_MAX_PRICE;
   const { items, total, addProduct, updateQuantity, checkout } = useCart(
     products,
     memberPricing.useMemberPricing

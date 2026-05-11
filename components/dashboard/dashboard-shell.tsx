@@ -25,6 +25,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { SmartImage } from "@/components/ui/smart-image";
 import { useToast } from "@/components/ui/toast";
 import { STORE_CURRENCY } from "@/lib/constants";
 import {
@@ -119,6 +120,13 @@ function toInputDateTime(value?: string) {
 
 function getText(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
+}
+
+function getTexts(formData: FormData, key: string) {
+  return formData
+    .getAll(key)
+    .map((entry) => String(entry || "").trim())
+    .filter(Boolean);
 }
 
 function getNumber(formData: FormData, key: string, fallback = 0) {
@@ -400,22 +408,26 @@ export function DashboardShell({
   const boardRolePresets =
     locale === "ar"
       ? [
-          "رئيس الهيئة الإدارية",
-          "نائب الرئيس",
+          "رئيس الجمعية",
+          "نائبة رئيس الجمعية",
+          "لجنة العلاقات العامة",
+          "لجنة المبادرات والمشاريع",
+          "لجنة الانشطة",
           "أمين الصندوق",
-          "مسؤول العلاقات العامة",
-          "مسؤول الفعاليات",
-          "مسؤول التثقيف",
-          "عضو هيئة إدارية"
+          "اللجنة الاعلامية",
+          "لجنة البحث العلمي والتدريب",
+          "لجنة شؤون الاعضاء"
         ]
       : [
-          "Board president",
-          "Vice president",
+          "Association president",
+          "Association vice president",
+          "Public relations committee",
+          "Initiatives and projects committee",
+          "Activities committee",
           "Treasurer",
-          "Public relations lead",
-          "Events lead",
-          "Education lead",
-          "Board member"
+          "Media committee",
+          "Scientific research and training committee",
+          "Member affairs committee"
         ];
   const currentBoardYear = String(new Date().getFullYear());
   const showManagementSections = mode === "admin";
@@ -1182,6 +1194,10 @@ export function DashboardShell({
                         submitEvent.preventDefault();
                         const formData = new FormData(submitEvent.currentTarget);
                         void runAction(`edit-product-${product.id}`, async () => {
+                          const removedImages = new Set(getTexts(formData, "removeImages"));
+                          const imageUrls = getTexts(formData, "images").filter(
+                            (image) => !removedImages.has(image)
+                          );
                           const imageFiles = formData
                             .getAll("imageFiles")
                             .filter((entry): entry is File => entry instanceof File && entry.size > 0);
@@ -1196,7 +1212,7 @@ export function DashboardShell({
                             stock: getNumber(formData, "stock", product.stock),
                             category: getText(formData, "category") as ProductCategory,
                             company: getText(formData, "company"),
-                            images: [...splitLines(getText(formData, "images")), ...uploadedImages],
+                            images: [...imageUrls, ...uploadedImages],
                             description: getText(formData, "description"),
                             longDescription: splitLines(getText(formData, "longDescription")),
                             featured: formData.get("featured") === "on"
@@ -1217,7 +1233,42 @@ export function DashboardShell({
                       <input name="stock" required type="number" min={0} defaultValue={product.stock} className={dashboardEditFieldClass} />
                       <input name="price" required type="number" min={0.01} step="0.01" defaultValue={product.price} className={dashboardEditFieldClass} />
                       <input name="memberPrice" type="number" min={0.01} step="0.01" defaultValue={product.memberPrice ?? product.price} className={dashboardEditFieldClass} />
-                      <textarea name="images" defaultValue={product.images.join("\n")} className={`${dashboardEditTextAreaClass} md:col-span-2`} />
+                      <div className="space-y-3 md:col-span-2">
+                        <p className="text-sm font-semibold text-brand-primary dark:text-brand-ink">
+                          {locale === "ar" ? "صور المنتج" : "Product images"}
+                        </p>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          {product.images.length ? (
+                            product.images.map((image, imageIndex) => (
+                              <div key={`${product.id}-image-${imageIndex}`} className="rounded-xl border border-brand-primary/10 bg-white/70 p-3 dark:border-white/12 dark:bg-[#101a2b]">
+                                <div className="relative mb-3 h-28 overflow-hidden rounded-lg bg-brand-sky dark:bg-white/10">
+                                  <SmartImage
+                                    src={image}
+                                    alt={product.name}
+                                    fill
+                                    className="object-cover"
+                                    sizes="(max-width: 768px) 100vw, 280px"
+                                  />
+                                </div>
+                                <input name="images" defaultValue={image} className={dashboardEditFieldClass} />
+                                <label className="mt-3 flex items-center gap-2 text-xs font-medium text-rose-600 dark:text-rose-300">
+                                  <input name="removeImages" type="checkbox" value={image} />
+                                  {locale === "ar" ? "حذف هذه الصورة" : "Remove this image"}
+                                </label>
+                              </div>
+                            ))
+                          ) : (
+                            <p className={`rounded-xl border border-dashed border-brand-primary/15 p-4 text-sm ${dashboardMutedTextClass}`}>
+                              {locale === "ar" ? "لا توجد صور محفوظة لهذا المنتج." : "No saved images for this product."}
+                            </p>
+                          )}
+                        </div>
+                        <input
+                          name="images"
+                          placeholder={locale === "ar" ? "رابط صورة جديد اختياري" : "Optional new image URL"}
+                          className={`${dashboardEditFieldClass} w-full`}
+                        />
+                      </div>
                       <label className={`${dashboardLabelClass} md:col-span-2`}>
                         <span>{imageLabels.uploadMany}</span>
                         <input name="imageFiles" type="file" accept="image/*" multiple className={dashboardEditFieldClass} />
