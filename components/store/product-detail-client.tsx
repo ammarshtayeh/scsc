@@ -106,7 +106,7 @@ export function ProductDetailClient({
           </div>
           <div className="rounded-2xl bg-brand-sky p-4 text-sm text-slate-600 dark:bg-white/10 dark:text-brand-mist">
             {product.stock > 0
-              ? `${formatNumber(product.stock, locale)} ${dictionary.store.unitsAvailable}`
+              ? `${locale === "ar" ? "المخزون" : "Stock"}: ${formatNumber(product.stock, locale)} ${dictionary.store.unitsAvailable}`
               : dictionary.store.outOfStock}
           </div>
           <Button disabled={product.stock <= 0} onClick={handleAdd}>

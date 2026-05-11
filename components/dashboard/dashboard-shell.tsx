@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import {
   CalendarDays,
   CheckCircle2,
@@ -17,7 +18,7 @@ import {
   Users
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Sidebar } from "@/components/layout/sidebar";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +42,7 @@ import {
   upsertEventAdmin,
   upsertProductAdmin
 } from "@/lib/firebase/functions";
+import { db } from "@/lib/firebase/firebase";
 import { uploadFileToStorage } from "@/lib/firebase/storage";
 import {
   translateArticleCategory,
@@ -120,6 +122,30 @@ function getText(formData: FormData, key: string) {
 function getNumber(formData: FormData, key: string, fallback = 0) {
   const value = Number(formData.get(key));
   return Number.isFinite(value) ? value : fallback;
+}
+
+function normalizeDashboardProduct(id: string, data: Record<string, unknown>): Product {
+  const price = Number(data.price);
+  const memberPrice = Number(data.memberPrice);
+
+  return {
+    id,
+    slug: typeof data.slug === "string" && data.slug.trim() ? data.slug.trim() : id,
+    name: typeof data.name === "string" && data.name.trim() ? data.name.trim() : "Untitled product",
+    description: typeof data.description === "string" ? data.description : "",
+    longDescription: Array.isArray(data.longDescription)
+      ? data.longDescription.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    price: Number.isFinite(price) ? price : 0,
+    memberPrice: Number.isFinite(memberPrice) ? memberPrice : undefined,
+    category: (typeof data.category === "string" ? data.category : "Skin Care") as ProductCategory,
+    company: typeof data.company === "string" && data.company.trim() ? data.company.trim() : "SCSC Partner",
+    stock: Math.max(0, Number(data.stock) || 0),
+    images: Array.isArray(data.images)
+      ? data.images.filter((entry): entry is string => typeof entry === "string" && Boolean(entry.trim()))
+      : [],
+    featured: Boolean(data.featured)
+  };
 }
 
 function getCsvData(filename: string, rows: Record<string, unknown>[]) {
@@ -273,6 +299,7 @@ export function DashboardShell({
   const router = useRouter();
   const { pushToast } = useToast();
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [localProducts, setLocalProducts] = useState(products);
   const [eventForm, setEventForm] = useState({
     title: "",
     startsAt: "",
@@ -414,6 +441,32 @@ export function DashboardShell({
           role: "Role",
           bio: "Bio"
         };
+  const refreshClientProducts = useCallback(async () => {
+    if (!db) {
+      setLocalProducts(products);
+      return;
+    }
+
+    const snapshot = await getDocs(query(collection(db, "products"), orderBy("__name__")));
+    setLocalProducts(
+      snapshot.docs.map((entry) =>
+        normalizeDashboardProduct(entry.id, entry.data() as Record<string, unknown>)
+      )
+    );
+  }, [products]);
+
+  useEffect(() => {
+    setLocalProducts(products);
+  }, [products]);
+
+  useEffect(() => {
+    if (activeSection !== "products") {
+      return;
+    }
+
+    void refreshClientProducts().catch(() => undefined);
+  }, [activeSection, refreshClientProducts]);
+
   const registrationsByEvent = useMemo(() => {
     return eventRegistrations.reduce<Record<string, EventRegistration[]>>((acc, registration) => {
       acc[registration.eventId] = acc[registration.eventId]
@@ -438,7 +491,7 @@ export function DashboardShell({
       {
         href: "/admin/products",
         title: labels.productManagement,
-        metric: products.length,
+        metric: localProducts.length,
         icon: Package
       },
       {
@@ -479,7 +532,7 @@ export function DashboardShell({
       events,
       labels,
       orders,
-      products,
+      localProducts,
       users
     ]
   );
@@ -871,6 +924,7 @@ export function DashboardShell({
                     longDescription: splitLines(productForm.longDescription)
                   });
                   setProductImageFiles([]);
+                  await refreshClientProducts();
                 });
               }}
             >
@@ -939,7 +993,7 @@ export function DashboardShell({
             </form>
 
             <div className="grid gap-4">
-              {products.map((product) => (
+              {localProducts.map((product) => (
                 <div key={product.id} className={`${dashboardPanelClass} flex flex-col gap-3 md:flex-row md:items-center md:justify-between`}>
                   <div>
                     <p className="font-medium text-brand-primary">{product.name}</p>
@@ -958,7 +1012,12 @@ export function DashboardShell({
                       variant="secondary"
                       size="sm"
                       loading={loadingAction === `delete-product-${product.id}`}
-                      onClick={() => runAction(`delete-product-${product.id}`, () => deleteProductAdmin(product.id))}
+                      onClick={() =>
+                        runAction(`delete-product-${product.id}`, async () => {
+                          await deleteProductAdmin(product.id);
+                          await refreshClientProducts();
+                        })
+                      }
                     >
                       <Trash2 className="h-4 w-4" />
                       {labels.delete}
@@ -973,8 +1032,8 @@ export function DashboardShell({
                       onSubmit={(submitEvent) => {
                         submitEvent.preventDefault();
                         const formData = new FormData(submitEvent.currentTarget);
-                        void runAction(`edit-product-${product.id}`, () =>
-                          upsertProductAdmin({
+                        void runAction(`edit-product-${product.id}`, async () => {
+                          await upsertProductAdmin({
                             id: product.id,
                             name: getText(formData, "name"),
                             price: getNumber(formData, "price", product.price),
@@ -986,8 +1045,9 @@ export function DashboardShell({
                             description: getText(formData, "description"),
                             longDescription: splitLines(getText(formData, "longDescription")),
                             featured: formData.get("featured") === "on"
-                          })
-                        );
+                          });
+                          await refreshClientProducts();
+                        });
                       }}
                     >
                       <input name="name" required defaultValue={product.name} className={dashboardEditFieldClass} />
