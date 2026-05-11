@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
 import {
   CalendarDays,
   CheckCircle2,
@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
+import { STORE_CURRENCY } from "@/lib/constants";
 import {
   deleteEventAdmin,
   deleteArticleAdmin,
@@ -146,6 +147,22 @@ function normalizeDashboardProduct(id: string, data: Record<string, unknown>): P
       ? data.images.filter((entry): entry is string => typeof entry === "string" && Boolean(entry.trim()))
       : [],
     featured: Boolean(data.featured)
+  };
+}
+
+function normalizeDashboardBoardMember(id: string, data: Record<string, unknown>): BoardMember {
+  const order = Number(data.order);
+
+  return {
+    id,
+    name: typeof data.name === "string" && data.name.trim() ? data.name.trim() : "Board member",
+    role: typeof data.role === "string" && data.role.trim() ? data.role.trim() : "Board member",
+    year: typeof data.year === "string" && data.year.trim()
+      ? data.year.trim()
+      : String(new Date().getFullYear()),
+    order: Number.isFinite(order) ? order : 99,
+    image: typeof data.image === "string" ? data.image : "",
+    bio: typeof data.bio === "string" ? data.bio : ""
   };
 }
 
@@ -300,7 +317,17 @@ export function DashboardShell({
   const router = useRouter();
   const { pushToast } = useToast();
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [localStats, setLocalStats] = useState(stats);
+  const [localCounts, setLocalCounts] = useState({
+    products: products.length,
+    events: events.length,
+    users: users.length,
+    orders: orders.length,
+    boardMembers: boardMembers.length,
+    pendingArticles: articles.filter((article) => !article.approved).length
+  });
   const [localProducts, setLocalProducts] = useState(products);
+  const [localBoardMembers, setLocalBoardMembers] = useState(boardMembers);
   const [eventForm, setEventForm] = useState({
     title: "",
     startsAt: "",
@@ -461,16 +488,89 @@ export function DashboardShell({
     }
 
     const snapshot = await getDocs(query(collection(db, "products"), orderBy("__name__")));
-    setLocalProducts(
-      snapshot.docs.map((entry) =>
-        normalizeDashboardProduct(entry.id, entry.data() as Record<string, unknown>)
-      )
+    const nextProducts = snapshot.docs.map((entry) =>
+      normalizeDashboardProduct(entry.id, entry.data() as Record<string, unknown>)
     );
+    setLocalProducts(nextProducts);
+    setLocalCounts((current) => ({ ...current, products: nextProducts.length }));
   }, [products]);
+  const refreshClientBoardMembers = useCallback(async () => {
+    if (!db) {
+      setLocalBoardMembers(boardMembers);
+      return;
+    }
+
+    const snapshot = await getDocs(query(collection(db, "boardMembers"), orderBy("year", "desc")));
+    const nextBoardMembers = snapshot.docs
+      .map((entry) =>
+        normalizeDashboardBoardMember(entry.id, entry.data() as Record<string, unknown>)
+      )
+      .sort((a, b) => {
+        const yearDiff = Number(b.year) - Number(a.year);
+        return yearDiff || (a.order ?? 99) - (b.order ?? 99) || a.name.localeCompare(b.name);
+      });
+    setLocalBoardMembers(nextBoardMembers);
+    setLocalCounts((current) => ({ ...current, boardMembers: nextBoardMembers.length }));
+  }, [boardMembers]);
+  const refreshClientStats = useCallback(async () => {
+    if (!db) {
+      setLocalStats(stats);
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const [
+      usersSnapshot,
+      upcomingEventsSnapshot,
+      totalEventsSnapshot,
+      ordersSnapshot,
+      productSnapshot,
+      boardMembersSnapshot,
+      articlesSnapshot
+    ] = await Promise.all([
+      getDocs(collection(db, "users")),
+      getDocs(query(collection(db, "events"), where("startsAt", ">=", now))),
+      getDocs(collection(db, "events")),
+      getDocs(collection(db, "orders")),
+      getDocs(collection(db, "products")),
+      getDocs(collection(db, "boardMembers")),
+      getDocs(collection(db, "articles"))
+    ]);
+    const companySet = new Set(
+      productSnapshot.docs
+        .map((entry) => entry.data().company)
+        .filter((company): company is string => typeof company === "string" && Boolean(company.trim()))
+    );
+
+    setLocalStats({
+      totalUsers: usersSnapshot.docs.length,
+      upcomingEvents: upcomingEventsSnapshot.docs.length,
+      totalOrders: ordersSnapshot.docs.length,
+      registeredCompanies: companySet.size
+    });
+    setLocalCounts({
+      products: productSnapshot.docs.length,
+      events: totalEventsSnapshot.docs.length,
+      users: usersSnapshot.docs.length,
+      orders: ordersSnapshot.docs.length,
+      boardMembers: boardMembersSnapshot.docs.length,
+      pendingArticles: articlesSnapshot.docs.filter((article) => article.data().approved !== true).length
+    });
+  }, [stats]);
 
   useEffect(() => {
+    setLocalStats(stats);
+    setLocalCounts({
+      products: products.length,
+      events: events.length,
+      users: users.length,
+      orders: orders.length,
+      boardMembers: boardMembers.length,
+      pendingArticles: articles.filter((article) => !article.approved).length
+    });
     setLocalProducts(products);
-  }, [products]);
+    setLocalBoardMembers(boardMembers);
+  }, [articles, boardMembers, events, orders, products, stats, users]);
 
   useEffect(() => {
     if (activeSection !== "products") {
@@ -479,6 +579,20 @@ export function DashboardShell({
 
     void refreshClientProducts().catch(() => undefined);
   }, [activeSection, refreshClientProducts]);
+
+  useEffect(() => {
+    if (activeSection === "overview") {
+      void Promise.all([
+        refreshClientStats(),
+        refreshClientProducts(),
+        refreshClientBoardMembers()
+      ]).catch(() => undefined);
+    }
+
+    if (activeSection === "board-members") {
+      void refreshClientBoardMembers().catch(() => undefined);
+    }
+  }, [activeSection, refreshClientBoardMembers, refreshClientProducts, refreshClientStats]);
 
   const registrationsByEvent = useMemo(() => {
     return eventRegistrations.reduce<Record<string, EventRegistration[]>>((acc, registration) => {
@@ -491,12 +605,12 @@ export function DashboardShell({
 
   const statCards = useMemo(
     () => [
-      { label: labels.totalUsers, value: stats.totalUsers, icon: Users },
-      { label: labels.upcomingEvents, value: stats.upcomingEvents, icon: CalendarDays },
-      { label: labels.totalOrders, value: stats.totalOrders, icon: ShoppingBag },
-      { label: labels.registeredCompanies, value: stats.registeredCompanies, icon: ShieldCheck }
+      { label: labels.totalUsers, value: localStats.totalUsers, icon: Users },
+      { label: labels.upcomingEvents, value: localStats.upcomingEvents, icon: CalendarDays },
+      { label: labels.totalOrders, value: localStats.totalOrders, icon: ShoppingBag },
+      { label: labels.registeredCompanies, value: localStats.registeredCompanies, icon: ShieldCheck }
     ],
-    [labels, stats]
+    [labels, localStats]
   );
 
   const managementCards = useMemo(
@@ -504,49 +618,44 @@ export function DashboardShell({
       {
         href: "/admin/products",
         title: labels.productManagement,
-        metric: localProducts.length,
+        metric: localCounts.products,
         icon: Package
       },
       {
         href: "/admin/events",
         title: labels.eventManagement,
-        metric: events.length,
+        metric: localCounts.events,
         icon: CalendarDays
       },
       {
         href: "/admin/users",
         title: labels.userManagement,
-        metric: users.length,
+        metric: localCounts.users,
         icon: UserCog
       },
       {
         href: "/admin/orders",
         title: labels.orders,
-        metric: orders.length,
+        metric: localCounts.orders,
         icon: ClipboardList
       },
       {
         href: "/admin/board-members",
         title: adminLabels.boardMembers,
-        metric: boardMembers.length,
+        metric: localCounts.boardMembers,
         icon: Users
       },
       {
         href: "/admin/moderation",
         title: labels.moderation,
-        metric: articles.filter((article) => !article.approved).length,
+        metric: localCounts.pendingArticles,
         icon: CheckCircle2
       }
     ],
     [
       adminLabels.boardMembers,
-      articles,
-      boardMembers,
-      events,
       labels,
-      orders,
-      localProducts,
-      users
+      localCounts
     ]
   );
 
@@ -976,10 +1085,10 @@ export function DashboardShell({
               <DashboardFieldLabel label={locale === "ar" ? "كمية المخزون" : "Stock quantity"}>
                 <input required type="number" min={0} value={productForm.stock} onChange={(event) => setProductForm((current) => ({ ...current, stock: event.target.value }))} className={dashboardFieldClass} />
               </DashboardFieldLabel>
-              <DashboardFieldLabel label={locale === "ar" ? "السعر الأساسي" : "Base price"}>
+              <DashboardFieldLabel label={locale === "ar" ? "السعر الأساسي بالشيكل" : "Base price (ILS)"}>
                 <input required type="number" min={0.01} step="0.01" value={productForm.price} onChange={(event) => setProductForm((current) => ({ ...current, price: event.target.value }))} className={dashboardFieldClass} />
               </DashboardFieldLabel>
-              <DashboardFieldLabel label={locale === "ar" ? "سعر الأعضاء" : "Member price"}>
+              <DashboardFieldLabel label={locale === "ar" ? "سعر الأعضاء بالشيكل" : "Member price (ILS)"}>
                 <input type="number" min={0.01} step="0.01" value={productForm.memberPrice} onChange={(event) => setProductForm((current) => ({ ...current, memberPrice: event.target.value }))} className={dashboardFieldClass} />
               </DashboardFieldLabel>
               <div className="grid gap-3 md:col-span-2 md:grid-cols-2">
@@ -1036,7 +1145,7 @@ export function DashboardShell({
                       {formatNumber(product.stock, locale)}
                     </Badge>
                     <span className="text-sm font-medium text-brand-primary">
-                      {formatCurrency(product.memberPrice ?? product.price, "USD", locale)}
+                      {formatCurrency(product.memberPrice ?? product.price, STORE_CURRENCY, locale)}
                     </span>
                     <Link href={`/store/${encodeURIComponent(product.slug || product.id)}`}>
                       <Button variant="secondary" size="sm" type="button">
@@ -1073,6 +1182,12 @@ export function DashboardShell({
                         submitEvent.preventDefault();
                         const formData = new FormData(submitEvent.currentTarget);
                         void runAction(`edit-product-${product.id}`, async () => {
+                          const imageFiles = formData
+                            .getAll("imageFiles")
+                            .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+                          const uploadedImages = await Promise.all(
+                            imageFiles.map((file) => uploadDashboardImage("products", file))
+                          );
                           await upsertProductAdmin({
                             id: product.id,
                             name: getText(formData, "name"),
@@ -1081,7 +1196,7 @@ export function DashboardShell({
                             stock: getNumber(formData, "stock", product.stock),
                             category: getText(formData, "category") as ProductCategory,
                             company: getText(formData, "company"),
-                            images: splitLines(getText(formData, "images")),
+                            images: [...splitLines(getText(formData, "images")), ...uploadedImages],
                             description: getText(formData, "description"),
                             longDescription: splitLines(getText(formData, "longDescription")),
                             featured: formData.get("featured") === "on"
@@ -1103,6 +1218,10 @@ export function DashboardShell({
                       <input name="price" required type="number" min={0.01} step="0.01" defaultValue={product.price} className={dashboardEditFieldClass} />
                       <input name="memberPrice" type="number" min={0.01} step="0.01" defaultValue={product.memberPrice ?? product.price} className={dashboardEditFieldClass} />
                       <textarea name="images" defaultValue={product.images.join("\n")} className={`${dashboardEditTextAreaClass} md:col-span-2`} />
+                      <label className={`${dashboardLabelClass} md:col-span-2`}>
+                        <span>{imageLabels.uploadMany}</span>
+                        <input name="imageFiles" type="file" accept="image/*" multiple className={dashboardEditFieldClass} />
+                      </label>
                       <textarea name="description" defaultValue={product.description} className={`${dashboardEditTextAreaClass} md:col-span-2`} />
                       <textarea name="longDescription" defaultValue={product.longDescription.join("\n")} className={`${dashboardEditFieldClass} min-h-24 md:col-span-2`} />
                       <label className="flex items-center gap-2 text-sm text-slate-600">
@@ -1153,6 +1272,7 @@ export function DashboardShell({
                   });
                   setBoardMemberImageFile(null);
                   submitEvent.currentTarget.reset();
+                  await refreshClientBoardMembers();
                 });
               }}
             >
@@ -1199,7 +1319,7 @@ export function DashboardShell({
               </Button>
             </form>
             <div className="grid gap-4">
-              {boardMembers.map((member) => (
+              {localBoardMembers.map((member) => (
                 <div key={member.id} className={dashboardPanelClass}>
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
@@ -1217,7 +1337,10 @@ export function DashboardShell({
                           return;
                         }
 
-                        void runAction(`delete-board-member-${member.id}`, () => deleteBoardMemberAdmin(member.id));
+                        void runAction(`delete-board-member-${member.id}`, async () => {
+                          await deleteBoardMemberAdmin(member.id);
+                          await refreshClientBoardMembers();
+                        });
                       }}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -1239,7 +1362,7 @@ export function DashboardShell({
                             imageFile instanceof File && imageFile.size > 0
                               ? await uploadDashboardImage("board", imageFile)
                               : "";
-                          return upsertBoardMemberAdmin({
+                          await upsertBoardMemberAdmin({
                             id: member.id,
                             name: getText(formData, "name"),
                             role: getText(formData, "role"),
@@ -1248,6 +1371,7 @@ export function DashboardShell({
                             image: uploadedImage || getText(formData, "image"),
                             bio: getText(formData, "bio")
                           });
+                          await refreshClientBoardMembers();
                         });
                       }}
                     >
@@ -1408,16 +1532,16 @@ export function DashboardShell({
                           <div key={item.productId} className="rounded-xl bg-brand-sky/60 p-3 text-sm text-slate-600 dark:bg-white/10 dark:text-brand-mist">
                             <p className="font-medium text-brand-primary">{item.name}</p>
                             <p>
-                              {formatNumber(item.quantity, locale)} x {formatCurrency(item.price, "USD", locale)}
+                              {formatNumber(item.quantity, locale)} x {formatCurrency(item.price, STORE_CURRENCY, locale)}
                             </p>
                           </div>
                         ))}
                       </div>
                       <div className="grid gap-1 text-sm text-slate-600 dark:text-brand-mist">
-                        <p>{orderDetailLabels.subtotal}: {formatCurrency(order.subtotal, "USD", locale)}</p>
-                        <p>{orderDetailLabels.discount}: {formatCurrency(order.discount, "USD", locale)}</p>
+                        <p>{orderDetailLabels.subtotal}: {formatCurrency(order.subtotal, STORE_CURRENCY, locale)}</p>
+                        <p>{orderDetailLabels.discount}: {formatCurrency(order.discount, STORE_CURRENCY, locale)}</p>
                         <p className="font-semibold text-brand-primary">
-                          {orderDetailLabels.total}: {formatCurrency(order.total, "USD", locale)}
+                          {orderDetailLabels.total}: {formatCurrency(order.total, STORE_CURRENCY, locale)}
                         </p>
                       </div>
                     </div>

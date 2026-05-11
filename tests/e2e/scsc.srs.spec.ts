@@ -321,7 +321,7 @@ test.describe("GROUP 7 — Store @store", () => {
     // WHY: product detail must expose image/description/price/stock indicators.
     await expect(page.locator("main img").first()).toBeVisible();
     await expect(page.locator("main")).toContainText(/stock|in stock|out of stock|المخزون/i);
-    await expect(page.locator("main")).toContainText(/\$|usd|دولار/i);
+    await expect(page.locator("main")).toContainText(/₪|ils|شيكل/i);
   });
 
   test("store URL stays clean for logged-out redirect @store @redirect", async ({ page }) => {
