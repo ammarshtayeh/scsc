@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,6 +20,16 @@ export function StoreShell({ products }: { products: Product[] }) {
   const { dictionary, locale } = useLocale();
   const { pushToast } = useToast();
   const memberPricing = useMemberPricing();
+  const priceCeiling = useMemo(() => {
+    const highestProductPrice = products.reduce((highest, product) => {
+      const displayPrice = memberPricing.useMemberPricing
+        ? product.memberPrice ?? product.price
+        : product.price;
+      return Math.max(highest, displayPrice);
+    }, 0);
+
+    return Math.max(100, Math.ceil(highestProductPrice));
+  }, [products, memberPricing.useMemberPricing]);
   const { items, total, addProduct, updateQuantity, checkout } = useCart(
     products,
     memberPricing.useMemberPricing
@@ -27,13 +37,17 @@ export function StoreShell({ products }: { products: Product[] }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [company, setCompany] = useState("All");
-  const [maxPrice, setMaxPrice] = useState(100);
+  const [maxPrice, setMaxPrice] = useState(priceCeiling);
   const [deliveryForm, setDeliveryForm] = useState({
     contactName: "",
     phone: "",
     address: "",
     notes: ""
   });
+
+  useEffect(() => {
+    setMaxPrice(priceCeiling);
+  }, [priceCeiling]);
 
   const companies = useMemo(
     () => [dictionary.common.all, ...Array.from(new Set(products.map((product) => product.company)))],
@@ -154,8 +168,8 @@ export function StoreShell({ products }: { products: Product[] }) {
             </label>
             <input
               type="range"
-              min={10}
-              max={100}
+              min={0}
+              max={priceCeiling}
               step={1}
               value={maxPrice}
               onChange={(event) => setMaxPrice(Number(event.target.value))}
