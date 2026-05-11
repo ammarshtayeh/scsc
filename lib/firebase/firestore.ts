@@ -271,19 +271,25 @@ export async function checkoutCodOrder(
   const orderId = uuidv4();
 
   await runTransaction(database, async (transaction) => {
-    for (const lineItem of lineItems) {
-      const productRef = doc(database, "products", lineItem.productId);
-      const productSnap = await transaction.get(productRef);
-      const stock = Number(productSnap.data()?.stock || 0);
+    const productRefs = lineItems.map((lineItem) => doc(database, "products", lineItem.productId));
+    const productSnaps = await Promise.all(
+      productRefs.map((productRef) => transaction.get(productRef))
+    );
 
+    productSnaps.forEach((productSnap, index) => {
+      const lineItem = lineItems[index];
+      const stock = Number(productSnap.data()?.stock || 0);
       if (!productSnap.exists() || stock < lineItem.quantity) {
         throw new Error(`${lineItem.name} does not have enough stock.`);
       }
+    });
 
-      transaction.update(productRef, {
+    lineItems.forEach((lineItem, index) => {
+      const stock = Number(productSnaps[index].data()?.stock || 0);
+      transaction.update(productRefs[index], {
         stock: stock - lineItem.quantity
       });
-    }
+    });
 
     transaction.set(doc(database, "orders", orderId), {
       userId,

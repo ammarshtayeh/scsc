@@ -32,7 +32,7 @@ export default async function ArticleDetailPage({
         description={article.excerpt}
       />
       <section className="mx-auto max-w-5xl px-4 py-4 sm:px-6 lg:px-8">
-        <Card className="overflow-hidden p-0">
+        <Card className="overflow-hidden p-0 dark:border-white/10 dark:bg-white/5">
           <div className="relative h-[360px]">
             <SmartImage
               src={article.coverImage}
@@ -45,15 +45,15 @@ export default async function ArticleDetailPage({
           <div className="space-y-6 p-8">
             <div className="flex flex-wrap items-center gap-3">
               <Badge>{translateArticleCategory(article.category, locale)}</Badge>
-              <span className="text-sm text-slate-500">
+              <span className="text-sm text-slate-500 dark:text-brand-mist">
                 {formatDateShort(article.publishedAt, locale)}
               </span>
-              <span className="text-sm text-slate-500">
+              <span className="text-sm text-slate-500 dark:text-brand-mist">
                 {dictionary.education.authorPrefix} {article.authorName}
               </span>
             </div>
             {article.content.map((paragraph, index) => (
-              <p key={index} className="text-sm leading-8 text-slate-700">
+              <p key={index} className="text-sm leading-8 text-slate-700 dark:text-brand-mist">
                 {paragraph}
               </p>
             ))}
@@ -69,14 +69,14 @@ export default async function ArticleDetailPage({
                       href={reference.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-sm text-brand-primary underline decoration-brand-accent underline-offset-4"
+                      className="text-sm text-brand-primary underline decoration-brand-accent underline-offset-4 dark:text-brand-ink"
                     >
                       {reference.label}
                     </a>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">{dictionary.education.noReferences}</p>
+                <p className="text-sm text-slate-500 dark:text-brand-mist">{dictionary.education.noReferences}</p>
               )}
             </div>
           </div>

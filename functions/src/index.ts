@@ -774,6 +774,18 @@ export const updateOrderStatus = onCall(publicCallableOptions, async (request) =
   return { success: true };
 });
 
+export const deleteOrder = onCall(publicCallableOptions, async (request) => {
+  requireAdmin(request);
+  const { id } = request.data as { id?: string };
+
+  if (!id) {
+    throw new HttpsError("invalid-argument", "Order ID is required.");
+  }
+
+  await db.collection("orders").doc(id).delete();
+  return { success: true };
+});
+
 export const upsertArticle = onCall(publicCallableOptions, async (request) => {
   requireAdminOrModerator(request);
 

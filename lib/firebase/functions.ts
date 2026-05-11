@@ -141,6 +141,10 @@ export async function updateOrderStatusAdmin(payload: {
   return callAdminFunction("updateOrderStatus", payload);
 }
 
+export async function deleteOrderAdmin(id: string) {
+  return callAdminFunction<{ id: string }>("deleteOrder", { id });
+}
+
 export async function moderateArticleAdmin(payload: Pick<Article, "id" | "approved">) {
   return callAdminFunction("moderateArticle", payload);
 }

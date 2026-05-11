@@ -1,6 +1,21 @@
 "use client";
 
-import { CheckCircle2, Download, ImageUp, LinkIcon, Save, Trash2 } from "lucide-react";
+import Link from "next/link";
+import {
+  CalendarDays,
+  CheckCircle2,
+  ClipboardList,
+  Download,
+  ImageUp,
+  LinkIcon,
+  Package,
+  Save,
+  ShieldCheck,
+  ShoppingBag,
+  Trash2,
+  UserCog,
+  Users
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -13,6 +28,7 @@ import {
   deleteEventAdmin,
   deleteArticleAdmin,
   deleteBoardMemberAdmin,
+  deleteOrderAdmin,
   deleteProductAdmin,
   deleteUserAdmin,
   moderateArticleAdmin,
@@ -161,6 +177,19 @@ const dashboardTextAreaClass = `${dashboardFieldClass} min-h-24`;
 
 const dashboardLabelClass =
   "block space-y-2 text-sm font-semibold text-brand-primary dark:text-brand-ink";
+
+const dashboardEditFieldClass =
+  "rounded-xl border border-brand-primary/10 bg-white px-4 py-3 text-sm text-brand-primary outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20 dark:border-white/12 dark:bg-[#101a2b] dark:text-brand-ink dark:placeholder:text-brand-mist/70";
+
+const dashboardEditTextAreaClass = `${dashboardEditFieldClass} min-h-20`;
+
+const dashboardPanelClass =
+  "rounded-2xl border border-brand-primary/10 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-white/5";
+
+const dashboardSubtlePanelClass =
+  "rounded-xl bg-brand-sky/60 p-4 dark:bg-white/10";
+
+const dashboardMutedTextClass = "text-slate-500 dark:text-brand-mist";
 
 function DashboardFieldLabel({
   children,
@@ -373,12 +402,63 @@ export function DashboardShell({
 
   const statCards = useMemo(
     () => [
-      { label: labels.totalUsers, value: stats.totalUsers },
-      { label: labels.upcomingEvents, value: stats.upcomingEvents },
-      { label: labels.totalOrders, value: stats.totalOrders },
-      { label: labels.registeredCompanies, value: stats.registeredCompanies }
+      { label: labels.totalUsers, value: stats.totalUsers, icon: Users },
+      { label: labels.upcomingEvents, value: stats.upcomingEvents, icon: CalendarDays },
+      { label: labels.totalOrders, value: stats.totalOrders, icon: ShoppingBag },
+      { label: labels.registeredCompanies, value: stats.registeredCompanies, icon: ShieldCheck }
     ],
     [labels, stats]
+  );
+
+  const managementCards = useMemo(
+    () => [
+      {
+        href: "/admin/products",
+        title: labels.productManagement,
+        metric: products.length,
+        icon: Package
+      },
+      {
+        href: "/admin/events",
+        title: labels.eventManagement,
+        metric: events.length,
+        icon: CalendarDays
+      },
+      {
+        href: "/admin/users",
+        title: labels.userManagement,
+        metric: users.length,
+        icon: UserCog
+      },
+      {
+        href: "/admin/orders",
+        title: labels.orders,
+        metric: orders.length,
+        icon: ClipboardList
+      },
+      {
+        href: "/admin/board-members",
+        title: adminLabels.boardMembers,
+        metric: boardMembers.length,
+        icon: Users
+      },
+      {
+        href: "/admin/moderation",
+        title: labels.moderation,
+        metric: articles.filter((article) => !article.approved).length,
+        icon: CheckCircle2
+      }
+    ],
+    [
+      adminLabels.boardMembers,
+      articles,
+      boardMembers,
+      events,
+      labels,
+      orders,
+      products,
+      users
+    ]
   );
 
   async function runAction(name: string, action: () => Promise<unknown>) {
@@ -401,16 +481,64 @@ export function DashboardShell({
 
         <div className="space-y-6">
           {showOverview ? (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {statCards.map((card) => (
-                <Card key={card.label}>
-                  <p className="text-sm text-slate-500">{card.label}</p>
-                  <p className="mt-3 font-heading text-4xl font-bold text-brand-primary">
-                    {formatNumber(card.value, locale)}
-                  </p>
-                </Card>
-              ))}
-            </div>
+            <>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {statCards.map((card) => {
+                  const Icon = card.icon;
+                  return (
+                    <Card key={card.label} className="dark:border-white/10 dark:bg-white/5">
+                      <div className="flex items-center justify-between gap-4">
+                        <p className={`text-sm ${dashboardMutedTextClass}`}>{card.label}</p>
+                        <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-primary text-white dark:bg-brand-accent">
+                          <Icon className="h-5 w-5" />
+                        </span>
+                      </div>
+                      <p className="mt-4 font-heading text-4xl font-bold text-brand-primary">
+                        {formatNumber(card.value, locale)}
+                      </p>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              <Card className="space-y-5 dark:border-white/10 dark:bg-white/5">
+                <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                  <div>
+                    <h2 className="font-heading text-2xl font-semibold text-brand-primary">
+                      {locale === "ar" ? "مركز الإدارة" : "Management center"}
+                    </h2>
+                    <p className={`mt-2 text-sm ${dashboardMutedTextClass}`}>
+                      {locale === "ar"
+                        ? "اختصارات مباشرة لإدارة المنتجات، المستخدمين، الفعاليات، الطلبات، والهيئة الإدارية."
+                        : "Fast access to products, users, events, orders, board members, and moderation."}
+                    </p>
+                  </div>
+                  <Badge>{locale === "ar" ? "صلاحيات كاملة" : "Full admin controls"}</Badge>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {managementCards.map((card) => {
+                    const Icon = card.icon;
+                    return (
+                      <Link
+                        key={card.href}
+                        href={card.href}
+                        className="group rounded-2xl border border-brand-primary/10 bg-brand-sky/55 p-4 transition hover:-translate-y-0.5 hover:border-brand-accent hover:bg-white dark:border-white/10 dark:bg-white/10 dark:hover:border-brand-accent dark:hover:bg-white/15"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <span className="grid h-11 w-11 place-items-center rounded-xl bg-white text-brand-primary shadow-sm dark:bg-[#101a2b] dark:text-brand-ink">
+                            <Icon className="h-5 w-5" />
+                          </span>
+                          <span className="font-heading text-2xl font-bold text-brand-primary">
+                            {formatNumber(card.metric, locale)}
+                          </span>
+                        </div>
+                        <p className="mt-4 text-sm font-semibold text-brand-primary">{card.title}</p>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </Card>
+            </>
           ) : null}
 
           {showAdminSection("events") ? (
@@ -491,11 +619,11 @@ export function DashboardShell({
 
             <div className="grid gap-4">
               {events.map((event) => (
-                <div key={event.id} className="rounded-2xl border border-brand-primary/10 p-4">
+                <div key={event.id} className={dashboardPanelClass}>
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                       <p className="font-medium text-brand-primary">{event.title}</p>
-                      <p className="text-sm text-slate-500">
+                      <p className={`text-sm ${dashboardMutedTextClass}`}>
                         {formatDateTime(event.startsAt, locale)} - {event.venue}
                       </p>
                     </div>
@@ -538,7 +666,7 @@ export function DashboardShell({
                       </Button>
                     </div>
                   </div>
-                  <details className="mt-4 rounded-xl bg-brand-sky/50 p-4">
+                  <details className={`mt-4 ${dashboardSubtlePanelClass}`}>
                     <summary className="cursor-pointer text-sm font-semibold text-brand-primary">
                       {adminLabels.edit}
                     </summary>
@@ -564,14 +692,14 @@ export function DashboardShell({
                         );
                       }}
                     >
-                      <input name="title" required defaultValue={event.title} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-                      <input name="startsAt" required type="datetime-local" defaultValue={toInputDateTime(event.startsAt)} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-                      <input name="venue" defaultValue={event.venue} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-                      <input name="capacity" required type="number" min={1} defaultValue={event.capacity} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-                      <input name="coverImage" defaultValue={event.coverImage} className="rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-                      <textarea name="excerpt" defaultValue={event.excerpt} className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-                      <textarea name="description" defaultValue={event.description.join("\n")} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-                      <input name="tags" defaultValue={event.tags.join(", ")} className="rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+                      <input name="title" required defaultValue={event.title} className={dashboardEditFieldClass} />
+                      <input name="startsAt" required type="datetime-local" defaultValue={toInputDateTime(event.startsAt)} className={dashboardEditFieldClass} />
+                      <input name="venue" defaultValue={event.venue} className={dashboardEditFieldClass} />
+                      <input name="capacity" required type="number" min={1} defaultValue={event.capacity} className={dashboardEditFieldClass} />
+                      <input name="coverImage" defaultValue={event.coverImage} className={`${dashboardEditFieldClass} md:col-span-2`} />
+                      <textarea name="excerpt" defaultValue={event.excerpt} className={`${dashboardEditTextAreaClass} md:col-span-2`} />
+                      <textarea name="description" defaultValue={event.description.join("\n")} className={`${dashboardEditFieldClass} min-h-24 md:col-span-2`} />
+                      <input name="tags" defaultValue={event.tags.join(", ")} className={`${dashboardEditFieldClass} md:col-span-2`} />
                       <label className="flex items-center gap-2 text-sm text-slate-600">
                         <input name="isFeatured" type="checkbox" defaultChecked={Boolean(event.isFeatured)} />
                         {adminLabels.featured}
@@ -620,19 +748,19 @@ export function DashboardShell({
               {events.map((event) => {
                 const registrations = registrationsByEvent[event.id] || [];
                 return (
-                  <details key={event.id} className="rounded-2xl border border-brand-primary/10 p-4">
+                  <details key={event.id} className={dashboardPanelClass}>
                     <summary className="cursor-pointer font-medium text-brand-primary">
                       {event.title} ({formatNumber(registrations.length, locale)})
                     </summary>
                     <div className="mt-4 grid gap-3">
                       {registrations.length ? (
                         registrations.map((registration) => (
-                          <div key={`${registration.eventId}-${registration.userId}`} className="grid gap-3 rounded-xl bg-brand-sky/50 p-3 md:grid-cols-[1fr_auto_auto] md:items-center">
+                          <div key={`${registration.eventId}-${registration.userId}`} className="grid gap-3 rounded-xl bg-brand-sky/50 p-3 dark:bg-white/10 md:grid-cols-[1fr_auto_auto] md:items-center">
                             <div className="text-sm">
                               <p className="font-medium text-brand-primary">
                                 {registration.displayName || registration.userId}
                               </p>
-                              <p className="text-slate-500">{registration.email || registration.userId}</p>
+                              <p className={dashboardMutedTextClass}>{registration.email || registration.userId}</p>
                               {registration.checkedInAt ? (
                                 <p className="text-emerald-700">
                                   {adminLabels.checkIn}: {formatDateTime(registration.checkedInAt, locale)}
@@ -779,10 +907,10 @@ export function DashboardShell({
 
             <div className="grid gap-4">
               {products.map((product) => (
-                <div key={product.id} className="flex flex-col gap-3 rounded-2xl border border-brand-primary/10 p-4 md:flex-row md:items-center md:justify-between">
+                <div key={product.id} className={`${dashboardPanelClass} flex flex-col gap-3 md:flex-row md:items-center md:justify-between`}>
                   <div>
                     <p className="font-medium text-brand-primary">{product.name}</p>
-                    <p className="text-sm text-slate-500">
+                    <p className={`text-sm ${dashboardMutedTextClass}`}>
                       {product.company} - {translateProductCategory(product.category, locale)}
                     </p>
                   </div>
@@ -803,7 +931,7 @@ export function DashboardShell({
                       {labels.delete}
                     </Button>
                   </div>
-                  <details className="md:col-span-2 mt-2 rounded-xl bg-brand-sky/50 p-4">
+                  <details className={`mt-2 md:col-span-2 ${dashboardSubtlePanelClass}`}>
                     <summary className="cursor-pointer text-sm font-semibold text-brand-primary">
                       {adminLabels.edit}
                     </summary>
@@ -829,21 +957,21 @@ export function DashboardShell({
                         );
                       }}
                     >
-                      <input name="name" required defaultValue={product.name} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-                      <input name="company" defaultValue={product.company} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-                      <select name="category" defaultValue={product.category} className="rounded-xl border border-brand-primary/10 px-4 py-3">
+                      <input name="name" required defaultValue={product.name} className={dashboardEditFieldClass} />
+                      <input name="company" defaultValue={product.company} className={dashboardEditFieldClass} />
+                      <select name="category" defaultValue={product.category} className={dashboardEditFieldClass}>
                         {productCategories.map((entry) => (
                           <option key={entry} value={entry}>
                             {translateProductCategory(entry, locale)}
                           </option>
                         ))}
                       </select>
-                      <input name="stock" required type="number" min={0} defaultValue={product.stock} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-                      <input name="price" required type="number" min={0.01} step="0.01" defaultValue={product.price} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-                      <input name="memberPrice" type="number" min={0.01} step="0.01" defaultValue={product.memberPrice ?? product.price} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-                      <textarea name="images" defaultValue={product.images.join("\n")} className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-                      <textarea name="description" defaultValue={product.description} className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-                      <textarea name="longDescription" defaultValue={product.longDescription.join("\n")} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+                      <input name="stock" required type="number" min={0} defaultValue={product.stock} className={dashboardEditFieldClass} />
+                      <input name="price" required type="number" min={0.01} step="0.01" defaultValue={product.price} className={dashboardEditFieldClass} />
+                      <input name="memberPrice" type="number" min={0.01} step="0.01" defaultValue={product.memberPrice ?? product.price} className={dashboardEditFieldClass} />
+                      <textarea name="images" defaultValue={product.images.join("\n")} className={`${dashboardEditTextAreaClass} md:col-span-2`} />
+                      <textarea name="description" defaultValue={product.description} className={`${dashboardEditTextAreaClass} md:col-span-2`} />
+                      <textarea name="longDescription" defaultValue={product.longDescription.join("\n")} className={`${dashboardEditFieldClass} min-h-24 md:col-span-2`} />
                       <label className="flex items-center gap-2 text-sm text-slate-600">
                         <input name="featured" type="checkbox" defaultChecked={Boolean(product.featured)} />
                         {adminLabels.featured}
@@ -895,7 +1023,7 @@ export function DashboardShell({
                 <input name="image" placeholder={adminLabels.image} className={dashboardFieldClass} />
               </DashboardFieldLabel>
               <DashboardFieldLabel label={adminLabels.bio} className="md:col-span-2">
-                <textarea name="bio" placeholder={adminLabels.bio} className="min-h-20 w-full rounded-xl border border-brand-primary/10 px-4 py-3 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20 dark:border-white/12 dark:bg-[#101a2b] dark:text-brand-ink dark:placeholder:text-brand-mist/70" />
+                <textarea name="bio" placeholder={adminLabels.bio} className={`${dashboardEditTextAreaClass} w-full`} />
               </DashboardFieldLabel>
               <Button loading={loadingAction === "create-board-member"} type="submit" className="md:col-span-2">
                 <Save className="h-4 w-4" />
@@ -904,11 +1032,11 @@ export function DashboardShell({
             </form>
             <div className="grid gap-4">
               {boardMembers.map((member) => (
-                <div key={member.id} className="rounded-2xl border border-brand-primary/10 p-4">
+                <div key={member.id} className={dashboardPanelClass}>
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                       <p className="font-medium text-brand-primary">{member.name}</p>
-                      <p className="text-sm text-slate-500">
+                      <p className={`text-sm ${dashboardMutedTextClass}`}>
                         {member.role} - {member.year}
                       </p>
                     </div>
@@ -922,7 +1050,7 @@ export function DashboardShell({
                       {labels.delete}
                     </Button>
                   </div>
-                  <details className="mt-4 rounded-xl bg-brand-sky/50 p-4">
+                  <details className={`mt-4 ${dashboardSubtlePanelClass}`}>
                     <summary className="cursor-pointer text-sm font-semibold text-brand-primary">
                       {adminLabels.edit}
                     </summary>
@@ -943,11 +1071,11 @@ export function DashboardShell({
                         );
                       }}
                     >
-                      <input name="name" required defaultValue={member.name} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-                      <input name="role" required defaultValue={member.role} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-                      <input name="year" required defaultValue={member.year} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-                      <input name="image" defaultValue={member.image} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-                      <textarea name="bio" defaultValue={member.bio} className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+                      <input name="name" required defaultValue={member.name} className={dashboardEditFieldClass} />
+                      <input name="role" required defaultValue={member.role} className={dashboardEditFieldClass} />
+                      <input name="year" required defaultValue={member.year} className={dashboardEditFieldClass} />
+                      <input name="image" defaultValue={member.image} className={dashboardEditFieldClass} />
+                      <textarea name="bio" defaultValue={member.bio} className={`${dashboardEditTextAreaClass} md:col-span-2`} />
                       <Button loading={loadingAction === `edit-board-member-${member.id}`} type="submit" className="md:col-span-2">
                         <Save className="h-4 w-4" />
                         {adminLabels.saveChanges}
@@ -967,19 +1095,19 @@ export function DashboardShell({
             </h2>
             <div className="grid gap-4">
               {users.map((entry) => (
-                <div key={entry.id} className="grid gap-3 rounded-2xl border border-brand-primary/10 p-4 md:grid-cols-[1fr_auto_auto_auto_auto] md:items-center">
+                <div key={entry.id} className={`${dashboardPanelClass} grid gap-3 md:grid-cols-[1fr_auto_auto_auto_auto] md:items-center`}>
                   <div>
                     <p className="font-medium text-brand-primary">{entry.displayName}</p>
-                    <p className="text-sm text-slate-500">{entry.email}</p>
+                    <p className={`text-sm ${dashboardMutedTextClass}`}>{entry.email}</p>
                   </div>
-                  <select defaultValue={entry.role} id={`role-${entry.id}`} className="rounded-xl border border-brand-primary/10 px-3 py-2">
+                  <select defaultValue={entry.role} id={`role-${entry.id}`} className={dashboardEditFieldClass}>
                     {roles.map((role) => (
                       <option key={role} value={role}>
                         {translateRole(role, locale)}
                       </option>
                     ))}
                   </select>
-                  <select defaultValue={entry.membershipStatus} id={`status-${entry.id}`} className="rounded-xl border border-brand-primary/10 px-3 py-2">
+                  <select defaultValue={entry.membershipStatus} id={`status-${entry.id}`} className={dashboardEditFieldClass}>
                     {membershipStatuses.map((status) => (
                       <option key={status} value={status}>
                         {translateMembershipStatus(status, locale)}
@@ -1033,15 +1161,15 @@ export function DashboardShell({
             </h2>
             <div className="grid gap-4">
               {orders.map((order) => (
-                <div key={order.id} className="rounded-2xl border border-brand-primary/10 p-4">
-                  <div className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-center">
+                <div key={order.id} className={dashboardPanelClass}>
+                  <div className="grid gap-3 md:grid-cols-[1fr_auto_auto_auto] md:items-center">
                     <div>
                       <p className="font-medium text-brand-primary">{order.id}</p>
-                      <p className="text-sm text-slate-500">
+                      <p className={`text-sm ${dashboardMutedTextClass}`}>
                         {formatDateLong(order.createdAt, locale)} - {formatNumber(order.items.length, locale)} {labels.items}
                       </p>
                     </div>
-                    <select defaultValue={order.status} id={`order-${order.id}`} className="rounded-xl border border-brand-primary/10 px-3 py-2">
+                    <select defaultValue={order.status} id={`order-${order.id}`} className={dashboardEditFieldClass}>
                       {orderStatuses.map((status) => (
                         <option key={status} value={status}>
                           {translateOrderStatus(status, locale)}
@@ -1065,6 +1193,21 @@ export function DashboardShell({
                       <Save className="h-4 w-4" />
                       {labels.save}
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      loading={loadingAction === `delete-order-${order.id}`}
+                      onClick={() => {
+                        if (!window.confirm("Delete this order?")) {
+                          return;
+                        }
+
+                        void runAction(`delete-order-${order.id}`, () => deleteOrderAdmin(order.id));
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {labels.delete}
+                    </Button>
                   </div>
 
                   <div className="mt-4 grid gap-4 border-t border-brand-primary/10 pt-4 lg:grid-cols-2">
@@ -1074,7 +1217,7 @@ export function DashboardShell({
                       </h3>
                       <div className="grid gap-2">
                         {order.items.map((item) => (
-                          <div key={item.productId} className="rounded-xl bg-brand-sky/60 p-3 text-sm text-slate-600">
+                          <div key={item.productId} className="rounded-xl bg-brand-sky/60 p-3 text-sm text-slate-600 dark:bg-white/10 dark:text-brand-mist">
                             <p className="font-medium text-brand-primary">{item.name}</p>
                             <p>
                               {formatNumber(item.quantity, locale)} x {formatCurrency(item.price, "USD", locale)}
@@ -1082,7 +1225,7 @@ export function DashboardShell({
                           </div>
                         ))}
                       </div>
-                      <div className="grid gap-1 text-sm text-slate-600">
+                      <div className="grid gap-1 text-sm text-slate-600 dark:text-brand-mist">
                         <p>{orderDetailLabels.subtotal}: {formatCurrency(order.subtotal, "USD", locale)}</p>
                         <p>{orderDetailLabels.discount}: {formatCurrency(order.discount, "USD", locale)}</p>
                         <p className="font-semibold text-brand-primary">
@@ -1096,7 +1239,7 @@ export function DashboardShell({
                         {orderDetailLabels.delivery}
                       </h3>
                       {order.deliveryInfo ? (
-                        <div className="grid gap-2 text-sm text-slate-600">
+                        <div className="grid gap-2 text-sm text-slate-600 dark:text-brand-mist">
                           <p>{orderDetailLabels.recipient}: {order.deliveryInfo.contactName}</p>
                           <p>{orderDetailLabels.phone}: {order.deliveryInfo.phone}</p>
                           <p>{orderDetailLabels.address}: {order.deliveryInfo.address}</p>
@@ -1159,13 +1302,13 @@ export function DashboardShell({
                 <input name="coverImage" placeholder={adminLabels.image} className={dashboardFieldClass} />
               </DashboardFieldLabel>
               <DashboardFieldLabel label={locale === "ar" ? "ملخص المقال" : "Article excerpt"} className="md:col-span-2">
-                <textarea name="excerpt" required placeholder="Excerpt" className="min-h-20 w-full rounded-xl border border-brand-primary/10 px-4 py-3 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20 dark:border-white/12 dark:bg-[#101a2b] dark:text-brand-ink dark:placeholder:text-brand-mist/70" />
+                <textarea name="excerpt" required placeholder="Excerpt" className={`${dashboardEditTextAreaClass} w-full`} />
               </DashboardFieldLabel>
               <DashboardFieldLabel label={locale === "ar" ? "محتوى المقال" : "Article content"} className="md:col-span-2">
                 <textarea name="content" placeholder="Content, one paragraph per line" className={dashboardTextAreaClass} />
               </DashboardFieldLabel>
               <DashboardFieldLabel label={adminLabels.references} className="md:col-span-2">
-                <textarea name="references" placeholder={adminLabels.references} className="min-h-20 w-full rounded-xl border border-brand-primary/10 px-4 py-3 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20 dark:border-white/12 dark:bg-[#101a2b] dark:text-brand-ink dark:placeholder:text-brand-mist/70" />
+                <textarea name="references" placeholder={adminLabels.references} className={`${dashboardEditTextAreaClass} w-full`} />
               </DashboardFieldLabel>
               <label className="flex items-center gap-2 text-sm text-slate-600">
                 <input name="approved" type="checkbox" />
@@ -1178,11 +1321,11 @@ export function DashboardShell({
             </form>
             <div className="grid gap-4">
               {articles.map((article) => (
-                <div key={article.id} className="rounded-2xl border border-brand-primary/10 p-4">
+                <div key={article.id} className={dashboardPanelClass}>
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                       <p className="font-medium text-brand-primary">{article.title}</p>
-                      <p className="text-sm text-slate-500">
+                      <p className={`text-sm ${dashboardMutedTextClass}`}>
                         {translateArticleCategory(article.category, locale)}
                       </p>
                     </div>
@@ -1223,7 +1366,7 @@ export function DashboardShell({
                       ) : null}
                     </div>
                   </div>
-                  <details className="mt-4 rounded-xl bg-brand-sky/50 p-4">
+                  <details className={`mt-4 ${dashboardSubtlePanelClass}`}>
                     <summary className="cursor-pointer text-sm font-semibold text-brand-primary">
                       {adminLabels.edit}
                     </summary>
@@ -1248,20 +1391,20 @@ export function DashboardShell({
                         );
                       }}
                     >
-                      <input name="title" required defaultValue={article.title} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-                      <input name="authorName" defaultValue={article.authorName} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-                      <select name="category" defaultValue={article.category} className="rounded-xl border border-brand-primary/10 px-4 py-3">
+                      <input name="title" required defaultValue={article.title} className={dashboardEditFieldClass} />
+                      <input name="authorName" defaultValue={article.authorName} className={dashboardEditFieldClass} />
+                      <select name="category" defaultValue={article.category} className={dashboardEditFieldClass}>
                         {articleCategories.map((entry) => (
                           <option key={entry} value={entry}>
                             {translateArticleCategory(entry, locale)}
                           </option>
                         ))}
                       </select>
-                      <input name="publishedAt" type="datetime-local" defaultValue={toInputDateTime(article.publishedAt)} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-                      <input name="coverImage" defaultValue={article.coverImage} className="rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-                      <textarea name="excerpt" required defaultValue={article.excerpt} className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-                      <textarea name="content" defaultValue={article.content.join("\n")} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-                      <textarea name="references" defaultValue={referencesToText(article)} className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+                      <input name="publishedAt" type="datetime-local" defaultValue={toInputDateTime(article.publishedAt)} className={dashboardEditFieldClass} />
+                      <input name="coverImage" defaultValue={article.coverImage} className={`${dashboardEditFieldClass} md:col-span-2`} />
+                      <textarea name="excerpt" required defaultValue={article.excerpt} className={`${dashboardEditTextAreaClass} md:col-span-2`} />
+                      <textarea name="content" defaultValue={article.content.join("\n")} className={`${dashboardEditFieldClass} min-h-24 md:col-span-2`} />
+                      <textarea name="references" defaultValue={referencesToText(article)} className={`${dashboardEditTextAreaClass} md:col-span-2`} />
                       <label className="flex items-center gap-2 text-sm text-slate-600">
                         <input name="approved" type="checkbox" defaultChecked={article.approved} />
                         {adminLabels.approved}

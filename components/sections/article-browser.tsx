@@ -44,7 +44,7 @@ export function ArticleBrowser({ articles }: { articles: Article[] }) {
           className={`rounded-full px-4 py-2 text-sm font-medium ${
             activeCategory === "All"
               ? "bg-brand-primary text-white"
-              : "bg-white text-brand-primary"
+              : "bg-white text-brand-primary dark:bg-white/10 dark:text-brand-ink"
           }`}
         >
           {dictionary.common.all}
@@ -56,7 +56,7 @@ export function ArticleBrowser({ articles }: { articles: Article[] }) {
             className={`rounded-full px-4 py-2 text-sm font-medium ${
               activeCategory === category
                 ? "bg-brand-primary text-white"
-                : "bg-white text-brand-primary"
+                : "bg-white text-brand-primary dark:bg-white/10 dark:text-brand-ink"
             }`}
           >
             {translateArticleCategory(category, locale)}
@@ -68,7 +68,7 @@ export function ArticleBrowser({ articles }: { articles: Article[] }) {
         {filteredArticles.length ? (
           <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
             {filteredArticles.map((article) => (
-              <Card key={article.id} interactive className="h-full overflow-hidden p-0">
+              <Card key={article.id} interactive className="h-full overflow-hidden p-0 dark:border-white/10 dark:bg-white/5">
                 <div className="relative h-56">
                   <SmartImage
                     src={article.coverImage}
@@ -81,14 +81,14 @@ export function ArticleBrowser({ articles }: { articles: Article[] }) {
                 <div className="space-y-4 p-6">
                   <div className="flex items-center justify-between">
                     <Badge>{translateArticleCategory(article.category, locale)}</Badge>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-slate-500 dark:text-brand-mist">
                       {formatDateShort(article.publishedAt, locale)}
                     </span>
                   </div>
                   <h2 className="font-heading text-2xl font-semibold text-brand-primary">
                     {article.title}
                   </h2>
-                  <p className="text-sm leading-7 text-slate-600">
+                  <p className="text-sm leading-7 text-slate-600 dark:text-brand-mist">
                     {truncatePreview(article.excerpt)}
                   </p>
                   <Link href={`/education/${article.slug}`}>

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.updateOrderStatus = exports.deleteUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
+exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.deleteOrder = exports.updateOrderStatus = exports.deleteUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
 const crypto_1 = require("crypto");
 const app_1 = require("firebase-admin/app");
 const auth_1 = require("firebase-admin/auth");
@@ -559,6 +559,15 @@ exports.updateOrderStatus = (0, https_1.onCall)(publicCallableOptions, async (re
         updatedAt: new Date().toISOString()
     }, { merge: true });
     await sendOrderStatusEmail(id, status);
+    return { success: true };
+});
+exports.deleteOrder = (0, https_1.onCall)(publicCallableOptions, async (request) => {
+    requireAdmin(request);
+    const { id } = request.data;
+    if (!id) {
+        throw new https_1.HttpsError("invalid-argument", "Order ID is required.");
+    }
+    await db.collection("orders").doc(id).delete();
     return { success: true };
 });
 exports.upsertArticle = (0, https_1.onCall)(publicCallableOptions, async (request) => {

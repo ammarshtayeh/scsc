@@ -21,9 +21,10 @@ describe("Store enterprise QA contracts", () => {
     expect(checkoutBlock).toContain("if (!cartItems.length)");
     expect(checkoutBlock).toContain("throw new Error(\"Your cart is empty.\");");
     expect(checkoutBlock).toContain("await runTransaction(database, async (transaction) =>");
-    expect(checkoutBlock).toContain("const productSnap = await transaction.get(productRef);");
+    expect(checkoutBlock).toContain("const productSnaps = await Promise.all(");
+    expect(checkoutBlock).toContain("productRefs.map((productRef) => transaction.get(productRef))");
     expect(checkoutBlock).toContain("stock < lineItem.quantity");
-    expect(checkoutBlock).toContain("transaction.update(productRef");
+    expect(checkoutBlock).toContain("transaction.update(productRefs[index]");
     expect(checkoutBlock).toContain("transaction.set(doc(database, \"orders\", orderId)");
     expect(checkoutBlock).toContain("status: \"pending\"");
     expect(checkoutBlock).toContain("transaction.delete(doc(database, \"carts\", userId));");

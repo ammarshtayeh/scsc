@@ -23,8 +23,12 @@ export function ProductDetailClient({
   const { dictionary, locale } = useLocale();
   const { pushToast } = useToast();
   const memberPricing = useMemberPricing();
-  const { addProduct } = useCart(allProducts, memberPricing.useMemberPricing);
-  const [activeImage, setActiveImage] = useState(product.images[0]);
+  const cartProducts = allProducts.some((entry) => entry.id === product.id)
+    ? allProducts
+    : [product, ...allProducts];
+  const productImages = product.images.length ? product.images : [null];
+  const { addProduct } = useCart(cartProducts, memberPricing.useMemberPricing);
+  const [activeImage, setActiveImage] = useState<string | null>(product.images[0] || null);
   const displayPrice = memberPricing.useMemberPricing
     ? product.memberPrice ?? product.price
     : product.price;
@@ -44,7 +48,7 @@ export function ProductDetailClient({
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
-        <Card className="space-y-4 overflow-hidden">
+        <Card className="space-y-4 overflow-hidden dark:border-white/10 dark:bg-white/5">
           <div className="relative h-[420px]">
             <SmartImage
               src={activeImage}
@@ -55,11 +59,11 @@ export function ProductDetailClient({
             />
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            {product.images.map((image) => (
+            {productImages.map((image, index) => (
               <button
-                key={image}
+                key={image || `fallback-${index}`}
                 onClick={() => setActiveImage(image)}
-                className="relative h-28 overflow-hidden rounded-2xl"
+                className="relative h-28 overflow-hidden rounded-2xl border border-transparent transition hover:border-brand-accent dark:border-white/10"
               >
                 <SmartImage src={image} alt={product.name} fill className="object-cover" />
               </button>
@@ -67,7 +71,7 @@ export function ProductDetailClient({
           </div>
         </Card>
 
-        <Card className="space-y-5">
+        <Card className="space-y-5 dark:border-white/10 dark:bg-white/5">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent">
               {translateProductCategory(product.category, locale)}
@@ -75,7 +79,7 @@ export function ProductDetailClient({
             <h1 className="mt-3 font-heading text-4xl font-bold text-brand-primary">
               {product.name}
             </h1>
-            <p className="mt-3 text-sm text-slate-500">{product.company}</p>
+            <p className="mt-3 text-sm text-slate-500 dark:text-brand-mist">{product.company}</p>
           </div>
           <div>
             <p className="font-heading text-3xl font-bold text-brand-primary">
@@ -87,20 +91,20 @@ export function ProductDetailClient({
               </p>
             ) : null}
             {!memberPricing.useMemberPricing ? (
-              <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+              <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 dark:border-amber-300/30 dark:bg-amber-300/10 dark:text-amber-100">
                 {dictionary.store.renewalPrompt}
               </p>
             ) : null}
           </div>
-          <p className="text-sm leading-8 text-slate-600">{product.description}</p>
+          <p className="text-sm leading-8 text-slate-600 dark:text-brand-mist">{product.description}</p>
           <div className="space-y-3">
             {product.longDescription.map((paragraph, index) => (
-              <p key={index} className="text-sm leading-8 text-slate-700">
+              <p key={index} className="text-sm leading-8 text-slate-700 dark:text-brand-mist">
                 {paragraph}
               </p>
             ))}
           </div>
-          <div className="rounded-2xl bg-brand-sky p-4 text-sm text-slate-600">
+          <div className="rounded-2xl bg-brand-sky p-4 text-sm text-slate-600 dark:bg-white/10 dark:text-brand-mist">
             {product.stock > 0
               ? `${formatNumber(product.stock, locale)} ${dictionary.store.unitsAvailable}`
               : dictionary.store.outOfStock}
