@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import {
   CalendarDays,
   CheckCircle2,
   ClipboardList,
   Download,
   ExternalLink,
+  Home,
   ImageUp,
   LinkIcon,
   Package,
@@ -43,6 +44,7 @@ import {
   upsertArticleAdmin,
   upsertBoardMemberAdmin,
   upsertEventAdmin,
+  upsertHomeSettingsAdmin,
   upsertProductAdmin
 } from "@/lib/firebase/functions";
 import { db } from "@/lib/firebase/firebase";
@@ -62,6 +64,7 @@ import type {
   DashboardStats,
   EventRegistration,
   EventItem,
+  HomePageSettings,
   Order,
   OrderStatus,
   Product,
@@ -73,6 +76,7 @@ import type {
 type Locale = "en" | "ar";
 export type DashboardSection =
   | "overview"
+  | "home"
   | "events"
   | "registrants"
   | "products"
@@ -174,6 +178,46 @@ function normalizeDashboardBoardMember(id: string, data: Record<string, unknown>
   };
 }
 
+function normalizeDashboardDateValue(value: unknown) {
+  if (!value) {
+    return "";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? "" : value.toISOString();
+  }
+
+  if (typeof value === "object") {
+    const maybeTimestamp = value as {
+      toDate?: () => Date;
+      seconds?: number;
+      nanoseconds?: number;
+    };
+
+    if (typeof maybeTimestamp.toDate === "function") {
+      const date = maybeTimestamp.toDate();
+      return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+    }
+
+    if (typeof maybeTimestamp.seconds === "number") {
+      return new Date(
+        maybeTimestamp.seconds * 1000 + Math.floor((maybeTimestamp.nanoseconds || 0) / 1000000)
+      ).toISOString();
+    }
+  }
+
+  return "";
+}
+
 function getCsvData(filename: string, rows: Record<string, unknown>[]) {
   const headers = Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
   const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
@@ -213,7 +257,7 @@ function cleanFileName(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-async function uploadDashboardImage(folder: "events" | "products" | "board", file: File) {
+async function uploadDashboardImage(folder: "events" | "products" | "board" | "home", file: File) {
   const safeName = cleanFileName(file.name) || "image";
   const extension = safeName.includes(".") ? "" : ".jpg";
   return uploadFileToStorage(
@@ -269,6 +313,7 @@ export function DashboardShell({
   articles,
   boardMembers,
   eventRegistrations,
+  homeSettings,
   locale,
   labels,
   mode = "admin",
@@ -282,6 +327,7 @@ export function DashboardShell({
   articles: Article[];
   boardMembers: BoardMember[];
   eventRegistrations: EventRegistration[];
+  homeSettings: HomePageSettings | null;
   locale: Locale;
   mode?: "admin" | "moderator";
   activeSection?: DashboardSection;
@@ -429,6 +475,47 @@ export function DashboardShell({
           "Scientific research and training committee",
           "Member affairs committee"
         ];
+  const defaultHomeSlides =
+    locale === "ar"
+      ? [
+          {
+            image: "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=80",
+            title: "مجتمع مهني نابض",
+            caption: "فعاليات ومساحات تعارف تجمع العاملين والمهتمين في قطاع مستحضرات التجميل."
+          },
+          {
+            image: "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=1200&q=80",
+            title: "تعلم وتطوير",
+            caption: "ورش ومحتوى علمي يساعد الأعضاء على تطوير مهاراتهم بثقة."
+          },
+          {
+            image: "https://images.unsplash.com/photo-1522338242992-e1a54906a8da?auto=format&fit=crop&w=1200&q=80",
+            title: "منتجات وفرص",
+            caption: "منصة تربط الأعضاء بمنتجات مختارة وفرص تعاون داخل القطاع."
+          }
+        ]
+      : [
+          {
+            image: "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=80",
+            title: "A vibrant professional community",
+            caption: "Events and networking spaces for cosmetics professionals and enthusiasts."
+          },
+          {
+            image: "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=1200&q=80",
+            title: "Learning and development",
+            caption: "Workshops and science-backed content that help members build confidence."
+          },
+          {
+            image: "https://images.unsplash.com/photo-1522338242992-e1a54906a8da?auto=format&fit=crop&w=1200&q=80",
+            title: "Products and opportunities",
+            caption: "A platform connecting members with curated products and sector partnerships."
+          }
+        ];
+  const editableHomeSlides = defaultHomeSlides.map((slide, index) => ({
+    image: homeSettings?.slides[index]?.image || slide.image,
+    title: homeSettings?.slides[index]?.title || slide.title,
+    caption: homeSettings?.slides[index]?.caption || slide.caption
+  }));
   const currentBoardYear = String(new Date().getFullYear());
   const showManagementSections = mode === "admin";
   const showOverview = showManagementSections && activeSection === "overview";
@@ -459,6 +546,11 @@ export function DashboardShell({
           order: "ترتيب الظهور",
           role: "المنصب",
           bio: "نبذة",
+          homeSettings: "الصفحة الرئيسية",
+          homeGuidance: "حدّث صور السلايدر الرئيسية والعناوين والوصف الظاهر في أول صفحة.",
+          slide: "الشريحة",
+          slideTitle: "عنوان الشريحة",
+          slideCaption: "وصف الشريحة",
           productGuidance: "أضيفوا المنتج مرة واحدة هنا وسيظهر مباشرة في متجر الأعضاء وصفحة التفاصيل. يمكنكم رفع الصور، تعديل السعر والمخزون، أو حذف المنتج بدون أي تعديل برمجي.",
           boardGuidance: "أي تعديل هنا يظهر في صفحة من نحن والهيكل التنظيمي. ارفعوا الصورة، اختاروا المنصب، ثم احفظوا بدون الحاجة لأي تعديل برمجي.",
           details: "معاينة",
@@ -487,6 +579,11 @@ export function DashboardShell({
           order: "Display order",
           role: "Role",
           bio: "Bio",
+          homeSettings: "Home page",
+          homeGuidance: "Update the main slider images, titles, and captions shown on the first page.",
+          slide: "Slide",
+          slideTitle: "Slide title",
+          slideCaption: "Slide caption",
           productGuidance: "Add a product once here and it appears immediately in the member store and detail page. Upload photos, adjust pricing and stock, or delete it without touching code.",
           boardGuidance: "Changes here power the About page and organizational structure. Upload a photo, choose a role, and save without touching code.",
           details: "Preview",
@@ -530,7 +627,7 @@ export function DashboardShell({
       return;
     }
 
-    const now = new Date().toISOString();
+    const now = Date.now();
     const [
       usersSnapshot,
       upcomingEventsSnapshot,
@@ -541,7 +638,7 @@ export function DashboardShell({
       articlesSnapshot
     ] = await Promise.all([
       getDocs(collection(db, "users")),
-      getDocs(query(collection(db, "events"), where("startsAt", ">=", now))),
+      getDocs(collection(db, "events")),
       getDocs(collection(db, "events")),
       getDocs(collection(db, "orders")),
       getDocs(collection(db, "products")),
@@ -556,7 +653,10 @@ export function DashboardShell({
 
     setLocalStats({
       totalUsers: usersSnapshot.docs.length,
-      upcomingEvents: upcomingEventsSnapshot.docs.length,
+      upcomingEvents: upcomingEventsSnapshot.docs.filter((entry) => {
+        const startsAt = normalizeDashboardDateValue(entry.data().startsAt);
+        return startsAt && new Date(startsAt).getTime() >= now;
+      }).length,
       totalOrders: ordersSnapshot.docs.length,
       registeredCompanies: companySet.size
     });
@@ -628,6 +728,12 @@ export function DashboardShell({
   const managementCards = useMemo(
     () => [
       {
+        href: "/admin/home",
+        title: adminLabels.homeSettings,
+        metric: editableHomeSlides.length,
+        icon: Home
+      },
+      {
         href: "/admin/products",
         title: labels.productManagement,
         metric: localCounts.products,
@@ -666,6 +772,8 @@ export function DashboardShell({
     ],
     [
       adminLabels.boardMembers,
+      adminLabels.homeSettings,
+      editableHomeSlides.length,
       labels,
       localCounts
     ]
@@ -749,6 +857,89 @@ export function DashboardShell({
                 </div>
               </Card>
             </>
+          ) : null}
+
+          {showAdminSection("home") ? (
+          <Card id="home" className="space-y-5">
+            <div>
+              <h2 className="font-heading text-2xl font-semibold text-brand-primary">
+                {adminLabels.homeSettings}
+              </h2>
+              <p className={`mt-2 text-sm leading-7 ${dashboardMutedTextClass}`}>
+                {adminLabels.homeGuidance}
+              </p>
+            </div>
+            <form
+              className="grid gap-4"
+              onSubmit={(submitEvent) => {
+                submitEvent.preventDefault();
+                const formData = new FormData(submitEvent.currentTarget);
+                void runAction("save-home-settings", async () => {
+                  const slides = await Promise.all(
+                    editableHomeSlides.map(async (slide, index) => {
+                      const imageFile = formData.get(`homeSlideFile-${index}`);
+                      const uploadedImage =
+                        imageFile instanceof File && imageFile.size > 0
+                          ? await uploadDashboardImage("home", imageFile)
+                          : "";
+
+                      return {
+                        image: uploadedImage || getText(formData, `homeSlideImage-${index}`) || slide.image,
+                        title: getText(formData, `homeSlideTitle-${index}`),
+                        caption: getText(formData, `homeSlideCaption-${index}`)
+                      };
+                    })
+                  );
+
+                  await upsertHomeSettingsAdmin({ slides });
+                });
+              }}
+            >
+              {editableHomeSlides.map((slide, index) => (
+                <div key={`home-slide-${index}`} className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}>
+                  <h3 className="font-heading text-xl font-semibold text-brand-primary md:col-span-2">
+                    {adminLabels.slide} {formatNumber(index + 1, locale)}
+                  </h3>
+                  <DashboardFieldLabel label={adminLabels.slideTitle}>
+                    <input
+                      name={`homeSlideTitle-${index}`}
+                      required
+                      defaultValue={slide.title}
+                      className={dashboardFieldClass}
+                    />
+                  </DashboardFieldLabel>
+                  <DashboardFieldLabel label={imageLabels.url}>
+                    <input
+                      name={`homeSlideImage-${index}`}
+                      required
+                      defaultValue={slide.image}
+                      className={dashboardFieldClass}
+                    />
+                  </DashboardFieldLabel>
+                  <DashboardFieldLabel label={adminLabels.slideCaption} className="md:col-span-2">
+                    <textarea
+                      name={`homeSlideCaption-${index}`}
+                      required
+                      defaultValue={slide.caption}
+                      className={dashboardTextAreaClass}
+                    />
+                  </DashboardFieldLabel>
+                  <DashboardFieldLabel label={imageLabels.upload} className="md:col-span-2">
+                    <input
+                      name={`homeSlideFile-${index}`}
+                      type="file"
+                      accept="image/*"
+                      className={dashboardFieldClass}
+                    />
+                  </DashboardFieldLabel>
+                </div>
+              ))}
+              <Button loading={loadingAction === "save-home-settings"} type="submit">
+                <Save className="h-4 w-4" />
+                {labels.save}
+              </Button>
+            </form>
+          </Card>
           ) : null}
 
           {showAdminSection("events") ? (
@@ -1221,18 +1412,30 @@ export function DashboardShell({
                         });
                       }}
                     >
-                      <input name="name" required defaultValue={product.name} className={dashboardEditFieldClass} />
-                      <input name="company" defaultValue={product.company} className={dashboardEditFieldClass} />
-                      <select name="category" defaultValue={product.category} className={dashboardEditFieldClass}>
-                        {productCategories.map((entry) => (
-                          <option key={entry} value={entry}>
-                            {translateProductCategory(entry, locale)}
-                          </option>
-                        ))}
-                      </select>
-                      <input name="stock" required type="number" min={0} defaultValue={product.stock} className={dashboardEditFieldClass} />
-                      <input name="price" required type="number" min={0.01} step="0.01" defaultValue={product.price} className={dashboardEditFieldClass} />
-                      <input name="memberPrice" type="number" min={0.01} step="0.01" defaultValue={product.memberPrice ?? product.price} className={dashboardEditFieldClass} />
+                      <DashboardFieldLabel label={labels.productNamePlaceholder}>
+                        <input name="name" required defaultValue={product.name} className={`${dashboardEditFieldClass} w-full`} />
+                      </DashboardFieldLabel>
+                      <DashboardFieldLabel label={labels.productCompanyPlaceholder}>
+                        <input name="company" defaultValue={product.company} className={`${dashboardEditFieldClass} w-full`} />
+                      </DashboardFieldLabel>
+                      <DashboardFieldLabel label={locale === "ar" ? "تصنيف المنتج" : "Product category"}>
+                        <select name="category" defaultValue={product.category} className={`${dashboardEditFieldClass} w-full`}>
+                          {productCategories.map((entry) => (
+                            <option key={entry} value={entry}>
+                              {translateProductCategory(entry, locale)}
+                            </option>
+                          ))}
+                        </select>
+                      </DashboardFieldLabel>
+                      <DashboardFieldLabel label={locale === "ar" ? "كمية المخزون" : "Stock quantity"}>
+                        <input name="stock" required type="number" min={0} defaultValue={product.stock} className={`${dashboardEditFieldClass} w-full`} />
+                      </DashboardFieldLabel>
+                      <DashboardFieldLabel label={locale === "ar" ? "السعر الأساسي" : "Base price"}>
+                        <input name="price" required type="number" min={0.01} step="0.01" defaultValue={product.price} className={`${dashboardEditFieldClass} w-full`} />
+                      </DashboardFieldLabel>
+                      <DashboardFieldLabel label={locale === "ar" ? "سعر الأعضاء" : "Member price"}>
+                        <input name="memberPrice" type="number" min={0.01} step="0.01" defaultValue={product.memberPrice ?? product.price} className={`${dashboardEditFieldClass} w-full`} />
+                      </DashboardFieldLabel>
                       <div className="space-y-3 md:col-span-2">
                         <p className="text-sm font-semibold text-brand-primary dark:text-brand-ink">
                           {locale === "ar" ? "صور المنتج" : "Product images"}
@@ -1250,7 +1453,9 @@ export function DashboardShell({
                                     sizes="(max-width: 768px) 100vw, 280px"
                                   />
                                 </div>
-                                <input name="images" defaultValue={image} className={dashboardEditFieldClass} />
+                                <DashboardFieldLabel label={locale === "ar" ? "رابط الصورة المحفوظة" : "Saved image URL"}>
+                                  <input name="images" defaultValue={image} className={`${dashboardEditFieldClass} w-full`} />
+                                </DashboardFieldLabel>
                                 <label className="mt-3 flex items-center gap-2 text-xs font-medium text-rose-600 dark:text-rose-300">
                                   <input name="removeImages" type="checkbox" value={image} />
                                   {locale === "ar" ? "حذف هذه الصورة" : "Remove this image"}
@@ -1263,18 +1468,24 @@ export function DashboardShell({
                             </p>
                           )}
                         </div>
-                        <input
-                          name="images"
-                          placeholder={locale === "ar" ? "رابط صورة جديد اختياري" : "Optional new image URL"}
-                          className={`${dashboardEditFieldClass} w-full`}
-                        />
+                        <DashboardFieldLabel label={locale === "ar" ? "رابط صورة جديد اختياري" : "Optional new image URL"}>
+                          <input
+                            name="images"
+                            placeholder={locale === "ar" ? "رابط صورة جديد اختياري" : "Optional new image URL"}
+                            className={`${dashboardEditFieldClass} w-full`}
+                          />
+                        </DashboardFieldLabel>
                       </div>
                       <label className={`${dashboardLabelClass} md:col-span-2`}>
                         <span>{imageLabels.uploadMany}</span>
                         <input name="imageFiles" type="file" accept="image/*" multiple className={dashboardEditFieldClass} />
                       </label>
-                      <textarea name="description" defaultValue={product.description} className={`${dashboardEditTextAreaClass} md:col-span-2`} />
-                      <textarea name="longDescription" defaultValue={product.longDescription.join("\n")} className={`${dashboardEditFieldClass} min-h-24 md:col-span-2`} />
+                      <DashboardFieldLabel label={labels.productDescriptionPlaceholder} className="md:col-span-2">
+                        <textarea name="description" defaultValue={product.description} className={`${dashboardEditTextAreaClass} w-full`} />
+                      </DashboardFieldLabel>
+                      <DashboardFieldLabel label={labels.productLongDescriptionPlaceholder} className="md:col-span-2">
+                        <textarea name="longDescription" defaultValue={product.longDescription.join("\n")} className={`${dashboardEditFieldClass} min-h-24 w-full`} />
+                      </DashboardFieldLabel>
                       <label className="flex items-center gap-2 text-sm text-slate-600">
                         <input name="featured" type="checkbox" defaultChecked={Boolean(product.featured)} />
                         {adminLabels.featured}

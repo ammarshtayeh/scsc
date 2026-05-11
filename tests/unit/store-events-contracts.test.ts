@@ -145,4 +145,23 @@ describe("Events enterprise QA contracts", () => {
     expect(deleteEventBlock).toContain("if (!registrationsSnap.empty && !cleanupRegistrations)");
     expect(deleteEventBlock).toContain("FieldValue.arrayRemove(id)");
   });
+
+  it("exposes admin home page slider management and protects it with admin callable auth", () => {
+    const homeBlock = dashboardSource.slice(
+      dashboardSource.indexOf("<Card id=\"home\""),
+      dashboardSource.indexOf("<Card id=\"events\"")
+    );
+    const upsertHomeSettingsBlock = functionsSource.slice(
+      functionsSource.indexOf("export const upsertHomeSettings"),
+      functionsSource.indexOf("export const upsertProduct")
+    );
+
+    expect(homeBlock).toContain("upsertHomeSettingsAdmin");
+    expect(homeBlock).toContain("uploadDashboardImage(\"home\", imageFile)");
+    expect(homeBlock).toContain("homeSlideImage");
+    expect(homeBlock).toContain("homeSlideTitle");
+    expect(homeBlock).toContain("homeSlideCaption");
+    expect(upsertHomeSettingsBlock).toContain("requireAdmin(request);");
+    expect(upsertHomeSettingsBlock).toContain("db.collection(\"siteSettings\").doc(\"home\")");
+  });
 });

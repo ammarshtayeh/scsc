@@ -22,6 +22,7 @@ export function Sidebar() {
       ]
     : [
         { href: basePath, label: dictionary.dashboard.overview },
+        { href: `${basePath}/home#home`, label: dictionary.nav.home },
         { href: `${basePath}/events#events`, label: dictionary.nav.events },
         { href: `${basePath}/registrants#registrants`, label: dictionary.dashboard.eventRegistrants || "Registrants" },
         { href: `${basePath}/products#products`, label: dictionary.dashboard.productManagement },

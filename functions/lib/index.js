@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.deleteOrder = exports.updateOrderStatus = exports.deleteUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
+exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.deleteOrder = exports.updateOrderStatus = exports.deleteUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.upsertHomeSettings = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
 const crypto_1 = require("crypto");
 const app_1 = require("firebase-admin/app");
 const auth_1 = require("firebase-admin/auth");
@@ -436,6 +436,31 @@ exports.deleteEvent = (0, https_1.onCall)(publicCallableOptions, async (request)
         await batch.commit();
     }
     await db.collection("events").doc(id).delete();
+    return { success: true };
+});
+exports.upsertHomeSettings = (0, https_1.onCall)(publicCallableOptions, async (request) => {
+    var _a;
+    requireAdmin(request);
+    const { slides } = request.data;
+    if (!Array.isArray(slides)) {
+        throw new https_1.HttpsError("invalid-argument", "Home page slides are required.");
+    }
+    const cleanSlides = slides
+        .slice(0, 6)
+        .map((slide) => ({
+        image: cleanString(slide.image),
+        title: cleanString(slide.title),
+        caption: cleanString(slide.caption)
+    }))
+        .filter((slide) => slide.image || slide.title || slide.caption);
+    if (!cleanSlides.length || cleanSlides.some((slide) => !slide.image || !slide.title || !slide.caption)) {
+        throw new https_1.HttpsError("invalid-argument", "Each home page slide must include an image, title, and caption.");
+    }
+    await db.collection("siteSettings").doc("home").set({
+        slides: cleanSlides,
+        updatedAt: new Date().toISOString(),
+        updatedBy: ((_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid) || "unknown"
+    }, { merge: true });
     return { success: true };
 });
 exports.upsertProduct = (0, https_1.onCall)(publicCallableOptions, async (request) => {

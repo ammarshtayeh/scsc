@@ -46,6 +46,16 @@ describe("Firestore security rules coverage", () => {
     expect(rules).toContain("allow read, write: if isSelf(userId) || isAdminOrModerator();");
   });
 
+  it("allows public reads but only admins can change site settings", () => {
+    const settingsBlock = rules.slice(
+      rules.indexOf("match /siteSettings/{settingId}"),
+      rules.indexOf("match /contacts/{contactId}")
+    );
+
+    expect(settingsBlock).toContain("allow read: if true;");
+    expect(settingsBlock).toContain("allow create, update, delete: if isAdmin();");
+  });
+
   it("defaults every unmatched document path to deny reads and writes", () => {
     expect(rules).toContain("match /{document=**}");
     expect(rules).toContain("allow read, write: if false;");

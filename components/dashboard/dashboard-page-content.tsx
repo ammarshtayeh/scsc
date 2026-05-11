@@ -8,6 +8,7 @@ import {
   getArticlesForModeration,
   getDashboardStats,
   getEventRegistrationsForDashboard,
+  getHomePageSettings,
   getUpcomingEvents
 } from "@/lib/firebase/queries";
 import { getServerDictionary, getServerLocale } from "@/lib/i18n/server";
@@ -19,6 +20,7 @@ interface DashboardPageContentProps {
 
 const dashboardSections: DashboardSection[] = [
   "overview",
+  "home",
   "events",
   "registrants",
   "products",
@@ -38,7 +40,7 @@ export async function DashboardPageContent({ mode = "admin", section }: Dashboar
   const dictionary = getServerDictionary();
   const locale = getServerLocale();
   const activeSection = mode === "moderator" ? "moderation" : normalizeDashboardSection(section);
-  const [stats, events, products, users, orders, articles, boardMembers, eventRegistrations] =
+  const [stats, events, products, users, orders, articles, boardMembers, eventRegistrations, homeSettings] =
     await Promise.all([
     getDashboardStats(),
     getUpcomingEvents(8),
@@ -47,7 +49,8 @@ export async function DashboardPageContent({ mode = "admin", section }: Dashboar
     getAllOrders(),
     getArticlesForModeration(),
     getAllBoardMembers(),
-    getEventRegistrationsForDashboard()
+    getEventRegistrationsForDashboard(),
+    getHomePageSettings()
   ]);
 
   return (
@@ -66,6 +69,7 @@ export async function DashboardPageContent({ mode = "admin", section }: Dashboar
         articles={articles}
         boardMembers={boardMembers}
         eventRegistrations={eventRegistrations}
+        homeSettings={homeSettings}
         locale={locale}
         labels={dictionary.dashboard}
         mode={mode}

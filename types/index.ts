@@ -50,6 +50,17 @@ export interface EventRegistration {
   checkedInBy?: string | null;
 }
 
+export interface HomeSlide {
+  image: string;
+  title: string;
+  caption: string;
+}
+
+export interface HomePageSettings {
+  slides: HomeSlide[];
+  updatedAt?: string;
+}
+
 export interface Product {
   id: string;
   slug: string;

@@ -603,6 +603,49 @@ export const deleteEvent = onCall(publicCallableOptions, async (request) => {
   return { success: true };
 });
 
+export const upsertHomeSettings = onCall(publicCallableOptions, async (request) => {
+  requireAdmin(request);
+
+  const { slides } = request.data as {
+    slides?: Array<{
+      image?: unknown;
+      title?: unknown;
+      caption?: unknown;
+    }>;
+  };
+
+  if (!Array.isArray(slides)) {
+    throw new HttpsError("invalid-argument", "Home page slides are required.");
+  }
+
+  const cleanSlides = slides
+    .slice(0, 6)
+    .map((slide) => ({
+      image: cleanString(slide.image),
+      title: cleanString(slide.title),
+      caption: cleanString(slide.caption)
+    }))
+    .filter((slide) => slide.image || slide.title || slide.caption);
+
+  if (!cleanSlides.length || cleanSlides.some((slide) => !slide.image || !slide.title || !slide.caption)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Each home page slide must include an image, title, and caption."
+    );
+  }
+
+  await db.collection("siteSettings").doc("home").set(
+    {
+      slides: cleanSlides,
+      updatedAt: new Date().toISOString(),
+      updatedBy: request.auth?.uid || "unknown"
+    },
+    { merge: true }
+  );
+
+  return { success: true };
+});
+
 export const upsertProduct = onCall(publicCallableOptions, async (request) => {
   requireAdminOrModerator(request);
 

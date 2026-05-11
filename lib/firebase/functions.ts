@@ -9,6 +9,7 @@ import type {
   ContactMessagePayload,
   EventItem,
   EventRegistration,
+  HomePageSettings,
   MembershipQrSession,
   MembershipStatus,
   OrderStatus,
@@ -30,6 +31,7 @@ type AdminEventInput = Partial<EventItem> & Pick<EventItem, "title" | "startsAt"
 type AdminProductInput = Partial<Product> & Pick<Product, "name" | "price" | "stock">;
 type AdminArticleInput = Partial<Article> & Pick<Article, "title" | "excerpt" | "category">;
 type AdminBoardMemberInput = Partial<BoardMember> & Pick<BoardMember, "name" | "role" | "year">;
+type AdminHomeSettingsInput = Pick<HomePageSettings, "slides">;
 
 function requireFunctions() {
   if (!functions) {
@@ -103,6 +105,10 @@ export async function deleteArticleAdmin(id: string) {
 
 export async function upsertBoardMemberAdmin(payload: AdminBoardMemberInput) {
   return callAdminFunction<AdminBoardMemberInput>("upsertBoardMember", payload);
+}
+
+export async function upsertHomeSettingsAdmin(payload: AdminHomeSettingsInput) {
+  return callAdminFunction<AdminHomeSettingsInput>("upsertHomeSettings", payload);
 }
 
 export async function deleteBoardMemberAdmin(id: string) {
