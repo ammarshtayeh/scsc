@@ -2,6 +2,10 @@ import { DashboardPageContent } from "@/components/dashboard/dashboard-page-cont
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPage() {
-  return <DashboardPageContent mode="admin" />;
+export default async function AdminPage({
+  params
+}: {
+  params: { section?: string[] };
+}) {
+  return <DashboardPageContent mode="admin" section={params.section?.[0]} />;
 }

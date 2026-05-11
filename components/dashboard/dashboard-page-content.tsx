@@ -1,4 +1,4 @@
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { DashboardShell, type DashboardSection } from "@/components/dashboard/dashboard-shell";
 import { PageHero } from "@/components/ui/page-hero";
 import {
   getAllOrders,
@@ -14,11 +14,30 @@ import { getServerDictionary, getServerLocale } from "@/lib/i18n/server";
 
 interface DashboardPageContentProps {
   mode?: "admin" | "moderator";
+  section?: string;
 }
 
-export async function DashboardPageContent({ mode = "admin" }: DashboardPageContentProps) {
+const dashboardSections: DashboardSection[] = [
+  "overview",
+  "events",
+  "registrants",
+  "products",
+  "board-members",
+  "users",
+  "orders",
+  "moderation"
+];
+
+function normalizeDashboardSection(section?: string): DashboardSection {
+  return dashboardSections.includes(section as DashboardSection)
+    ? (section as DashboardSection)
+    : "overview";
+}
+
+export async function DashboardPageContent({ mode = "admin", section }: DashboardPageContentProps) {
   const dictionary = getServerDictionary();
   const locale = getServerLocale();
+  const activeSection = mode === "moderator" ? "moderation" : normalizeDashboardSection(section);
   const [stats, events, products, users, orders, articles, boardMembers, eventRegistrations] =
     await Promise.all([
     getDashboardStats(),
@@ -50,6 +69,7 @@ export async function DashboardPageContent({ mode = "admin" }: DashboardPageCont
         locale={locale}
         labels={dictionary.dashboard}
         mode={mode}
+        activeSection={activeSection}
       />
     </>
   );

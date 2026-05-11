@@ -21,7 +21,7 @@ export async function assertUrl(page: Page, expectedPath: string) {
 
 export async function goTo(page: Page, path: string) {
   await page.goto(path, { waitUntil: "domcontentloaded" });
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => undefined);
 }
 
 export async function loginAs(page: Page, email: string, password: string) {
@@ -33,6 +33,8 @@ export async function loginAs(page: Page, email: string, password: string) {
     page.waitForLoadState("networkidle"),
     page.getByRole("button", { name: /sign in|تسجيل الدخول/i }).click()
   ]);
+  await page.waitForURL((url) => !normalizePath(url.pathname).startsWith("/auth/login"));
+  await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => undefined);
 }
 
 export async function logout(page: Page) {
@@ -66,5 +68,8 @@ export async function maybeAcceptDialog(page: Page) {
 }
 
 export async function clickAndWaitNetworkIdle(page: Page, locator: Locator) {
-  await Promise.all([page.waitForLoadState("networkidle"), locator.click()]);
+  await Promise.all([
+    page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => undefined),
+    locator.click()
+  ]);
 }

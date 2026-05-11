@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -12,14 +13,40 @@ import { useCart } from "@/hooks/useCart";
 import { useLocale } from "@/hooks/useLocale";
 import { useMemberPricing } from "@/hooks/useMemberPricing";
 import { PRODUCT_CATEGORIES } from "@/lib/constants";
+import { db } from "@/lib/firebase/firebase";
 import { translateProductCategory } from "@/lib/i18n/helpers";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import type { Product } from "@/types";
 
-export function StoreShell({ products }: { products: Product[] }) {
+function normalizeClientProduct(id: string, data: Record<string, unknown>): Product {
+  const price = Number(data.price);
+  const memberPrice = Number(data.memberPrice);
+
+  return {
+    id,
+    slug: typeof data.slug === "string" && data.slug.trim() ? data.slug.trim() : id,
+    name: typeof data.name === "string" ? data.name : "Untitled product",
+    description: typeof data.description === "string" ? data.description : "",
+    longDescription: Array.isArray(data.longDescription)
+      ? data.longDescription.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    price: Number.isFinite(price) ? price : 0,
+    memberPrice: Number.isFinite(memberPrice) ? memberPrice : undefined,
+    category: (typeof data.category === "string" ? data.category : "Skin Care") as Product["category"],
+    company: typeof data.company === "string" && data.company.trim() ? data.company : "SCSC Partner",
+    stock: Math.max(0, Number(data.stock) || 0),
+    images: Array.isArray(data.images)
+      ? data.images.filter((entry): entry is string => typeof entry === "string" && Boolean(entry.trim()))
+      : [],
+    featured: Boolean(data.featured)
+  };
+}
+
+export function StoreShell({ products: initialProducts }: { products: Product[] }) {
   const { dictionary, locale } = useLocale();
   const { pushToast } = useToast();
   const memberPricing = useMemberPricing();
+  const [products, setProducts] = useState(initialProducts);
   const priceCeiling = useMemo(() => {
     const highestProductPrice = products.reduce((highest, product) => {
       const displayPrice = memberPricing.useMemberPricing
@@ -28,7 +55,7 @@ export function StoreShell({ products }: { products: Product[] }) {
       return Math.max(highest, displayPrice);
     }, 0);
 
-    return Math.max(100, Math.ceil(highestProductPrice));
+    return Math.ceil(highestProductPrice);
   }, [products, memberPricing.useMemberPricing]);
   const { items, total, addProduct, updateQuantity, checkout } = useCart(
     products,
@@ -48,6 +75,36 @@ export function StoreShell({ products }: { products: Product[] }) {
   useEffect(() => {
     setMaxPrice(priceCeiling);
   }, [priceCeiling]);
+
+  useEffect(() => {
+    if (initialProducts.length || !db) {
+      setProducts(initialProducts);
+      return;
+    }
+
+    let mounted = true;
+
+    async function loadClientProducts() {
+      const snapshot = await getDocs(query(collection(db!, "products"), orderBy("__name__")));
+      if (!mounted) {
+        return;
+      }
+
+      setProducts(
+        snapshot.docs.map((doc) =>
+          normalizeClientProduct(doc.id, doc.data() as Record<string, unknown>)
+        )
+      );
+    }
+
+    void loadClientProducts().catch((error) => {
+      pushToast(error instanceof Error ? error.message : dictionary.store.noProductsDescription, "error");
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [dictionary.store.noProductsDescription, initialProducts, pushToast]);
 
   const companies = useMemo(
     () => [dictionary.common.all, ...Array.from(new Set(products.map((product) => product.company)))],
@@ -172,9 +229,14 @@ export function StoreShell({ products }: { products: Product[] }) {
               max={priceCeiling}
               step={1}
               value={maxPrice}
+              disabled={priceCeiling <= 0}
               onChange={(event) => setMaxPrice(Number(event.target.value))}
               className="w-full accent-[#0B3B78]"
             />
+            <div className="mt-2 flex items-center justify-between text-xs font-medium text-slate-500">
+              <span>{formatCurrency(0, "USD", locale)}</span>
+              <span>{formatCurrency(priceCeiling, "USD", locale)}</span>
+            </div>
           </div>
         </Card>
 

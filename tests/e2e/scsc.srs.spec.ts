@@ -368,7 +368,7 @@ test.describe("GROUP 9 — Admin Dashboard @admin", () => {
     const name = `qa-product-${randomSuffix()}`;
     const editedName = `${name}-edited`;
     await loginAs(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
-    await goTo(page, "/admin");
+    await goTo(page, "/admin/products");
     await page.waitForSelector("form");
 
     await page.getByPlaceholder(/product name|اسم المنتج/i).fill(name);
@@ -386,7 +386,7 @@ test.describe("GROUP 9 — Admin Dashboard @admin", () => {
     // WHY: admin CRUD should immediately reflect in member-facing store.
     await expect(page.locator("main")).toContainText(name);
 
-    await goTo(page, "/admin");
+    await goTo(page, "/admin/products");
     const productCard = page.locator("div").filter({ hasText: name }).first();
     await expect(productCard).toBeVisible();
     await productCard.locator("summary").click();
@@ -401,7 +401,7 @@ test.describe("GROUP 9 — Admin Dashboard @admin", () => {
     await expect(page.locator("main")).toContainText(editedName);
     await expect(page.locator("main")).not.toContainText(name);
 
-    await goTo(page, "/admin");
+    await goTo(page, "/admin/products");
     const editedProductCard = page.locator("div").filter({ hasText: editedName }).first();
     await expect(editedProductCard).toBeVisible();
     await clickAndWaitNetworkIdle(
@@ -422,7 +422,7 @@ test.describe("GROUP 9 — Admin Dashboard @admin", () => {
     const futureDate = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString().slice(0, 16);
 
     await loginAs(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
-    await goTo(page, "/admin");
+    await goTo(page, "/admin/events");
     await page.waitForSelector("form");
 
     await page.getByPlaceholder(/event title|عنوان الفعالية/i).fill(name);
@@ -444,7 +444,7 @@ test.describe("GROUP 9 — Admin Dashboard @admin", () => {
     await goTo(page, "/events");
     await expect(page.locator("main")).toContainText(name);
 
-    await goTo(page, "/admin");
+    await goTo(page, "/admin/events");
     const eventCard = page.locator("div").filter({ hasText: name }).first();
     await expect(eventCard).toBeVisible();
     await eventCard.locator("summary").click();
@@ -459,7 +459,7 @@ test.describe("GROUP 9 — Admin Dashboard @admin", () => {
     await expect(page.locator("main")).toContainText(editedName);
     await expect(page.locator("main")).not.toContainText(name);
 
-    await goTo(page, "/admin");
+    await goTo(page, "/admin/events");
     const editedEventCard = page.locator("div").filter({ hasText: editedName }).first();
     await expect(editedEventCard).toBeVisible();
     await clickAndWaitNetworkIdle(
@@ -475,7 +475,7 @@ test.describe("GROUP 9 — Admin Dashboard @admin", () => {
     testRequiresAdmin();
     testRequiresUser();
     await loginAs(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
-    await goTo(page, "/admin");
+    await goTo(page, "/admin/users");
     const userRow = page.locator("div").filter({ hasText: USER_EMAIL! }).first();
     test.skip(!(await userRow.isVisible().catch(() => false)), "Target user row not found.");
     await userRow.locator("select").first().selectOption("moderator");
@@ -492,7 +492,7 @@ test.describe("GROUP 9 — Admin Dashboard @admin", () => {
   test("admin cannot delete own account @admin", async ({ page }) => {
     testRequiresAdmin();
     await loginAs(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
-    await goTo(page, "/admin");
+    await goTo(page, "/admin/users");
     await maybeAcceptDialog(page);
     const selfRow = page.locator("div").filter({ hasText: ADMIN_EMAIL! }).first();
     test.skip(!(await selfRow.isVisible().catch(() => false)), "Could not locate admin row.");

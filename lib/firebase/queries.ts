@@ -14,6 +14,43 @@ import type {
   UserProfile
 } from "@/types";
 
+function cleanString(value: unknown, fallback = "") {
+  return typeof value === "string" ? value.trim() : fallback;
+}
+
+function cleanStringArray(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => cleanString(entry)).filter(Boolean);
+  }
+
+  return typeof value === "string" ? [value.trim()].filter(Boolean) : [];
+}
+
+function cleanNumber(value: unknown, fallback = 0) {
+  const next = Number(value);
+  return Number.isFinite(next) ? next : fallback;
+}
+
+function normalizeProduct(id: string, data: Record<string, unknown>) {
+  const price = cleanNumber(data.price);
+
+  return {
+    id,
+    slug: cleanString(data.slug, id) || id,
+    name: cleanString(data.name, "Untitled product"),
+    description: cleanString(data.description),
+    longDescription: cleanStringArray(data.longDescription),
+    price,
+    memberPrice:
+      typeof data.memberPrice === "undefined" ? undefined : cleanNumber(data.memberPrice, price),
+    category: cleanString(data.category, "Skin Care") as Product["category"],
+    company: cleanString(data.company, "SCSC Partner"),
+    stock: Math.max(0, cleanNumber(data.stock)),
+    images: cleanStringArray(data.images),
+    featured: Boolean(data.featured)
+  } satisfies Product;
+}
+
 function sortByDate<T extends { publishedAt?: string; startsAt?: string; createdAt?: string }>(
   items: T[],
   field: "publishedAt" | "startsAt" | "createdAt"
@@ -126,7 +163,7 @@ export async function getAllProducts(): Promise<Product[]> {
   }
 
   const snapshot = await adminDb.collection("products").orderBy(FieldPath.documentId()).get();
-  return snapshot.docs.map((doc) => convertDoc<Product>(doc.id, doc.data()));
+  return snapshot.docs.map((doc) => normalizeProduct(doc.id, doc.data()));
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
@@ -135,12 +172,13 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   }
 
   const snapshot = await adminDb.collection("products").where("slug", "==", slug).limit(1).get();
-  if (snapshot.empty) {
-    return null;
+  if (!snapshot.empty) {
+    const doc = snapshot.docs[0];
+    return normalizeProduct(doc.id, doc.data());
   }
 
-  const doc = snapshot.docs[0];
-  return convertDoc<Product>(doc.id, doc.data());
+  const doc = await adminDb.collection("products").doc(slug).get();
+  return doc.exists ? normalizeProduct(doc.id, doc.data() || {}) : null;
 }
 
 export async function getBoardMembersByYear(): Promise<Record<string, BoardMember[]>> {

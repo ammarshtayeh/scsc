@@ -13,6 +13,7 @@ out/
 # Environment
 .env
 .env.local
+.env.playwright
 .env.*.local
 
 # Firebase

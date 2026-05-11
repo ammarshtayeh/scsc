@@ -50,6 +50,15 @@ import type {
 } from "@/types";
 
 type Locale = "en" | "ar";
+export type DashboardSection =
+  | "overview"
+  | "events"
+  | "registrants"
+  | "products"
+  | "board-members"
+  | "users"
+  | "orders"
+  | "moderation";
 
 const productCategories: ProductCategory[] = ["Skin Care", "Body Care", "Makeup", "Masks"];
 const articleCategories: ArticleCategory[] = ["Skin Care", "Makeup", "Hair Care", "Others"];
@@ -181,7 +190,8 @@ export function DashboardShell({
   eventRegistrations,
   locale,
   labels,
-  mode = "admin"
+  mode = "admin",
+  activeSection = "overview"
 }: {
   stats: DashboardStats;
   events: EventItem[];
@@ -193,6 +203,7 @@ export function DashboardShell({
   eventRegistrations: EventRegistration[];
   locale: Locale;
   mode?: "admin" | "moderator";
+  activeSection?: DashboardSection;
   labels: {
     totalUsers: string;
     upcomingEvents: string;
@@ -301,6 +312,10 @@ export function DashboardShell({
           noDelivery: "No delivery details"
         };
   const showManagementSections = mode === "admin";
+  const showOverview = showManagementSections && activeSection === "overview";
+  const showModerationSection = mode === "moderator" || activeSection === "moderation";
+  const showAdminSection = (section: DashboardSection) =>
+    showManagementSections && activeSection === section;
   const adminLabels =
     locale === "ar"
       ? {
@@ -385,7 +400,7 @@ export function DashboardShell({
         <Sidebar />
 
         <div className="space-y-6">
-          {showManagementSections ? (
+          {showOverview ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {statCards.map((card) => (
                 <Card key={card.label}>
@@ -398,7 +413,7 @@ export function DashboardShell({
             </div>
           ) : null}
 
-          {showManagementSections ? (
+          {showAdminSection("events") ? (
           <Card id="events" className="space-y-5">
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">
               {labels.eventManagement}
@@ -573,7 +588,7 @@ export function DashboardShell({
           </Card>
           ) : null}
 
-          {showManagementSections ? (
+          {showAdminSection("registrants") ? (
           <Card id="registrants" className="space-y-5">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <h2 className="font-heading text-2xl font-semibold text-brand-primary">
@@ -674,7 +689,7 @@ export function DashboardShell({
           </Card>
           ) : null}
 
-          {showManagementSections ? (
+          {showAdminSection("products") ? (
           <Card id="products" className="space-y-5">
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">
               {labels.productManagement}
@@ -845,7 +860,7 @@ export function DashboardShell({
           </Card>
           ) : null}
 
-          {showManagementSections ? (
+          {showAdminSection("board-members") ? (
           <Card id="board-members" className="space-y-5">
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">
               {adminLabels.boardMembers}
@@ -945,7 +960,7 @@ export function DashboardShell({
           </Card>
           ) : null}
 
-          {showManagementSections ? (
+          {showAdminSection("users") ? (
           <Card id="users" className="space-y-4">
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">
               {labels.userManagement}
@@ -1011,7 +1026,7 @@ export function DashboardShell({
           </Card>
           ) : null}
 
-          {showManagementSections ? (
+          {showAdminSection("orders") ? (
           <Card id="orders" className="space-y-4">
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">
               {labels.orders}
@@ -1100,6 +1115,7 @@ export function DashboardShell({
           </Card>
           ) : null}
 
+          {showModerationSection ? (
           <Card id="moderation" className="space-y-4">
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">
               {adminLabels.articles}
@@ -1260,6 +1276,7 @@ export function DashboardShell({
               ))}
             </div>
           </Card>
+          ) : null}
         </div>
       </div>
     </section>
