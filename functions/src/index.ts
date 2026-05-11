@@ -665,6 +665,7 @@ export const upsertBoardMember = onCall(publicCallableOptions, async (request) =
       name,
       role,
       year,
+      order: Math.max(1, cleanNumber(data.order, 99)),
       image: cleanString(data.image),
       bio: cleanString(data.bio),
       updatedAt: new Date().toISOString()

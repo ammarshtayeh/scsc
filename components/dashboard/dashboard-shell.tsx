@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ClipboardList,
   Download,
+  ExternalLink,
   ImageUp,
   LinkIcon,
   Package,
@@ -416,8 +417,14 @@ export function DashboardShell({
           image: "رابط الصورة",
           author: "الكاتب",
           year: "السنة",
+          order: "ترتيب الظهور",
           role: "المنصب",
-          bio: "نبذة"
+          bio: "نبذة",
+          productGuidance: "أضيفوا المنتج مرة واحدة هنا وسيظهر مباشرة في متجر الأعضاء وصفحة التفاصيل. يمكنكم رفع الصور، تعديل السعر والمخزون، أو حذف المنتج بدون أي تعديل برمجي.",
+          boardGuidance: "أي تعديل هنا يظهر في صفحة من نحن والهيكل التنظيمي. ارفعوا الصورة، اختاروا المنصب، ثم احفظوا بدون الحاجة لأي تعديل برمجي.",
+          details: "معاينة",
+          confirmDeleteProduct: "هل تريد حذف هذا المنتج من متجر الأعضاء؟",
+          confirmDeleteBoardMember: "هل تريد حذف عضو الهيئة الإدارية؟"
         }
       : {
           edit: "Edit",
@@ -438,8 +445,14 @@ export function DashboardShell({
           image: "Image URL",
           author: "Author",
           year: "Year",
+          order: "Display order",
           role: "Role",
-          bio: "Bio"
+          bio: "Bio",
+          productGuidance: "Add a product once here and it appears immediately in the member store and detail page. Upload photos, adjust pricing and stock, or delete it without touching code.",
+          boardGuidance: "Changes here power the About page and organizational structure. Upload a photo, choose a role, and save without touching code.",
+          details: "Preview",
+          confirmDeleteProduct: "Delete this product from the member store?",
+          confirmDeleteBoardMember: "Delete this board member?"
         };
   const refreshClientProducts = useCallback(async () => {
     if (!db) {
@@ -923,11 +936,28 @@ export function DashboardShell({
                     description: productForm.description,
                     longDescription: splitLines(productForm.longDescription)
                   });
+                  setProductForm({
+                    name: "",
+                    price: "10",
+                    memberPrice: "9",
+                    stock: "10",
+                    category: "Skin Care",
+                    company: "",
+                    image: "",
+                    imageTwo: "",
+                    description: "",
+                    longDescription: ""
+                  });
                   setProductImageFiles([]);
                   await refreshClientProducts();
                 });
               }}
             >
+              <div className={`${dashboardSubtlePanelClass} md:col-span-2`}>
+                <p className="text-sm leading-7 text-slate-600 dark:text-brand-mist">
+                  {adminLabels.productGuidance}
+                </p>
+              </div>
               <DashboardFieldLabel label={labels.productNamePlaceholder}>
                 <input required placeholder={labels.productNamePlaceholder} value={productForm.name} onChange={(event) => setProductForm((current) => ({ ...current, name: event.target.value }))} className={dashboardFieldClass} />
               </DashboardFieldLabel>
@@ -994,9 +1024,9 @@ export function DashboardShell({
 
             <div className="grid gap-4">
               {localProducts.map((product) => (
-                <div key={product.id} className={`${dashboardPanelClass} flex flex-col gap-3 md:flex-row md:items-center md:justify-between`}>
-                  <div>
-                    <p className="font-medium text-brand-primary">{product.name}</p>
+                <div key={product.id} className={`${dashboardPanelClass} grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start`}>
+                  <div className="min-w-0">
+                    <p className="break-words font-medium text-brand-primary">{product.name}</p>
                     <p className={`text-sm ${dashboardMutedTextClass}`}>
                       {product.company} - {translateProductCategory(product.category, locale)}
                     </p>
@@ -1008,22 +1038,32 @@ export function DashboardShell({
                     <span className="text-sm font-medium text-brand-primary">
                       {formatCurrency(product.memberPrice ?? product.price, "USD", locale)}
                     </span>
+                    <Link href={`/store/${encodeURIComponent(product.slug || product.id)}`}>
+                      <Button variant="secondary" size="sm" type="button">
+                        <ExternalLink className="h-4 w-4" />
+                        {adminLabels.details}
+                      </Button>
+                    </Link>
                     <Button
                       variant="secondary"
                       size="sm"
                       loading={loadingAction === `delete-product-${product.id}`}
-                      onClick={() =>
-                        runAction(`delete-product-${product.id}`, async () => {
+                      onClick={() => {
+                        if (!window.confirm(adminLabels.confirmDeleteProduct)) {
+                          return;
+                        }
+
+                        void runAction(`delete-product-${product.id}`, async () => {
                           await deleteProductAdmin(product.id);
                           await refreshClientProducts();
-                        })
-                      }
+                        });
+                      }}
                     >
                       <Trash2 className="h-4 w-4" />
                       {labels.delete}
                     </Button>
                   </div>
-                  <details className={`mt-2 md:col-span-2 ${dashboardSubtlePanelClass}`}>
+                  <details className={`${dashboardSubtlePanelClass} lg:col-span-2`}>
                     <summary className="cursor-pointer text-sm font-semibold text-brand-primary">
                       {adminLabels.edit}
                     </summary>
@@ -1089,9 +1129,7 @@ export function DashboardShell({
                   {adminLabels.boardMembers}
                 </h2>
                 <p className={`mt-2 max-w-2xl text-sm leading-7 ${dashboardMutedTextClass}`}>
-                  {locale === "ar"
-                    ? "أي تعديل هنا يظهر في صفحة من نحن والهيكل التنظيمي. ارفع الصورة، اختر المنصب، ثم احفظ بدون الحاجة لأي تعديل برمجي."
-                    : "Changes here power the About page and organizational structure. Upload a photo, choose a role, and save without touching code."}
+                  {adminLabels.boardGuidance}
                 </p>
               </div>
               <Badge>{locale === "ar" ? "يعرض أحدث سنة تلقائياً" : "Latest year shown automatically"}</Badge>
@@ -1109,6 +1147,7 @@ export function DashboardShell({
                     name: getText(formData, "name"),
                     role: getText(formData, "role"),
                     year: getText(formData, "year"),
+                    order: getNumber(formData, "order", 99),
                     image: uploadedImage || getText(formData, "image"),
                     bio: getText(formData, "bio")
                   });
@@ -1128,6 +1167,9 @@ export function DashboardShell({
                     </option>
                   ))}
                 </select>
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={adminLabels.order}>
+                <input name="order" required type="number" min={1} defaultValue={1} className={dashboardFieldClass} />
               </DashboardFieldLabel>
               <DashboardFieldLabel label={adminLabels.year}>
                 <input name="year" required defaultValue={currentBoardYear} placeholder={adminLabels.year} className={dashboardFieldClass} />
@@ -1163,14 +1205,20 @@ export function DashboardShell({
                     <div>
                       <p className="font-medium text-brand-primary">{member.name}</p>
                       <p className={`text-sm ${dashboardMutedTextClass}`}>
-                        {member.role} - {member.year}
+                        {member.role} - {member.year} - #{formatNumber(member.order ?? 99, locale)}
                       </p>
                     </div>
                     <Button
                       variant="secondary"
                       size="sm"
                       loading={loadingAction === `delete-board-member-${member.id}`}
-                      onClick={() => runAction(`delete-board-member-${member.id}`, () => deleteBoardMemberAdmin(member.id))}
+                      onClick={() => {
+                        if (!window.confirm(adminLabels.confirmDeleteBoardMember)) {
+                          return;
+                        }
+
+                        void runAction(`delete-board-member-${member.id}`, () => deleteBoardMemberAdmin(member.id));
+                      }}
                     >
                       <Trash2 className="h-4 w-4" />
                       {labels.delete}
@@ -1196,6 +1244,7 @@ export function DashboardShell({
                             name: getText(formData, "name"),
                             role: getText(formData, "role"),
                             year: getText(formData, "year"),
+                            order: getNumber(formData, "order", member.order ?? 99),
                             image: uploadedImage || getText(formData, "image"),
                             bio: getText(formData, "bio")
                           });
@@ -1210,6 +1259,7 @@ export function DashboardShell({
                           </option>
                         ))}
                       </select>
+                      <input name="order" required type="number" min={1} defaultValue={member.order ?? 99} className={dashboardEditFieldClass} />
                       <input name="year" required defaultValue={member.year} className={dashboardEditFieldClass} />
                       <input name="image" defaultValue={member.image} className={dashboardEditFieldClass} />
                       <input name="imageFile" type="file" accept="image/*" className={`${dashboardEditFieldClass} md:col-span-2`} />

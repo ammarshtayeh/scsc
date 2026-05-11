@@ -169,7 +169,7 @@ export function OrganizationStructure({
   const managedMembers = members.length
     ? [...members].sort((a, b) => {
         const yearDiff = Number(b.year) - Number(a.year);
-        return yearDiff || a.name.localeCompare(b.name);
+        return yearDiff || (a.order ?? 99) - (b.order ?? 99) || a.name.localeCompare(b.name);
       })
     : [];
   const latestYear = managedMembers[0]?.year;

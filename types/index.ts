@@ -101,6 +101,7 @@ export interface BoardMember {
   year: string;
   name: string;
   role: string;
+  order?: number;
   image: string;
   bio: string;
 }

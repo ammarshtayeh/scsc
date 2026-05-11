@@ -21,7 +21,13 @@ export function BoardMembers({ groupedMembers }: BoardMembersProps) {
     [groupedMembers]
   );
   const [selectedYear, setSelectedYear] = useState(years[0] || "");
-  const members = groupedMembers[selectedYear] || [];
+  const members = useMemo(
+    () =>
+      [...(groupedMembers[selectedYear] || [])].sort(
+        (a, b) => (a.order ?? 99) - (b.order ?? 99) || a.name.localeCompare(b.name)
+      ),
+    [groupedMembers, selectedYear]
+  );
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">

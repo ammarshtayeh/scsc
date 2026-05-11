@@ -404,6 +404,7 @@ test.describe("GROUP 9 — Admin Dashboard @admin", () => {
     await goTo(page, "/admin/products");
     const editedProductCard = page.locator("div").filter({ hasText: editedName }).first();
     await expect(editedProductCard).toBeVisible();
+    await maybeAcceptDialog(page);
     await clickAndWaitNetworkIdle(
       page,
       editedProductCard.getByRole("button", { name: /delete|حذف/i }).first()

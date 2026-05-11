@@ -488,6 +488,7 @@ exports.upsertBoardMember = (0, https_1.onCall)(publicCallableOptions, async (re
         name,
         role,
         year,
+        order: Math.max(1, cleanNumber(data.order, 99)),
         image: cleanString(data.image),
         bio: cleanString(data.bio),
         updatedAt: new Date().toISOString()
