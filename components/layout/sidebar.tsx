@@ -32,8 +32,8 @@ export function Sidebar() {
       ];
 
   return (
-    <aside className="rounded-[28px] border border-white/50 bg-white/80 p-5 shadow-soft backdrop-blur-xl">
-      <h2 className="font-heading text-xl font-semibold text-brand-primary">
+    <aside className="rounded-[28px] border border-white/50 bg-white/88 p-5 shadow-soft backdrop-blur-xl dark:border-white/10 dark:bg-[#0f1b2e]/92 dark:shadow-[0_18px_46px_rgba(3,8,18,0.42)]">
+      <h2 className="font-heading text-xl font-semibold text-brand-primary dark:text-brand-ink">
         {dictionary.dashboard.sectionTitle}
       </h2>
       <div className="mt-5 flex flex-col gap-2">
@@ -44,8 +44,8 @@ export function Sidebar() {
             className={cn(
               "rounded-2xl px-4 py-3 text-sm font-medium transition",
               pathname === link.href.split("#")[0]
-                ? "bg-brand-primary text-white"
-                : "text-slate-600 hover:bg-brand-sky hover:text-brand-primary"
+                ? "bg-brand-primary text-white shadow-soft dark:bg-[#2b5794] dark:text-white"
+                : "text-slate-700 hover:bg-brand-sky hover:text-brand-primary dark:text-brand-mist dark:hover:bg-white/8 dark:hover:text-white"
             )}
           >
             {link.label}

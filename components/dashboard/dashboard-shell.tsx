@@ -145,6 +145,31 @@ async function uploadDashboardImage(folder: "events" | "products", file: File) {
   );
 }
 
+const dashboardFieldClass =
+  "w-full rounded-xl border border-brand-primary/10 px-4 py-3 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20 dark:border-white/12 dark:bg-[#101a2b] dark:text-brand-ink dark:placeholder:text-brand-mist/70";
+
+const dashboardTextAreaClass = `${dashboardFieldClass} min-h-24`;
+
+const dashboardLabelClass =
+  "block space-y-2 text-sm font-semibold text-brand-primary dark:text-brand-ink";
+
+function DashboardFieldLabel({
+  children,
+  className = "",
+  label
+}: {
+  children: React.ReactNode;
+  className?: string;
+  label: string;
+}) {
+  return (
+    <label className={`${dashboardLabelClass} ${className}`}>
+      <span>{label}</span>
+      {children}
+    </label>
+  );
+}
+
 export function DashboardShell({
   stats,
   events,
@@ -402,33 +427,47 @@ export function DashboardShell({
                 });
               }}
             >
-              <input required placeholder={labels.eventTitlePlaceholder} value={eventForm.title} onChange={(event) => setEventForm((current) => ({ ...current, title: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input required type="datetime-local" value={eventForm.startsAt} onChange={(event) => setEventForm((current) => ({ ...current, startsAt: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input placeholder={labels.eventVenuePlaceholder} value={eventForm.venue} onChange={(event) => setEventForm((current) => ({ ...current, venue: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input required type="number" min={1} placeholder={labels.eventCapacityPlaceholder} value={eventForm.capacity} onChange={(event) => setEventForm((current) => ({ ...current, capacity: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+              <DashboardFieldLabel label={labels.eventTitlePlaceholder}>
+                <input required placeholder={labels.eventTitlePlaceholder} value={eventForm.title} onChange={(event) => setEventForm((current) => ({ ...current, title: event.target.value }))} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "تاريخ ووقت الفعالية" : "Event date and time"}>
+                <input required type="datetime-local" value={eventForm.startsAt} onChange={(event) => setEventForm((current) => ({ ...current, startsAt: event.target.value }))} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={labels.eventVenuePlaceholder}>
+                <input placeholder={labels.eventVenuePlaceholder} value={eventForm.venue} onChange={(event) => setEventForm((current) => ({ ...current, venue: event.target.value }))} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={labels.eventCapacityPlaceholder}>
+                <input required type="number" min={1} placeholder={labels.eventCapacityPlaceholder} value={eventForm.capacity} onChange={(event) => setEventForm((current) => ({ ...current, capacity: event.target.value }))} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
               <div className="grid gap-3 md:col-span-2 md:grid-cols-2">
                 <label className="space-y-2">
                   <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
                     <LinkIcon className="h-4 w-4" />
                     {imageLabels.url}
                   </span>
-                  <input placeholder={labels.eventCoverImagePlaceholder} value={eventForm.coverImage} onChange={(event) => setEventForm((current) => ({ ...current, coverImage: event.target.value }))} className="w-full rounded-xl border border-brand-primary/10 px-4 py-3" />
+                  <input placeholder={labels.eventCoverImagePlaceholder} value={eventForm.coverImage} onChange={(event) => setEventForm((current) => ({ ...current, coverImage: event.target.value }))} className={dashboardFieldClass} />
                 </label>
                 <label className="space-y-2">
                   <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
                     <ImageUp className="h-4 w-4" />
                     {imageLabels.upload}
                   </span>
-                  <input type="file" accept="image/*" onChange={(event) => setEventImageFile(event.target.files?.[0] || null)} className="w-full rounded-xl border border-brand-primary/10 bg-white px-4 py-3 text-sm" />
+                  <input type="file" accept="image/*" onChange={(event) => setEventImageFile(event.target.files?.[0] || null)} className={dashboardFieldClass} />
                 </label>
                 <p className="text-xs leading-5 text-slate-500 md:col-span-2">
                   {imageLabels.eventHint}
                   {eventImageFile ? ` ${imageLabels.selected}: ${eventImageFile.name}` : ""}
                 </p>
               </div>
-              <textarea placeholder={labels.eventExcerptPlaceholder} value={eventForm.excerpt} onChange={(event) => setEventForm((current) => ({ ...current, excerpt: event.target.value }))} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-              <textarea placeholder={labels.eventDescriptionPlaceholder} value={eventForm.description} onChange={(event) => setEventForm((current) => ({ ...current, description: event.target.value }))} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-              <input placeholder={labels.eventTagsPlaceholder} value={eventForm.tags} onChange={(event) => setEventForm((current) => ({ ...current, tags: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <DashboardFieldLabel label={labels.eventExcerptPlaceholder} className="md:col-span-2">
+                <textarea placeholder={labels.eventExcerptPlaceholder} value={eventForm.excerpt} onChange={(event) => setEventForm((current) => ({ ...current, excerpt: event.target.value }))} className={dashboardTextAreaClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={labels.eventDescriptionPlaceholder} className="md:col-span-2">
+                <textarea placeholder={labels.eventDescriptionPlaceholder} value={eventForm.description} onChange={(event) => setEventForm((current) => ({ ...current, description: event.target.value }))} className={dashboardTextAreaClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={labels.eventTagsPlaceholder} className="md:col-span-2">
+                <input placeholder={labels.eventTagsPlaceholder} value={eventForm.tags} onChange={(event) => setEventForm((current) => ({ ...current, tags: event.target.value }))} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
               <Button loading={loadingAction === "create-event"} type="submit" className="md:col-span-2">
                 <Save className="h-4 w-4" />
                 {labels.addEvent}
@@ -665,32 +704,44 @@ export function DashboardShell({
                 });
               }}
             >
-              <input required placeholder={labels.productNamePlaceholder} value={productForm.name} onChange={(event) => setProductForm((current) => ({ ...current, name: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input placeholder={labels.productCompanyPlaceholder} value={productForm.company} onChange={(event) => setProductForm((current) => ({ ...current, company: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <select value={productForm.category} onChange={(event) => setProductForm((current) => ({ ...current, category: event.target.value as ProductCategory }))} className="rounded-xl border border-brand-primary/10 px-4 py-3">
-                {productCategories.map((entry) => (
-                  <option key={entry} value={entry}>
-                    {translateProductCategory(entry, locale)}
-                  </option>
-                ))}
-              </select>
-              <input required type="number" min={0} value={productForm.stock} onChange={(event) => setProductForm((current) => ({ ...current, stock: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input required type="number" min={0.01} step="0.01" value={productForm.price} onChange={(event) => setProductForm((current) => ({ ...current, price: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input type="number" min={0.01} step="0.01" value={productForm.memberPrice} onChange={(event) => setProductForm((current) => ({ ...current, memberPrice: event.target.value }))} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
+              <DashboardFieldLabel label={labels.productNamePlaceholder}>
+                <input required placeholder={labels.productNamePlaceholder} value={productForm.name} onChange={(event) => setProductForm((current) => ({ ...current, name: event.target.value }))} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={labels.productCompanyPlaceholder}>
+                <input placeholder={labels.productCompanyPlaceholder} value={productForm.company} onChange={(event) => setProductForm((current) => ({ ...current, company: event.target.value }))} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "تصنيف المنتج" : "Product category"}>
+                <select value={productForm.category} onChange={(event) => setProductForm((current) => ({ ...current, category: event.target.value as ProductCategory }))} className={dashboardFieldClass}>
+                  {productCategories.map((entry) => (
+                    <option key={entry} value={entry}>
+                      {translateProductCategory(entry, locale)}
+                    </option>
+                  ))}
+                </select>
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "كمية المخزون" : "Stock quantity"}>
+                <input required type="number" min={0} value={productForm.stock} onChange={(event) => setProductForm((current) => ({ ...current, stock: event.target.value }))} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "السعر الأساسي" : "Base price"}>
+                <input required type="number" min={0.01} step="0.01" value={productForm.price} onChange={(event) => setProductForm((current) => ({ ...current, price: event.target.value }))} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "سعر الأعضاء" : "Member price"}>
+                <input type="number" min={0.01} step="0.01" value={productForm.memberPrice} onChange={(event) => setProductForm((current) => ({ ...current, memberPrice: event.target.value }))} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
               <div className="grid gap-3 md:col-span-2 md:grid-cols-2">
                 <label className="space-y-2">
                   <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
                     <LinkIcon className="h-4 w-4" />
                     {imageLabels.url}
                   </span>
-                  <input placeholder={labels.productImagePlaceholder} value={productForm.image} onChange={(event) => setProductForm((current) => ({ ...current, image: event.target.value }))} className="w-full rounded-xl border border-brand-primary/10 px-4 py-3" />
+                  <input placeholder={labels.productImagePlaceholder} value={productForm.image} onChange={(event) => setProductForm((current) => ({ ...current, image: event.target.value }))} className={dashboardFieldClass} />
                 </label>
                 <label className="space-y-2">
                   <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
                     <ImageUp className="h-4 w-4" />
                     {imageLabels.uploadMany}
                   </span>
-                  <input type="file" accept="image/*" multiple onChange={(event) => setProductImageFiles(Array.from(event.target.files || []))} className="w-full rounded-xl border border-brand-primary/10 bg-white px-4 py-3 text-sm" />
+                  <input type="file" accept="image/*" multiple onChange={(event) => setProductImageFiles(Array.from(event.target.files || []))} className={dashboardFieldClass} />
                 </label>
                 <p className="text-xs leading-5 text-slate-500 md:col-span-2">
                   {imageLabels.productHint}
@@ -699,8 +750,12 @@ export function DashboardShell({
                     : ""}
                 </p>
               </div>
-              <textarea placeholder={labels.productDescriptionPlaceholder} value={productForm.description} onChange={(event) => setProductForm((current) => ({ ...current, description: event.target.value }))} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-              <textarea placeholder={labels.productLongDescriptionPlaceholder} value={productForm.longDescription} onChange={(event) => setProductForm((current) => ({ ...current, longDescription: event.target.value }))} className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <DashboardFieldLabel label={labels.productDescriptionPlaceholder} className="md:col-span-2">
+                <textarea placeholder={labels.productDescriptionPlaceholder} value={productForm.description} onChange={(event) => setProductForm((current) => ({ ...current, description: event.target.value }))} className={dashboardTextAreaClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={labels.productLongDescriptionPlaceholder} className="md:col-span-2">
+                <textarea placeholder={labels.productLongDescriptionPlaceholder} value={productForm.longDescription} onChange={(event) => setProductForm((current) => ({ ...current, longDescription: event.target.value }))} className={dashboardTextAreaClass} />
+              </DashboardFieldLabel>
               <Button loading={loadingAction === "create-product"} type="submit" className="md:col-span-2">
                 <Save className="h-4 w-4" />
                 {labels.addProduct}
@@ -812,11 +867,21 @@ export function DashboardShell({
                 });
               }}
             >
-              <input name="name" required placeholder={adminLabels.addBoardMember} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input name="role" required placeholder={adminLabels.role} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input name="year" required placeholder={adminLabels.year} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input name="image" placeholder={adminLabels.image} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <textarea name="bio" placeholder={adminLabels.bio} className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <DashboardFieldLabel label={locale === "ar" ? "اسم عضو الهيئة" : "Board member name"}>
+                <input name="name" required placeholder={adminLabels.addBoardMember} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={adminLabels.role}>
+                <input name="role" required placeholder={adminLabels.role} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={adminLabels.year}>
+                <input name="year" required placeholder={adminLabels.year} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={adminLabels.image}>
+                <input name="image" placeholder={adminLabels.image} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={adminLabels.bio} className="md:col-span-2">
+                <textarea name="bio" placeholder={adminLabels.bio} className="min-h-20 w-full rounded-xl border border-brand-primary/10 px-4 py-3 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20 dark:border-white/12 dark:bg-[#101a2b] dark:text-brand-ink dark:placeholder:text-brand-mist/70" />
+              </DashboardFieldLabel>
               <Button loading={loadingAction === "create-board-member"} type="submit" className="md:col-span-2">
                 <Save className="h-4 w-4" />
                 {adminLabels.addBoardMember}
@@ -1059,19 +1124,33 @@ export function DashboardShell({
                 });
               }}
             >
-              <input name="title" required placeholder="Article title" className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <input name="authorName" placeholder={adminLabels.author} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <select name="category" className="rounded-xl border border-brand-primary/10 px-4 py-3">
-                {articleCategories.map((entry) => (
-                  <option key={entry} value={entry}>
-                    {translateArticleCategory(entry, locale)}
-                  </option>
-                ))}
-              </select>
-              <input name="coverImage" placeholder={adminLabels.image} className="rounded-xl border border-brand-primary/10 px-4 py-3" />
-              <textarea name="excerpt" required placeholder="Excerpt" className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-              <textarea name="content" placeholder="Content, one paragraph per line" className="min-h-24 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
-              <textarea name="references" placeholder={adminLabels.references} className="min-h-20 rounded-xl border border-brand-primary/10 px-4 py-3 md:col-span-2" />
+              <DashboardFieldLabel label={locale === "ar" ? "عنوان المقال" : "Article title"}>
+                <input name="title" required placeholder="Article title" className={dashboardFieldClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={adminLabels.author}>
+                <input name="authorName" placeholder={adminLabels.author} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "تصنيف المقال" : "Article category"}>
+                <select name="category" className={dashboardFieldClass}>
+                  {articleCategories.map((entry) => (
+                    <option key={entry} value={entry}>
+                      {translateArticleCategory(entry, locale)}
+                    </option>
+                  ))}
+                </select>
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={adminLabels.image}>
+                <input name="coverImage" placeholder={adminLabels.image} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "ملخص المقال" : "Article excerpt"} className="md:col-span-2">
+                <textarea name="excerpt" required placeholder="Excerpt" className="min-h-20 w-full rounded-xl border border-brand-primary/10 px-4 py-3 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20 dark:border-white/12 dark:bg-[#101a2b] dark:text-brand-ink dark:placeholder:text-brand-mist/70" />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "محتوى المقال" : "Article content"} className="md:col-span-2">
+                <textarea name="content" placeholder="Content, one paragraph per line" className={dashboardTextAreaClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={adminLabels.references} className="md:col-span-2">
+                <textarea name="references" placeholder={adminLabels.references} className="min-h-20 w-full rounded-xl border border-brand-primary/10 px-4 py-3 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20 dark:border-white/12 dark:bg-[#101a2b] dark:text-brand-ink dark:placeholder:text-brand-mist/70" />
+              </DashboardFieldLabel>
               <label className="flex items-center gap-2 text-sm text-slate-600">
                 <input name="approved" type="checkbox" />
                 {adminLabels.approved}
