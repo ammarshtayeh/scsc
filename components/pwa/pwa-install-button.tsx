@@ -4,6 +4,7 @@ import { Download } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { useLocale } from "@/hooks/useLocale";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -19,8 +20,11 @@ export function PwaInstallButton({
   fullWidth?: boolean;
 }) {
   const { dictionary } = useLocale();
+  const { pushToast } = useToast();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
+  const [isInstallSupported, setIsInstallSupported] = useState(false);
+  const [isIos, setIsIos] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -28,6 +32,10 @@ export function PwaInstallButton({
     }
 
     const mediaQuery = window.matchMedia("(display-mode: standalone)");
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isiOSDevice = /iphone|ipad|ipod/.test(userAgent);
+    const isMobileDevice = /android|iphone|ipad|ipod|mobile/.test(userAgent);
+
     const handleInstalled = () => {
       setInstalled(true);
       setDeferredPrompt(null);
@@ -35,9 +43,12 @@ export function PwaInstallButton({
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
       setDeferredPrompt(event as BeforeInstallPromptEvent);
+      setIsInstallSupported(true);
     };
 
     setInstalled(mediaQuery.matches);
+    setIsIos(isiOSDevice);
+    setIsInstallSupported(isMobileDevice);
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleInstalled);
 
@@ -47,11 +58,19 @@ export function PwaInstallButton({
     };
   }, []);
 
-  if (installed || !deferredPrompt) {
+  if (installed || !isInstallSupported) {
     return null;
   }
 
   const handleInstall = async () => {
+    if (!deferredPrompt) {
+      pushToast(
+        isIos ? dictionary.nav.installAppIosHint : dictionary.nav.installAppUnavailableHint,
+        "info"
+      );
+      return;
+    }
+
     await deferredPrompt.prompt();
     const choice = await deferredPrompt.userChoice;
 

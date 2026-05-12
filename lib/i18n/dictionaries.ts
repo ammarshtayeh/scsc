@@ -29,6 +29,9 @@ export const dictionaries = {
       profile: "Profile",
       dashboard: "Dashboard",
       installApp: "Install App",
+      installAppIosHint: "On iPhone or iPad, open Share and choose Add to Home Screen.",
+      installAppUnavailableHint:
+        "If your browser supports app install, use the browser menu and choose Install App or Add to Home Screen.",
       toggleNavigation: "Toggle navigation"
     },
     common: {
@@ -545,6 +548,9 @@ export const dictionaries = {
       profile: "الملف الشخصي",
       dashboard: "لوحة التحكم",
       installApp: "تثبيت التطبيق",
+      installAppIosHint: "على iPhone أو iPad افتح مشاركة ثم اختر إضافة إلى الشاشة الرئيسية.",
+      installAppUnavailableHint:
+        "إذا كان متصفحك يدعم التثبيت، افتح قائمة المتصفح ثم اختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية.",
       toggleNavigation: "تبديل القائمة"
     },
     common: {
