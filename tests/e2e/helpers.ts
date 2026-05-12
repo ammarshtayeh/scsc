@@ -1,6 +1,11 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
-export const BASE_URL = process.env.BASE_URL ?? "https://scsc-iota.vercel.app";
+function resolveBaseUrl() {
+  const configured = process.env.BASE_URL?.trim();
+  return configured || "https://scsc-iota.vercel.app";
+}
+
+export const BASE_URL = resolveBaseUrl();
 
 function normalizePath(pathname: string): string {
   if (!pathname || pathname === "/") {

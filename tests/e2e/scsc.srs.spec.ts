@@ -343,7 +343,7 @@ test.describe("GROUP 8 — User Profile & QR @profile @qr", () => {
     await expect(page.locator("main")).toContainText(/membership|order history|عضوية|الطلبات/i);
     await clickAndWaitNetworkIdle(
       page,
-      page.getByRole("button", { name: /view membership card|بطاقة العضوية/i })
+      page.getByRole("button", { name: /view membership (card|qr)|بطاقة العضوية|رمز العضوية/i })
     );
     await expect(page.locator("main img").first()).toBeVisible();
     // WHY: anti-screenshot warning and countdown are mandatory in QR SRS.
