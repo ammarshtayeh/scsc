@@ -21,7 +21,7 @@ export function SiteLogo({
     <div className={cn("flex max-w-full min-w-0 items-center", compact ? "gap-2.5" : "gap-3", className)}>
       <div
         className={cn(
-          "relative overflow-hidden rounded-full border border-brand-primary/20 bg-white shadow-soft ring-1 ring-brand-accent/20 dark:border-white/10 dark:bg-white/95 dark:ring-brand-accent/30",
+          "relative overflow-hidden rounded-full border border-brand-primary/20 bg-gradient-to-br from-white via-white to-brand-sky shadow-soft ring-1 ring-brand-accent/20 dark:border-white/10 dark:bg-white/95 dark:ring-brand-accent/30",
           compact ? "h-11 w-11" : "h-12 w-12"
         )}
       >

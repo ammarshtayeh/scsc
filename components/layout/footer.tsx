@@ -18,8 +18,8 @@ export function Footer() {
   ];
 
   return (
-    <footer className="border-t border-brand-primary/10 bg-[#f2f0e8] text-brand-primary backdrop-blur-2xl dark:border-white/10 dark:bg-[#07101f] dark:text-brand-ink">
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-4 lg:px-8">
+    <footer className="mt-16 px-4 pb-4 sm:px-6 lg:px-8">
+      <div className="glass-surface mx-auto grid max-w-7xl gap-8 overflow-hidden rounded-[32px] border border-white/70 px-5 py-12 text-brand-primary shadow-soft dark:border-white/10 dark:text-brand-ink sm:px-8 md:grid-cols-2 lg:grid-cols-4">
         <div className="min-w-0 space-y-3">
           <SiteLogo
             title={dictionary.site.title}

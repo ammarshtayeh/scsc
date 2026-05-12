@@ -31,7 +31,20 @@ type AdminEventInput = Partial<EventItem> & Pick<EventItem, "title" | "startsAt"
 type AdminProductInput = Partial<Product> & Pick<Product, "name" | "price" | "stock">;
 type AdminArticleInput = Partial<Article> & Pick<Article, "title" | "excerpt" | "category">;
 type AdminBoardMemberInput = Partial<BoardMember> & Pick<BoardMember, "name" | "role" | "year">;
-type AdminHomeSettingsInput = Pick<HomePageSettings, "slides">;
+type AdminHomeSettingsInput = Pick<
+  HomePageSettings,
+  | "slides"
+  | "partnerEyebrow"
+  | "partnerTitle"
+  | "partnerDescription"
+  | "partners"
+  | "storeEyebrow"
+  | "storeTitle"
+  | "storeDescription"
+  | "storeCtaLabel"
+  | "storeCtaHref"
+  | "storePerks"
+>;
 
 function requireFunctions() {
   if (!functions) {

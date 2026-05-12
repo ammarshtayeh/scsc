@@ -10,13 +10,13 @@ type ButtonSize = "sm" | "md" | "lg";
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-brand-primary text-white shadow-soft hover:bg-[#0f4a93] hover:shadow-elevated hover:-translate-y-0.5 active:shadow-soft transition-all dark:bg-[#21467c] dark:text-brand-ink dark:hover:bg-[#2a558f]",
+    "bg-gradient-to-r from-brand-primary via-[#11488d] to-[#0b3b78] text-white shadow-soft hover:from-[#11488d] hover:via-[#1753a1] hover:to-[#0f4a93] hover:shadow-float hover:-translate-y-0.5 active:shadow-soft transition-all dark:from-[#21467c] dark:via-[#295289] dark:to-[#1a3b66] dark:text-brand-ink dark:hover:from-[#2a558f] dark:hover:to-[#21467c]",
   secondary:
     "border border-brand-primary/15 bg-white/95 text-brand-primary hover:bg-brand-sky/85 hover:border-brand-primary/25 hover:-translate-y-0.5 shadow-card hover:shadow-soft transition-all dark:border-white/16 dark:bg-[#16253b] dark:text-brand-ink dark:hover:bg-[#1d3150]",
   ghost:
     "text-brand-primary hover:bg-brand-sky/70 transition-colors dark:text-[#f5d669] dark:hover:bg-[#16253b]",
   accent:
-    "bg-brand-accent text-brand-primary shadow-glow hover:bg-[#f6cf42] hover:shadow-elevated hover:-translate-y-0.5 active:shadow-glow transition-all dark:bg-[#e0b11d] dark:text-[#0d1625] dark:hover:bg-[#f2c734]"
+    "bg-gradient-to-r from-brand-accent via-[#f6cf42] to-[#efbb0f] text-brand-primary shadow-glow hover:from-[#f6cf42] hover:via-[#f8d75b] hover:to-[#f3c223] hover:shadow-float hover:-translate-y-0.5 active:shadow-glow transition-all dark:from-[#e0b11d] dark:via-[#f0c530] dark:to-[#dba910] dark:text-[#0d1625] dark:hover:from-[#f2c734] dark:hover:to-[#e6b91f]"
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

@@ -606,12 +606,39 @@ export const deleteEvent = onCall(publicCallableOptions, async (request) => {
 export const upsertHomeSettings = onCall(publicCallableOptions, async (request) => {
   requireAdmin(request);
 
-  const { slides } = request.data as {
+  const {
+    slides,
+    partnerEyebrow,
+    partnerTitle,
+    partnerDescription,
+    partners,
+    storeEyebrow,
+    storeTitle,
+    storeDescription,
+    storeCtaLabel,
+    storeCtaHref,
+    storePerks
+  } = request.data as {
     slides?: Array<{
       image?: unknown;
       title?: unknown;
       caption?: unknown;
     }>;
+    partnerEyebrow?: unknown;
+    partnerTitle?: unknown;
+    partnerDescription?: unknown;
+    partners?: Array<{
+      name?: unknown;
+      tagline?: unknown;
+      logo?: unknown;
+      url?: unknown;
+    }>;
+    storeEyebrow?: unknown;
+    storeTitle?: unknown;
+    storeDescription?: unknown;
+    storeCtaLabel?: unknown;
+    storeCtaHref?: unknown;
+    storePerks?: unknown;
   };
 
   if (!Array.isArray(slides)) {
@@ -634,9 +661,38 @@ export const upsertHomeSettings = onCall(publicCallableOptions, async (request) 
     );
   }
 
+  const cleanPartners = Array.isArray(partners)
+    ? partners
+        .slice(0, 6)
+        .map((partner) => ({
+          name: cleanString(partner.name),
+          tagline: cleanString(partner.tagline),
+          logo: cleanString(partner.logo),
+          url: cleanString(partner.url)
+        }))
+        .filter((partner) => partner.name || partner.tagline || partner.logo || partner.url)
+    : [];
+
+  if (cleanPartners.some((partner) => !partner.name || !partner.tagline || !partner.logo)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Each partner must include a name, tagline, and logo."
+    );
+  }
+
   await db.collection("siteSettings").doc("home").set(
     {
       slides: cleanSlides,
+      partnerEyebrow: cleanString(partnerEyebrow),
+      partnerTitle: cleanString(partnerTitle),
+      partnerDescription: cleanString(partnerDescription),
+      partners: cleanPartners,
+      storeEyebrow: cleanString(storeEyebrow),
+      storeTitle: cleanString(storeTitle),
+      storeDescription: cleanString(storeDescription),
+      storeCtaLabel: cleanString(storeCtaLabel),
+      storeCtaHref: cleanString(storeCtaHref),
+      storePerks: cleanStringArray(storePerks).slice(0, 6),
       updatedAt: new Date().toISOString(),
       updatedBy: request.auth?.uid || "unknown"
     },

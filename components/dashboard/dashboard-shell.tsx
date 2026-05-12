@@ -516,6 +516,90 @@ export function DashboardShell({
     title: homeSettings?.slides[index]?.title || slide.title,
     caption: homeSettings?.slides[index]?.caption || slide.caption
   }));
+  const defaultPartners =
+    locale === "ar"
+      ? [
+          {
+            name: "شركاء الجمال والعناية",
+            tagline: "علامات وشركات تتعاون مع الجمعية للوصول للطلبة بشكل مرتب وموثوق.",
+            logo: defaultHomeSlides[0].image,
+            url: ""
+          },
+          {
+            name: "مختبرات ومورّدون",
+            tagline: "شراكات تربط المجتمع الطلابي بالقطاع من خلال منتجات وتجارب مفيدة.",
+            logo: defaultHomeSlides[1].image,
+            url: ""
+          },
+          {
+            name: "داعمون للنشاط الطلابي",
+            tagline: "منتجات وفرص تظهر داخل متجر الجمعية مع حضور بصري أقوى.",
+            logo: defaultHomeSlides[2].image,
+            url: ""
+          }
+        ]
+      : [
+          {
+            name: "Beauty and care partners",
+            tagline: "Brands collaborating with the association to reach students through a trusted channel.",
+            logo: defaultHomeSlides[0].image,
+            url: ""
+          },
+          {
+            name: "Labs and suppliers",
+            tagline: "Partnerships connecting the student community with useful products and experiences.",
+            logo: defaultHomeSlides[1].image,
+            url: ""
+          },
+          {
+            name: "Student activity supporters",
+            tagline: "Products and opportunities featured in the store with stronger visual presence.",
+            logo: defaultHomeSlides[2].image,
+            url: ""
+          }
+        ];
+  const editablePartners = defaultPartners.map((partner, index) => ({
+    name: homeSettings?.partners?.[index]?.name || partner.name,
+    tagline: homeSettings?.partners?.[index]?.tagline || partner.tagline,
+    logo: homeSettings?.partners?.[index]?.logo || partner.logo,
+    url: homeSettings?.partners?.[index]?.url || partner.url
+  }));
+  const homeContentLabels =
+    locale === "ar"
+      ? {
+          partnerSection: "قسم الشركاء",
+          partnerEyebrow: "عنوان صغير للشركاء",
+          partnerTitle: "عنوان قسم الشركاء",
+          partnerDescription: "وصف قسم الشركاء",
+          partnerName: "اسم الشريك",
+          partnerTagline: "وصف الشريك",
+          partnerLogo: "صورة أو شعار الشريك",
+          partnerUrl: "رابط الشريك",
+          storeSection: "قسم الترويج للمتجر",
+          storeEyebrow: "عنوان صغير للمتجر",
+          storeTitle: "عنوان ترويجي للمتجر",
+          storeDescription: "وصف ترويجي للمتجر",
+          storeCtaLabel: "نص زر المتجر",
+          storeCtaHref: "رابط زر المتجر",
+          storePerks: "مزايا المتجر، سطر لكل ميزة"
+        }
+      : {
+          partnerSection: "Partner section",
+          partnerEyebrow: "Partner eyebrow",
+          partnerTitle: "Partner section title",
+          partnerDescription: "Partner section description",
+          partnerName: "Partner name",
+          partnerTagline: "Partner tagline",
+          partnerLogo: "Partner logo or image",
+          partnerUrl: "Partner URL",
+          storeSection: "Store promotion section",
+          storeEyebrow: "Store eyebrow",
+          storeTitle: "Store promotional title",
+          storeDescription: "Store promotional description",
+          storeCtaLabel: "Store button label",
+          storeCtaHref: "Store button URL",
+          storePerks: "Store perks, one per line"
+        };
   const currentBoardYear = String(new Date().getFullYear());
   const showManagementSections = mode === "admin";
   const showOverview = showManagementSections && activeSection === "overview";
@@ -890,8 +974,36 @@ export function DashboardShell({
                       };
                     })
                   );
+                  const partners = await Promise.all(
+                    editablePartners.map(async (partner, index) => {
+                      const imageFile = formData.get(`partnerLogoFile-${index}`);
+                      const uploadedLogo =
+                        imageFile instanceof File && imageFile.size > 0
+                          ? await uploadDashboardImage("home", imageFile)
+                          : "";
 
-                  await upsertHomeSettingsAdmin({ slides });
+                      return {
+                        name: getText(formData, `partnerName-${index}`) || partner.name,
+                        tagline: getText(formData, `partnerTagline-${index}`) || partner.tagline,
+                        logo: uploadedLogo || getText(formData, `partnerLogo-${index}`) || partner.logo,
+                        url: getText(formData, `partnerUrl-${index}`)
+                      };
+                    })
+                  );
+
+                  await upsertHomeSettingsAdmin({
+                    slides,
+                    partnerEyebrow: getText(formData, "partnerEyebrow"),
+                    partnerTitle: getText(formData, "partnerTitle"),
+                    partnerDescription: getText(formData, "partnerDescription"),
+                    partners,
+                    storeEyebrow: getText(formData, "storeEyebrow"),
+                    storeTitle: getText(formData, "storeTitle"),
+                    storeDescription: getText(formData, "storeDescription"),
+                    storeCtaLabel: getText(formData, "storeCtaLabel"),
+                    storeCtaHref: getText(formData, "storeCtaHref"),
+                    storePerks: splitLines(getText(formData, "storePerks"))
+                  });
                 });
               }}
             >
@@ -934,6 +1046,119 @@ export function DashboardShell({
                   </DashboardFieldLabel>
                 </div>
               ))}
+              <div className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}>
+                <h3 className="font-heading text-xl font-semibold text-brand-primary md:col-span-2">
+                  {homeContentLabels.partnerSection}
+                </h3>
+                <DashboardFieldLabel label={homeContentLabels.partnerEyebrow}>
+                  <input
+                    name="partnerEyebrow"
+                    defaultValue={homeSettings?.partnerEyebrow || ""}
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
+                <DashboardFieldLabel label={homeContentLabels.partnerTitle}>
+                  <input
+                    name="partnerTitle"
+                    defaultValue={homeSettings?.partnerTitle || ""}
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
+                <DashboardFieldLabel label={homeContentLabels.partnerDescription} className="md:col-span-2">
+                  <textarea
+                    name="partnerDescription"
+                    defaultValue={homeSettings?.partnerDescription || ""}
+                    className={dashboardTextAreaClass}
+                  />
+                </DashboardFieldLabel>
+                {editablePartners.map((partner, index) => (
+                  <div key={`partner-${index}`} className="grid gap-3 rounded-2xl border border-brand-primary/10 p-4 md:col-span-2 md:grid-cols-2">
+                    <DashboardFieldLabel label={`${homeContentLabels.partnerName} ${formatNumber(index + 1, locale)}`}>
+                      <input
+                        name={`partnerName-${index}`}
+                        defaultValue={partner.name}
+                        className={dashboardFieldClass}
+                      />
+                    </DashboardFieldLabel>
+                    <DashboardFieldLabel label={homeContentLabels.partnerUrl}>
+                      <input
+                        name={`partnerUrl-${index}`}
+                        defaultValue={partner.url}
+                        className={dashboardFieldClass}
+                      />
+                    </DashboardFieldLabel>
+                    <DashboardFieldLabel label={homeContentLabels.partnerLogo}>
+                      <input
+                        name={`partnerLogo-${index}`}
+                        defaultValue={partner.logo}
+                        className={dashboardFieldClass}
+                      />
+                    </DashboardFieldLabel>
+                    <DashboardFieldLabel label={imageLabels.upload}>
+                      <input
+                        name={`partnerLogoFile-${index}`}
+                        type="file"
+                        accept="image/*"
+                        className={dashboardFieldClass}
+                      />
+                    </DashboardFieldLabel>
+                    <DashboardFieldLabel label={homeContentLabels.partnerTagline} className="md:col-span-2">
+                      <textarea
+                        name={`partnerTagline-${index}`}
+                        defaultValue={partner.tagline}
+                        className={dashboardTextAreaClass}
+                      />
+                    </DashboardFieldLabel>
+                  </div>
+                ))}
+              </div>
+              <div className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}>
+                <h3 className="font-heading text-xl font-semibold text-brand-primary md:col-span-2">
+                  {homeContentLabels.storeSection}
+                </h3>
+                <DashboardFieldLabel label={homeContentLabels.storeEyebrow}>
+                  <input
+                    name="storeEyebrow"
+                    defaultValue={homeSettings?.storeEyebrow || ""}
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
+                <DashboardFieldLabel label={homeContentLabels.storeTitle}>
+                  <input
+                    name="storeTitle"
+                    defaultValue={homeSettings?.storeTitle || ""}
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
+                <DashboardFieldLabel label={homeContentLabels.storeDescription} className="md:col-span-2">
+                  <textarea
+                    name="storeDescription"
+                    defaultValue={homeSettings?.storeDescription || ""}
+                    className={dashboardTextAreaClass}
+                  />
+                </DashboardFieldLabel>
+                <DashboardFieldLabel label={homeContentLabels.storeCtaLabel}>
+                  <input
+                    name="storeCtaLabel"
+                    defaultValue={homeSettings?.storeCtaLabel || ""}
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
+                <DashboardFieldLabel label={homeContentLabels.storeCtaHref}>
+                  <input
+                    name="storeCtaHref"
+                    defaultValue={homeSettings?.storeCtaHref || "/store"}
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
+                <DashboardFieldLabel label={homeContentLabels.storePerks} className="md:col-span-2">
+                  <textarea
+                    name="storePerks"
+                    defaultValue={(homeSettings?.storePerks || []).join("\n")}
+                    className={dashboardTextAreaClass}
+                  />
+                </DashboardFieldLabel>
+              </div>
               <Button loading={loadingAction === "save-home-settings"} type="submit">
                 <Save className="h-4 w-4" />
                 {labels.save}

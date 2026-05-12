@@ -38,21 +38,24 @@ export function Navbar() {
     );
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/40 bg-brand-background/72 backdrop-blur-2xl dark:border-white/10 dark:bg-brand-night/80">
-      <div className="mx-auto flex max-w-[96rem] min-w-0 items-center justify-between gap-4 px-4 py-4 sm:px-6 xl:px-10">
-        <Link
-          href="/"
-          className="min-w-0 max-w-[calc(100vw-5rem)] flex-1 lg:max-w-[31rem] xl:max-w-[36rem]"
-        >
-          <SiteLogo
-            compact
-            title={dictionary.site.title}
-            university={dictionary.site.university}
-            className={locale === "ar" ? "text-right" : ""}
-          />
-        </Link>
+    <header className="sticky top-0 z-40 px-3 pt-3 sm:px-4 sm:pt-4">
+      <div className="mx-auto max-w-[96rem]">
+        <div className="glass-surface relative flex min-w-0 items-center justify-between gap-4 overflow-hidden rounded-[24px] border border-white/70 px-4 py-4 shadow-soft ring-1 ring-brand-primary/5 dark:border-white/10 dark:ring-white/10 sm:px-6 xl:px-8">
+          <div className="pointer-events-none absolute inset-0 bg-brand-radial opacity-80" />
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-white/35 to-transparent dark:from-white/5" />
+          <Link
+            href="/"
+            className="relative min-w-0 max-w-[calc(100vw-5rem)] flex-1 lg:max-w-[31rem] xl:max-w-[36rem]"
+          >
+            <SiteLogo
+              compact
+              title={dictionary.site.title}
+              university={dictionary.site.university}
+              className={locale === "ar" ? "text-right" : ""}
+            />
+          </Link>
 
-        <nav className="hidden shrink-0 items-center gap-4 xl:gap-5 lg:flex">
+          <nav className="relative hidden shrink-0 items-center gap-4 xl:gap-5 lg:flex">
           {navLinks.map((link) => (
             <Link
               key={link.href}
@@ -65,9 +68,9 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
-        </nav>
+          </nav>
 
-        <div className="hidden shrink-0 items-center gap-2.5 lg:flex">
+          <div className="relative hidden shrink-0 items-center gap-2.5 lg:flex">
           <ThemeSwitcher />
           <LanguageToggle />
           <PwaInstallButton />
@@ -103,17 +106,18 @@ export function Navbar() {
               </Link>
             </>
           ) : null}
-        </div>
+          </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="shrink-0 lg:hidden"
-          onClick={() => setOpen((current) => !current)}
-          aria-label={dictionary.nav.toggleNavigation}
-        >
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="relative shrink-0 lg:hidden"
+            onClick={() => setOpen((current) => !current)}
+            aria-label={dictionary.nav.toggleNavigation}
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -122,9 +126,9 @@ export function Navbar() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="border-t border-white/40 bg-brand-background px-4 py-4 dark:border-white/10 dark:bg-brand-night lg:hidden"
+            className="mx-auto mt-2 max-w-[96rem] px-1 lg:hidden"
           >
-            <nav className="flex flex-col gap-3">
+            <nav className="glass-surface flex flex-col gap-3 rounded-[24px] border border-white/60 px-4 py-4 shadow-soft dark:border-white/10">
               <div className="flex items-center gap-3 pb-2">
                 <ThemeSwitcher />
                 <LanguageToggle />

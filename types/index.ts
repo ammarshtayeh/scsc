@@ -56,8 +56,25 @@ export interface HomeSlide {
   caption: string;
 }
 
+export interface PartnerHighlight {
+  name: string;
+  tagline: string;
+  logo: string;
+  url?: string;
+}
+
 export interface HomePageSettings {
   slides: HomeSlide[];
+  partnerEyebrow?: string;
+  partnerTitle?: string;
+  partnerDescription?: string;
+  partners?: PartnerHighlight[];
+  storeEyebrow?: string;
+  storeTitle?: string;
+  storeDescription?: string;
+  storeCtaLabel?: string;
+  storeCtaHref?: string;
+  storePerks?: string[];
   updatedAt?: string;
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, ShieldCheck, Sparkles, Store } from "lucide-react";
 import Link from "next/link";
 
 import { ImageSlider } from "@/components/sections/image-slider";
@@ -45,10 +45,11 @@ export function HeroSection({ slides, featuredEvent }: HeroSectionProps) {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="relative overflow-hidden rounded-[28px] border border-white/70 bg-white/78 p-6 shadow-elevated backdrop-blur-xl dark:border-white/10 dark:bg-[#0e1b2e]/92 dark:shadow-[0_28px_72px_rgba(0,0,0,0.4)] sm:rounded-[34px] sm:p-10"
+          className="glass-surface relative overflow-hidden rounded-[28px] border border-white/70 p-6 shadow-float ring-1 ring-brand-primary/5 dark:border-white/10 dark:shadow-[0_28px_72px_rgba(0,0,0,0.4)] sm:rounded-[34px] sm:p-10"
         >
           <div className="absolute -right-10 top-0 h-36 w-36 rounded-full bg-brand-accent/18 blur-3xl dark:bg-brand-accent/14" />
           <div className="absolute bottom-0 left-0 h-44 w-44 rounded-full bg-brand-sky blur-3xl dark:bg-[#173257]" />
+          <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.24),transparent_35%,transparent_65%,rgba(255,255,255,0.16))]" />
           <div className="relative">
             <motion.div variants={itemVariants}>
               <Badge className="border-brand-accent/30 bg-brand-accent/15 text-brand-accent">
@@ -70,6 +71,17 @@ export function HeroSection({ slides, featuredEvent }: HeroSectionProps) {
             >
               {dictionary.home.description}
             </motion.p>
+
+            <motion.div variants={itemVariants} className="mt-6 flex flex-wrap gap-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/10 bg-white/70 px-4 py-2 text-sm font-medium text-brand-primary dark:border-white/10 dark:bg-white/5 dark:text-brand-ink">
+                <ShieldCheck className="h-4 w-4 text-brand-accent" />
+                مجتمع طلابي موثوق
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/10 bg-white/70 px-4 py-2 text-sm font-medium text-brand-primary dark:border-white/10 dark:bg-white/5 dark:text-brand-ink">
+                <Store className="h-4 w-4 text-brand-accent" />
+                متجر شركاء ومزايا أعضاء
+              </div>
+            </motion.div>
 
             <motion.div variants={itemVariants} className="mt-7 grid gap-4 sm:mt-8 sm:grid-cols-2">
               <div className="rounded-2xl border border-brand-primary/15 bg-white/82 p-5 transition-shadow dark:border-brand-accent/18 dark:bg-white/[0.06] dark:shadow-[0_16px_40px_rgba(0,0,0,0.22)] sm:p-6 sm:hover:shadow-card">
@@ -113,7 +125,7 @@ export function HeroSection({ slides, featuredEvent }: HeroSectionProps) {
             {featuredEvent ? (
               <motion.div
                 variants={itemVariants}
-                className="mt-7 rounded-2xl border border-brand-accent/30 bg-gradient-to-r from-brand-primary to-brand-primary/90 p-5 text-white shadow-glow dark:from-[#1a2c47] dark:to-[#21385a] sm:mt-8 sm:p-6"
+                className="mt-7 rounded-[26px] border border-brand-accent/30 bg-gradient-to-r from-brand-primary via-[#11488d] to-brand-primary/90 p-5 text-white shadow-glow dark:from-[#1a2c47] dark:via-[#23406a] dark:to-[#21385a] sm:mt-8 sm:p-6"
               >
                 <p className="text-xs font-bold uppercase tracking-widest text-white/80">
                   {dictionary.home.featuredEventLabel}

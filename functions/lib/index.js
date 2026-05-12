@@ -441,7 +441,7 @@ exports.deleteEvent = (0, https_1.onCall)(publicCallableOptions, async (request)
 exports.upsertHomeSettings = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     var _a;
     requireAdmin(request);
-    const { slides } = request.data;
+    const { slides, partnerEyebrow, partnerTitle, partnerDescription, partners, storeEyebrow, storeTitle, storeDescription, storeCtaLabel, storeCtaHref, storePerks } = request.data;
     if (!Array.isArray(slides)) {
         throw new https_1.HttpsError("invalid-argument", "Home page slides are required.");
     }
@@ -456,8 +456,32 @@ exports.upsertHomeSettings = (0, https_1.onCall)(publicCallableOptions, async (r
     if (!cleanSlides.length || cleanSlides.some((slide) => !slide.image || !slide.title || !slide.caption)) {
         throw new https_1.HttpsError("invalid-argument", "Each home page slide must include an image, title, and caption.");
     }
+    const cleanPartners = Array.isArray(partners)
+        ? partners
+            .slice(0, 6)
+            .map((partner) => ({
+            name: cleanString(partner.name),
+            tagline: cleanString(partner.tagline),
+            logo: cleanString(partner.logo),
+            url: cleanString(partner.url)
+        }))
+            .filter((partner) => partner.name || partner.tagline || partner.logo || partner.url)
+        : [];
+    if (cleanPartners.some((partner) => !partner.name || !partner.tagline || !partner.logo)) {
+        throw new https_1.HttpsError("invalid-argument", "Each partner must include a name, tagline, and logo.");
+    }
     await db.collection("siteSettings").doc("home").set({
         slides: cleanSlides,
+        partnerEyebrow: cleanString(partnerEyebrow),
+        partnerTitle: cleanString(partnerTitle),
+        partnerDescription: cleanString(partnerDescription),
+        partners: cleanPartners,
+        storeEyebrow: cleanString(storeEyebrow),
+        storeTitle: cleanString(storeTitle),
+        storeDescription: cleanString(storeDescription),
+        storeCtaLabel: cleanString(storeCtaLabel),
+        storeCtaHref: cleanString(storeCtaHref),
+        storePerks: cleanStringArray(storePerks).slice(0, 6),
         updatedAt: new Date().toISOString(),
         updatedBy: ((_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid) || "unknown"
     }, { merge: true });

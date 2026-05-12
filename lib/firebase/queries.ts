@@ -10,6 +10,7 @@ import type {
   EventRegistration,
   EventItem,
   HomePageSettings,
+  PartnerHighlight,
   Order,
   Product,
   UserProfile
@@ -150,8 +151,32 @@ function normalizeHomeSettings(data: Record<string, unknown>) {
         .filter((slide) => slide.image || slide.title || slide.caption)
     : [];
 
+  const partners = Array.isArray(data.partners)
+    ? data.partners
+        .map((entry) => {
+          const partner = entry as Record<string, unknown>;
+          return {
+            name: cleanString(partner.name),
+            tagline: cleanString(partner.tagline),
+            logo: cleanString(partner.logo),
+            url: cleanString(partner.url) || undefined
+          } satisfies PartnerHighlight;
+        })
+        .filter((partner) => partner.name || partner.tagline || partner.logo || partner.url)
+    : [];
+
   return {
     slides,
+    partnerEyebrow: cleanString(data.partnerEyebrow) || undefined,
+    partnerTitle: cleanString(data.partnerTitle) || undefined,
+    partnerDescription: cleanString(data.partnerDescription) || undefined,
+    partners,
+    storeEyebrow: cleanString(data.storeEyebrow) || undefined,
+    storeTitle: cleanString(data.storeTitle) || undefined,
+    storeDescription: cleanString(data.storeDescription) || undefined,
+    storeCtaLabel: cleanString(data.storeCtaLabel) || undefined,
+    storeCtaHref: cleanString(data.storeCtaHref) || undefined,
+    storePerks: cleanStringArray(data.storePerks),
     updatedAt: normalizeDateValue(data.updatedAt) || undefined
   } satisfies HomePageSettings;
 }

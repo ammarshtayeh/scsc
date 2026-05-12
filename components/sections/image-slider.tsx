@@ -37,7 +37,8 @@ export function ImageSlider({ slides }: ImageSliderProps) {
   const activeSlide = slides[index];
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-white/40 bg-white/50 shadow-soft dark:border-white/10 dark:bg-brand-surface/70 sm:rounded-[32px]">
+    <div className="glass-surface relative overflow-hidden rounded-[28px] border border-white/50 shadow-float dark:border-white/10 sm:rounded-[32px]">
+      <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.24),transparent_36%),linear-gradient(180deg,transparent,rgba(9,17,29,0.08))]" />
       <div className="relative h-[290px] sm:h-[360px] lg:h-[420px]">
         <AnimatePresence mode="wait">
           <motion.div
@@ -61,7 +62,7 @@ export function ImageSlider({ slides }: ImageSliderProps) {
         </AnimatePresence>
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-brand-primary/88 via-brand-primary/58 to-transparent px-5 pb-5 pt-10 text-white sm:p-6">
+      <div className="absolute inset-x-0 bottom-0 z-[2] bg-gradient-to-t from-brand-primary/92 via-brand-primary/58 to-transparent px-5 pb-5 pt-10 text-white sm:p-6">
         <h3 className="font-heading text-xl font-semibold sm:text-2xl">{activeSlide.title}</h3>
         <p className="mt-2 max-w-xl text-sm leading-6 text-white/85">{activeSlide.caption}</p>
         {slides.length > 1 ? (
@@ -81,7 +82,7 @@ export function ImageSlider({ slides }: ImageSliderProps) {
         ) : null}
       </div>
 
-      <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4">
+      <div className="absolute inset-y-0 left-0 z-[2] flex items-center pl-3 sm:pl-4">
         <Button
           variant="secondary"
           size="sm"
@@ -91,7 +92,7 @@ export function ImageSlider({ slides }: ImageSliderProps) {
           {direction === "rtl" ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
       </div>
-      <div className="absolute inset-y-0 right-0 flex items-center pr-3 sm:pr-4">
+      <div className="absolute inset-y-0 right-0 z-[2] flex items-center pr-3 sm:pr-4">
         <Button
           variant="secondary"
           size="sm"

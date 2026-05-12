@@ -156,7 +156,7 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
   }
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <section id="store-grid" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr_0.82fr]">
         <Card className="space-y-5 xl:sticky xl:top-24">
           <div>
@@ -254,6 +254,16 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
                   <div className="space-y-4 p-6">
                     <div className="flex items-start justify-between gap-3">
                       <div>
+                        <div className="mb-3 flex flex-wrap gap-2">
+                          {product.featured ? (
+                            <span className="rounded-full bg-brand-accent/15 px-3 py-1 text-xs font-semibold text-brand-accent">
+                              {locale === "ar" ? "منتج مميز" : "Featured"}
+                            </span>
+                          ) : null}
+                          <span className="rounded-full bg-brand-primary/8 px-3 py-1 text-xs font-semibold text-brand-primary dark:bg-white/10 dark:text-brand-ink">
+                            {locale === "ar" ? "شريك معتمد" : "Partner listing"}
+                          </span>
+                        </div>
                         <h2 className="font-heading text-2xl font-semibold text-brand-primary">
                           {product.name}
                         </h2>

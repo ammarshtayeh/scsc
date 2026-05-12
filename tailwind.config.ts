@@ -33,13 +33,16 @@ const config: Config = {
         soft: "0 18px 48px rgba(11, 59, 120, 0.10)",
         glow: "0 16px 42px rgba(242, 195, 24, 0.28)",
         elevated: "0 26px 70px rgba(11, 59, 120, 0.16)",
-        card: "0 10px 30px rgba(23, 32, 51, 0.08)"
+        card: "0 10px 30px rgba(23, 32, 51, 0.08)",
+        float: "0 30px 90px rgba(11, 59, 120, 0.18)"
       },
       backgroundImage: {
         "hero-grid":
-          "radial-gradient(circle at top left, rgba(238,244,255,0.92), transparent 42%), radial-gradient(circle at 82% 18%, rgba(242,195,24,0.18), transparent 24%), radial-gradient(circle at bottom right, rgba(11,59,120,0.08), transparent 34%)",
+          "radial-gradient(circle at top left, rgba(238,244,255,0.96), transparent 40%), radial-gradient(circle at 82% 18%, rgba(242,195,24,0.24), transparent 22%), radial-gradient(circle at bottom right, rgba(11,59,120,0.12), transparent 30%), linear-gradient(135deg, rgba(255,255,255,0.44), rgba(255,255,255,0.1))",
         "section-mesh":
-          "linear-gradient(135deg, rgba(255,255,255,0.74), rgba(255,255,255,0.55)), radial-gradient(circle at 20% 20%, rgba(242,195,24,0.10), transparent 20%), radial-gradient(circle at 80% 0%, rgba(11,59,120,0.10), transparent 28%)"
+          "linear-gradient(135deg, rgba(255,255,255,0.82), rgba(255,255,255,0.56)), radial-gradient(circle at 20% 20%, rgba(242,195,24,0.14), transparent 20%), radial-gradient(circle at 80% 0%, rgba(11,59,120,0.14), transparent 28%)",
+        "brand-radial":
+          "radial-gradient(circle at top, rgba(242,195,24,0.26), transparent 24%), radial-gradient(circle at bottom right, rgba(11,59,120,0.2), transparent 32%)"
       },
       animation: {
         shimmer: "shimmer 1.8s linear infinite",
