@@ -379,6 +379,8 @@ export const dictionaries = {
       qrScreenshotWarning:
         "Screenshot copies expire quickly and are rejected after the first successful scan.",
       editProfile: "Edit Profile",
+      changePassword: "Change Password",
+      changePasswordHint: "Send a secure password reset link to your account email.",
       profilePhoto: "Profile Photo",
       profileUpdated: "Profile updated.",
       profileUpdateError: "Unable to update profile.",
@@ -883,6 +885,8 @@ export const dictionaries = {
       qrScreenshotWarning:
         "لقطات الشاشة تنتهي بسرعة ويتم رفضها بعد أول مسح ناجح.",
       editProfile: "تعديل الملف الشخصي",
+      changePassword: "تغيير كلمة المرور",
+      changePasswordHint: "أرسل رابطًا آمنًا لإعادة تعيين كلمة المرور إلى بريدك الإلكتروني.",
       profilePhoto: "الصورة الشخصية",
       profileUpdated: "تم تحديث الملف الشخصي.",
       profileUpdateError: "تعذر تحديث الملف الشخصي.",

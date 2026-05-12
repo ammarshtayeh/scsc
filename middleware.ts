@@ -17,7 +17,7 @@ export async function middleware(request: NextRequest) {
   const session = await verifySessionToken(request.cookies.get(SESSION_COOKIE_NAME)?.value);
   const pathname = request.nextUrl.pathname;
 
-  if (pathname.startsWith("/store") || pathname.startsWith("/profile")) {
+  if (pathname.startsWith("/profile")) {
     if (!session) {
       return buildLoginRedirect(request);
     }
@@ -57,5 +57,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/store/:path*", "/profile/:path*", "/admin/:path*", "/moderator/:path*", "/dashboard/:path*"]
+  matcher: ["/profile/:path*", "/admin/:path*", "/moderator/:path*", "/dashboard/:path*"]
 };

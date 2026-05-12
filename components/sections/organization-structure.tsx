@@ -46,14 +46,19 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.08
+      staggerChildren: 0.045,
+      delayChildren: 0.02
     }
   }
 };
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 22, scale: 0.96 },
-  visible: { opacity: 1, y: 0, scale: 1 }
+  hidden: { opacity: 0, y: 14 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.28, ease: "easeOut" }
+  }
 };
 
 function normalizeBoardMember(id: string, data: Record<string, unknown>): BoardMember {
@@ -98,15 +103,15 @@ function MemberPhotoCard({
   return (
     <motion.div
       variants={cardVariants}
-      whileHover={{ y: -7 }}
-      transition={{ type: "spring", stiffness: 260, damping: 24 }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       className={`group overflow-hidden rounded-2xl border border-white/12 bg-white/[0.075] text-white shadow-[0_22px_52px_rgba(2,8,23,0.26)] backdrop-blur-sm ${
         featured ? "lg:rounded-[1.35rem]" : ""
       }`}
     >
       <div
-        className={`relative min-h-[230px] overflow-hidden bg-[#08213d] sm:min-h-[260px] ${
-          featured ? "aspect-[4/3] lg:aspect-[16/10]" : "aspect-[4/5]"
+        className={`relative min-h-[220px] overflow-hidden bg-[#08213d] sm:min-h-[260px] ${
+          featured ? "aspect-[4/3] lg:aspect-[16/10]" : "aspect-[4/4.7] sm:aspect-[4/5]"
         }`}
       >
         {hasImage ? (
@@ -114,12 +119,13 @@ function MemberPhotoCard({
             src={image}
             alt={name}
             fill
-            className="object-cover object-top transition duration-700 group-hover:scale-105"
+            className="object-cover object-top md:transition-transform md:duration-500 md:group-hover:scale-[1.02]"
             sizes={
               featured
-                ? "(max-width: 768px) 92vw, 30vw"
-                : "(max-width: 640px) 92vw, (max-width: 1024px) 45vw, 16vw"
+                ? "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 30vw"
+                : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 16vw"
             }
+            priority={featured && index < 2}
           />
         ) : (
           <div className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(242,195,24,0.32),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.14),rgba(255,255,255,0.04))]">
@@ -159,6 +165,23 @@ export function OrganizationStructure({
   members = []
 }: OrganizationStructureProps) {
   const [clientMembers, setClientMembers] = useState(members);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) {
+      return;
+    }
+
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncPreference = () => setReduceMotion(media.matches);
+
+    syncPreference();
+    media.addEventListener?.("change", syncPreference);
+
+    return () => {
+      media.removeEventListener?.("change", syncPreference);
+    };
+  }, []);
 
   useEffect(() => {
     setClientMembers(members);
@@ -213,11 +236,11 @@ export function OrganizationStructure({
 
   return (
     <motion.section
-      initial="hidden"
+      initial={reduceMotion ? false : "hidden"}
       whileInView="visible"
-      viewport={{ once: true, amount: 0.16 }}
+      viewport={{ once: true, amount: 0.06 }}
       variants={containerVariants}
-      className="relative left-1/2 w-screen -translate-x-1/2 overflow-hidden bg-[linear-gradient(135deg,#06172b,#0b3b78_46%,#14515b)] py-12 text-white dark:bg-[linear-gradient(135deg,#06172b,#0a2d4d_50%,#124348)] sm:py-16"
+      className="relative w-full overflow-x-clip bg-[linear-gradient(135deg,#06172b,#0b3b78_46%,#14515b)] py-12 text-white dark:bg-[linear-gradient(135deg,#06172b,#0a2d4d_50%,#124348)] sm:py-16"
     >
       <div className="absolute left-[6%] top-8 h-56 w-56 rounded-full bg-brand-accent/16 blur-3xl" />
       <div className="absolute bottom-0 right-[8%] h-72 w-72 rounded-full bg-white/10 blur-3xl" />
@@ -245,7 +268,7 @@ export function OrganizationStructure({
           </div>
         </motion.div>
 
-        <div className="relative mt-10 space-y-10">
+        <div className="relative mt-8 space-y-8 sm:mt-10 sm:space-y-10">
           {visibleMembers.length ? (
             <>
               <div>
@@ -255,7 +278,7 @@ export function OrganizationStructure({
                 >
                   {leadershipTitle}
                 </motion.p>
-                <motion.div variants={containerVariants} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <motion.div variants={containerVariants} className="grid gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3">
                   {leadershipMembers.map((member, index) => (
                     <MemberPhotoCard
                       key={member.id}
@@ -280,7 +303,7 @@ export function OrganizationStructure({
                   </motion.p>
                   <motion.div
                     variants={containerVariants}
-                    className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+                    className="grid gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
                   >
                     {committeeMembers.map((member, index) => {
                       const Icon = committeeIcons[index] || UsersRound;

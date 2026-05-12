@@ -1519,7 +1519,8 @@ export function DashboardShell({
               className="grid gap-3 md:grid-cols-2"
               onSubmit={(submitEvent) => {
                 submitEvent.preventDefault();
-                const formData = new FormData(submitEvent.currentTarget);
+                const form = submitEvent.currentTarget;
+                const formData = new FormData(form);
                 void runAction("create-board-member", async () => {
                   const uploadedImage = boardMemberImageFile
                     ? await uploadDashboardImage("board", boardMemberImageFile)
@@ -1533,7 +1534,7 @@ export function DashboardShell({
                     bio: getText(formData, "bio")
                   });
                   setBoardMemberImageFile(null);
-                  submitEvent.currentTarget.reset();
+                  form.reset();
                   await refreshClientBoardMembers();
                 });
               }}
@@ -1841,7 +1842,8 @@ export function DashboardShell({
               className="grid gap-3 md:grid-cols-2"
               onSubmit={(submitEvent) => {
                 submitEvent.preventDefault();
-                const formData = new FormData(submitEvent.currentTarget);
+                const form = submitEvent.currentTarget;
+                const formData = new FormData(form);
                 void runAction("create-article", async () => {
                   await upsertArticleAdmin({
                     title: getText(formData, "title"),
@@ -1853,7 +1855,7 @@ export function DashboardShell({
                     references: parseReferences(getText(formData, "references")),
                     approved: formData.get("approved") === "on"
                   });
-                  submitEvent.currentTarget.reset();
+                  form.reset();
                 });
               }}
             >

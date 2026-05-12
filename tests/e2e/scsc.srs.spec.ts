@@ -274,9 +274,10 @@ test.describe("GROUP 6 — Events Page @events", () => {
 });
 
 test.describe("GROUP 7 — Store @store", () => {
-  test("logged-out access to /store redirects to login @store @auth @redirect", async ({ page }) => {
+  test("logged-out visitors can browse /store without redirect @store", async ({ page }) => {
     await goTo(page, "/store");
-    await expect(new URL(page.url()).pathname).toContain("/auth/login");
+    await assertUrl(page, "/store");
+    await expect(page.locator("main")).toContainText(/filters|cart|Ø§Ù„Ø³Ù„Ø©|products/i);
   });
 
   test("member can access store, add to cart, persist across navigation @smoke @store", async ({
@@ -307,6 +308,11 @@ test.describe("GROUP 7 — Store @store", () => {
     testRequiresUser();
     await loginAs(page, USER_EMAIL!, USER_PASSWORD!);
     await goTo(page, "/store");
+    const decrementButtons = page.locator("button").filter({ hasText: "-" });
+    while ((await decrementButtons.count()) > 0) {
+      await decrementButtons.first().click();
+      await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => undefined);
+    }
     const checkoutBtn = page.getByRole("button", { name: /checkout|إتمام الطلب/i }).first();
     await expect(checkoutBtn).toBeDisabled();
   });
@@ -324,11 +330,12 @@ test.describe("GROUP 7 — Store @store", () => {
     await expect(page.locator("main")).toContainText(/₪|ils|شيكل/i);
   });
 
-  test("store URL stays clean for logged-out redirect @store @redirect", async ({ page }) => {
+  test("store URL stays clean for logged-out browsing @store @redirect", async ({ page }) => {
     await goTo(page, "/store");
     const url = new URL(page.url());
-    // WHY: login redirection must not leak stale route params unexpectedly.
-    expect(url.pathname).toContain("/auth/login");
+    // WHY: public store browsing should keep the URL clean without auth redirect params.
+    expect(url.pathname).toBe("/store");
+    expect(url.search).toBe("");
   });
 });
 

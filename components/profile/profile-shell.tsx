@@ -34,7 +34,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "@/hooks/useLocale";
 import { STORE_CURRENCY } from "@/lib/constants";
 import { issueMembershipQrPass } from "@/lib/firebase/functions";
+import { sendPasswordReset } from "@/lib/firebase/auth";
 import { db } from "@/lib/firebase/firebase";
+import { isFirebaseClientConfigured } from "@/lib/firebase/firebase";
 import { uploadFileToStorage } from "@/lib/firebase/storage";
 import { translateOrderStatus, translateRole } from "@/lib/i18n/helpers";
 import { getMembershipStatusClasses, getMembershipStatusLabel, getSecondsUntilExpiry, resolveMembershipStatus } from "@/lib/membership";
@@ -417,6 +419,25 @@ export function ProfileShell({
     [profile]
   );
 
+  async function handlePasswordReset() {
+    if (!profile?.email) {
+      pushToast(dictionary.auth.enterEmailFirst, "error");
+      return;
+    }
+
+    if (!isFirebaseClientConfigured) {
+      pushToast(dictionary.auth.resetNeedsFirebase, "info");
+      return;
+    }
+
+    try {
+      await sendPasswordReset(profile.email);
+      pushToast(dictionary.auth.resetSent, "success");
+    } catch (error) {
+      pushToast(error instanceof Error ? error.message : dictionary.auth.resetError, "error");
+    }
+  }
+
   const orderTotal = useMemo(
     () => orders.reduce((sum, order) => sum + order.total, 0),
     [orders]
@@ -794,6 +815,19 @@ export function ProfileShell({
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">
               {dictionary.profile.editProfile}
             </h2>
+            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-brand-primary/10 bg-brand-sky/40 p-4">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-brand-primary">
+                  {dictionary.profile.changePassword}
+                </p>
+                <p className="text-xs leading-6 text-slate-500">
+                  {dictionary.profile.changePasswordHint}
+                </p>
+              </div>
+              <Button type="button" variant="secondary" onClick={handlePasswordReset}>
+                {dictionary.profile.changePassword}
+              </Button>
+            </div>
             <form onSubmit={handleSave} className="mt-6 grid gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
                 <label className="mb-2 block text-sm font-medium text-brand-primary">
