@@ -152,19 +152,19 @@ export function Navbar() {
                   </Button>
                 </>
               ) : !authLoading ? (
-                <>
-                  <Link href="/auth/login" onClick={() => setOpen(false)}>
+                <div className="flex flex-col gap-3 pt-1">
+                  <Link href="/auth/login" onClick={() => setOpen(false)} className="w-full">
                     <Button variant="secondary" size="sm" className="w-full">
                       {dictionary.nav.login}
                     </Button>
                   </Link>
-                  <Link href="/auth/signup" onClick={() => setOpen(false)}>
+                  <Link href="/auth/signup" onClick={() => setOpen(false)} className="w-full">
                     <Button variant="accent" size="sm" className="w-full">
                       {dictionary.nav.signup}
                     </Button>
                   </Link>
-                  <PwaInstallButton fullWidth />
-                </>
+                  <PwaInstallButton fullWidth className="min-h-10" />
+                </div>
               ) : null}
             </nav>
           </motion.div>
