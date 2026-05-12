@@ -28,6 +28,7 @@ export const dictionaries = {
       logout: "Logout",
       profile: "Profile",
       dashboard: "Dashboard",
+      installApp: "Install App",
       toggleNavigation: "Toggle navigation"
     },
     common: {
@@ -543,6 +544,7 @@ export const dictionaries = {
       logout: "تسجيل الخروج",
       profile: "الملف الشخصي",
       dashboard: "لوحة التحكم",
+      installApp: "تثبيت التطبيق",
       toggleNavigation: "تبديل القائمة"
     },
     common: {

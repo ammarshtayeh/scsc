@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "@/hooks/useLocale";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import { LanguageToggle } from "@/components/ui/language-toggle";
 import { SiteLogo } from "@/components/ui/site-logo";
 import { ThemeSwitcher } from "@/components/ui/theme-switcher";
@@ -69,6 +70,7 @@ export function Navbar() {
         <div className="hidden shrink-0 items-center gap-2.5 lg:flex">
           <ThemeSwitcher />
           <LanguageToggle />
+          <PwaInstallButton />
           {!authLoading && user ? (
             <>
               <Link href="/store">
@@ -161,6 +163,7 @@ export function Navbar() {
                       {dictionary.nav.signup}
                     </Button>
                   </Link>
+                  <PwaInstallButton fullWidth />
                 </>
               ) : null}
             </nav>
