@@ -29,7 +29,23 @@ export const dictionaries = {
       profile: "Profile",
       dashboard: "Dashboard",
       installApp: "Install App",
+      installGuideEyebrow: "PWA",
+      installGuideTitle: "Install the app on your device",
+      installGuideIosTitle: "iPhone and iPad",
+      installGuideAndroidTitle: "Android phones",
+      installGuideDesktopTitle: "Desktop browsers",
+      installGuideIosSteps:
+        "Tap Share in Safari, then choose Add to Home Screen, rename if you want, and tap Add.",
+      installGuideAndroidSteps:
+        "Open the browser menu, choose Install App or Add to Home screen, then confirm the install.",
+      installGuideDesktopSteps:
+        "Open the browser menu or the install icon in the address bar, then choose Install App.",
+      installGuideTip:
+        "If the install prompt does not appear, refresh once and try again from the same browser.",
+      closeInstallGuide: "Close",
       installAppIosHint: "On iPhone or iPad, open Share and choose Add to Home Screen.",
+      installAppAndroidHint:
+        "On Android, open the browser menu and choose Install App or Add to Home screen.",
       installAppUnavailableHint:
         "If your browser supports app install, use the browser menu and choose Install App or Add to Home Screen.",
       toggleNavigation: "Toggle navigation"
@@ -548,7 +564,23 @@ export const dictionaries = {
       profile: "الملف الشخصي",
       dashboard: "لوحة التحكم",
       installApp: "تثبيت التطبيق",
+      installGuideEyebrow: "PWA",
+      installGuideTitle: "ثبت التطبيق على جهازك",
+      installGuideIosTitle: "iPhone و iPad",
+      installGuideAndroidTitle: "هواتف Android",
+      installGuideDesktopTitle: "متصفحات الكمبيوتر",
+      installGuideIosSteps:
+        "افتح زر المشاركة في Safari ثم اختر إضافة إلى الشاشة الرئيسية، عدّل الاسم إذا أردت ثم اضغط إضافة.",
+      installGuideAndroidSteps:
+        "افتح قائمة المتصفح ثم اختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية وبعدها أكّد التثبيت.",
+      installGuideDesktopSteps:
+        "افتح قائمة المتصفح أو أيقونة التثبيت داخل شريط العنوان ثم اختر تثبيت التطبيق.",
+      installGuideTip:
+        "إذا لم تظهر نافذة التثبيت مباشرة، حدّث الصفحة مرة واحدة ثم حاول من نفس المتصفح.",
+      closeInstallGuide: "إغلاق",
       installAppIosHint: "على iPhone أو iPad افتح مشاركة ثم اختر إضافة إلى الشاشة الرئيسية.",
+      installAppAndroidHint:
+        "على Android افتح قائمة المتصفح ثم اختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية.",
       installAppUnavailableHint:
         "إذا كان متصفحك يدعم التثبيت، افتح قائمة المتصفح ثم اختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية.",
       toggleNavigation: "تبديل القائمة"
