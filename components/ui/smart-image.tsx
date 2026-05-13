@@ -3,6 +3,8 @@
 import Image, { type ImageProps } from "next/image";
 import { useEffect, useState } from "react";
 
+import { sanitizeImageSource } from "@/lib/utils";
+
 interface SmartImageProps extends Omit<ImageProps, "src"> {
   src?: string | null;
   fallbackSrc?: string;
@@ -16,10 +18,10 @@ export function SmartImage({
   alt,
   ...props
 }: SmartImageProps) {
-  const [currentSrc, setCurrentSrc] = useState(src || fallbackSrc);
+  const [currentSrc, setCurrentSrc] = useState(sanitizeImageSource(src, fallbackSrc));
 
   useEffect(() => {
-    setCurrentSrc(src || fallbackSrc);
+    setCurrentSrc(sanitizeImageSource(src, fallbackSrc));
   }, [fallbackSrc, src]);
 
   return (

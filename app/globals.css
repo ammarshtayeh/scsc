@@ -176,6 +176,10 @@ html[dir="rtl"] .force-ltr {
 }
 
 @layer utilities {
+  .dark .text-slate-400 {
+    color: #b3c0d6 !important;
+  }
+
   .dark .text-slate-500 {
     color: #c0cbdb !important;
   }
@@ -209,6 +213,12 @@ html[dir="rtl"] .force-ltr {
   }
 
   .dark .bg-white\/92,
+  .dark .bg-white\/90,
+  .dark .bg-white\/82,
+  .dark .bg-white\/80,
+  .dark .bg-white\/78,
+  .dark .bg-white\/75,
+  .dark .bg-white\/70,
   .dark .bg-white\/95 {
     background-color: rgba(15, 26, 45, 0.94) !important;
   }
@@ -239,17 +249,24 @@ html[dir="rtl"] .force-ltr {
   .showcase-panel {
     position: relative;
     overflow: hidden;
+    isolation: isolate;
   }
 
   .showcase-panel::before {
     content: "";
     position: absolute;
     inset: 0;
+    z-index: 0;
     pointer-events: none;
     background:
       radial-gradient(circle at top left, rgba(242, 195, 24, 0.16), transparent 22%),
       radial-gradient(circle at bottom right, rgba(11, 59, 120, 0.1), transparent 26%);
     opacity: 0.9;
+  }
+
+  .showcase-panel > * {
+    position: relative;
+    z-index: 1;
   }
 }
 

@@ -137,6 +137,28 @@ function cleanString(value: unknown, fallback = "") {
   return typeof value === "string" ? value.trim() : fallback;
 }
 
+const IMAGE_SOURCE_PATTERN =
+  /^(https?:\/\/.+|data:image\/.+|blob:.+|\/.+\.(avif|bmp|gif|ico|jpe?g|png|svg|webp)([?#].*)?)$/i;
+
+function isValidImageSource(value: unknown) {
+  return typeof value === "string" && IMAGE_SOURCE_PATTERN.test(value.trim());
+}
+
+function cleanImageString(value: unknown, fallback = "") {
+  return isValidImageSource(value) ? cleanString(value) : fallback;
+}
+
+function cleanImageStringArray(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [] as string[];
+  }
+
+  return value
+    .filter((entry) => isValidImageSource(entry))
+    .map((entry) => cleanString(entry))
+    .filter(Boolean);
+}
+
 function cleanStringArray(value: unknown) {
   if (!Array.isArray(value)) {
     return [] as string[];
@@ -541,7 +563,7 @@ export const upsertEvent = onCall(publicCallableOptions, async (request) => {
     title,
     excerpt: cleanString(data.excerpt),
     description: cleanStringArray(data.description),
-    coverImage: cleanString(data.coverImage),
+    coverImage: cleanImageString(data.coverImage),
     startsAt,
     venue: cleanString(data.venue, "TBA"),
     capacity,
@@ -648,7 +670,7 @@ export const upsertHomeSettings = onCall(publicCallableOptions, async (request) 
   const cleanSlides = slides
     .slice(0, 6)
     .map((slide) => ({
-      image: cleanString(slide.image),
+      image: cleanImageString(slide.image),
       title: cleanString(slide.title),
       caption: cleanString(slide.caption)
     }))
@@ -667,7 +689,7 @@ export const upsertHomeSettings = onCall(publicCallableOptions, async (request) 
         .map((partner) => ({
           name: cleanString(partner.name),
           tagline: cleanString(partner.tagline),
-          logo: cleanString(partner.logo),
+          logo: cleanImageString(partner.logo),
           url: cleanString(partner.url)
         }))
         .filter((partner) => partner.name || partner.tagline || partner.logo || partner.url)
@@ -725,7 +747,7 @@ export const upsertProduct = onCall(publicCallableOptions, async (request) => {
     category: cleanString(data.category, "Skin Care"),
     company: cleanString(data.company, "SCSC Partner"),
     stock,
-    images: cleanStringArray(data.images),
+    images: cleanImageStringArray(data.images),
     featured: Boolean(data.featured),
     updatedAt: new Date().toISOString()
   };
@@ -765,7 +787,7 @@ export const upsertBoardMember = onCall(publicCallableOptions, async (request) =
       role,
       year,
       order: Math.max(1, cleanNumber(data.order, 99)),
-      image: cleanString(data.image),
+      image: cleanImageString(data.image),
       bio: cleanString(data.bio),
       updatedAt: new Date().toISOString()
     },
@@ -918,7 +940,7 @@ export const upsertArticle = onCall(publicCallableOptions, async (request) => {
       title,
       excerpt,
       content: cleanStringArray(data.content),
-      coverImage: cleanString(data.coverImage),
+      coverImage: cleanImageString(data.coverImage),
       category,
       publishedAt: cleanString(data.publishedAt) || new Date().toISOString(),
       authorName: cleanString(data.authorName, "SCSC Editorial Team"),

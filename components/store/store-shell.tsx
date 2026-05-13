@@ -15,7 +15,7 @@ import { useMemberPricing } from "@/hooks/useMemberPricing";
 import { PRODUCT_CATEGORIES, STORE_CURRENCY } from "@/lib/constants";
 import { db } from "@/lib/firebase/firebase";
 import { translateProductCategory } from "@/lib/i18n/helpers";
-import { formatCurrency, formatNumber } from "@/lib/utils";
+import { formatCurrency, formatNumber, sanitizeImageSources } from "@/lib/utils";
 import type { Product } from "@/types";
 
 function normalizeClientProduct(id: string, data: Record<string, unknown>): Product {
@@ -35,9 +35,7 @@ function normalizeClientProduct(id: string, data: Record<string, unknown>): Prod
     category: (typeof data.category === "string" ? data.category : "Skin Care") as Product["category"],
     company: typeof data.company === "string" && data.company.trim() ? data.company : "SCSC Partner",
     stock: Math.max(0, Number(data.stock) || 0),
-    images: Array.isArray(data.images)
-      ? data.images.filter((entry): entry is string => typeof entry === "string" && Boolean(entry.trim()))
-      : [],
+    images: sanitizeImageSources(data.images),
     featured: Boolean(data.featured)
   };
 }

@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useLocale } from "@/hooks/useLocale";
 import { db } from "@/lib/firebase/firebase";
+import { sanitizeImageSources } from "@/lib/utils";
 import type { Product } from "@/types";
 
 function normalizeProduct(id: string, data: Record<string, unknown>): Product {
@@ -27,9 +28,7 @@ function normalizeProduct(id: string, data: Record<string, unknown>): Product {
     category: (typeof data.category === "string" ? data.category : "Skin Care") as Product["category"],
     company: typeof data.company === "string" && data.company.trim() ? data.company.trim() : "SCSC Partner",
     stock: Math.max(0, Number(data.stock) || 0),
-    images: Array.isArray(data.images)
-      ? data.images.filter((entry): entry is string => typeof entry === "string" && Boolean(entry.trim()))
-      : [],
+    images: sanitizeImageSources(data.images),
     featured: Boolean(data.featured)
   };
 }

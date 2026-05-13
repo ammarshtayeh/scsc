@@ -115,3 +115,20 @@ export function safeNumber(value: string | number | null | undefined, fallback =
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
+
+const IMAGE_SOURCE_PATTERN =
+  /^(https?:\/\/.+|data:image\/.+|blob:.+|\/.+\.(avif|bmp|gif|ico|jpe?g|png|svg|webp)([?#].*)?)$/i;
+
+export function isValidImageSource(value: unknown) {
+  return typeof value === "string" && IMAGE_SOURCE_PATTERN.test(value.trim());
+}
+
+export function sanitizeImageSource(value: unknown, fallback = "") {
+  return isValidImageSource(value) ? String(value).trim() : fallback;
+}
+
+export function sanitizeImageSources(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => isValidImageSource(entry)).map((entry) => entry.trim())
+    : [];
+}

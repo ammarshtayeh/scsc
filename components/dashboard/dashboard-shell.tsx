@@ -56,7 +56,14 @@ import {
   translateProductCategory,
   translateRole
 } from "@/lib/i18n/helpers";
-import { formatCurrency, formatDateLong, formatDateTime, formatNumber } from "@/lib/utils";
+import {
+  formatCurrency,
+  formatDateLong,
+  formatDateTime,
+  formatNumber,
+  sanitizeImageSource,
+  sanitizeImageSources
+} from "@/lib/utils";
 import type {
   Article,
   ArticleCategory,
@@ -155,9 +162,7 @@ function normalizeDashboardProduct(id: string, data: Record<string, unknown>): P
     category: (typeof data.category === "string" ? data.category : "Skin Care") as ProductCategory,
     company: typeof data.company === "string" && data.company.trim() ? data.company.trim() : "SCSC Partner",
     stock: Math.max(0, Number(data.stock) || 0),
-    images: Array.isArray(data.images)
-      ? data.images.filter((entry): entry is string => typeof entry === "string" && Boolean(entry.trim()))
-      : [],
+    images: sanitizeImageSources(data.images),
     featured: Boolean(data.featured)
   };
 }
@@ -173,7 +178,7 @@ function normalizeDashboardBoardMember(id: string, data: Record<string, unknown>
       ? data.year.trim()
       : String(new Date().getFullYear()),
     order: Number.isFinite(order) ? order : 99,
-    image: typeof data.image === "string" ? data.image : "",
+    image: sanitizeImageSource(data.image),
     bio: typeof data.bio === "string" ? data.bio : ""
   };
 }

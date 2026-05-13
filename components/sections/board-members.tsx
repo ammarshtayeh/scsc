@@ -9,7 +9,7 @@ import { SmartImage } from "@/components/ui/smart-image";
 import { db } from "@/lib/firebase/firebase";
 import { useLocale } from "@/hooks/useLocale";
 import { translateBoardRole } from "@/lib/i18n/helpers";
-import { cn } from "@/lib/utils";
+import { cn, sanitizeImageSource } from "@/lib/utils";
 import type { BoardMember } from "@/types";
 
 interface BoardMembersProps {
@@ -27,7 +27,7 @@ function normalizeBoardMember(id: string, data: Record<string, unknown>): BoardM
       ? data.year.trim()
       : String(new Date().getFullYear()),
     order: Number.isFinite(order) ? order : 99,
-    image: typeof data.image === "string" ? data.image : "",
+    image: sanitizeImageSource(data.image),
     bio: typeof data.bio === "string" ? data.bio : ""
   };
 }

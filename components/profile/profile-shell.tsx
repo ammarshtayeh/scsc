@@ -45,7 +45,8 @@ import {
   formatDateLong,
   formatDateShort,
   formatDateTime,
-  formatNumber
+  formatNumber,
+  sanitizeImageSource
 } from "@/lib/utils";
 import type {
   Article,
@@ -148,7 +149,7 @@ function normalizeArticle(id: string, data: Record<string, unknown>): Article {
     title: typeof data.title === "string" ? data.title : "Article",
     excerpt: typeof data.excerpt === "string" ? data.excerpt : "",
     content: Array.isArray(data.content) ? (data.content as string[]) : [],
-    coverImage: typeof data.coverImage === "string" ? data.coverImage : "",
+    coverImage: sanitizeImageSource(data.coverImage),
     category: (data.category as Article["category"]) || "Others",
     publishedAt: normalizeDateValue(data.publishedAt),
     authorName: typeof data.authorName === "string" ? data.authorName : "SCSC Team",
@@ -164,7 +165,7 @@ function normalizeEvent(id: string, data: Record<string, unknown>): EventItem {
     title: typeof data.title === "string" ? data.title : "Event",
     excerpt: typeof data.excerpt === "string" ? data.excerpt : "",
     description: Array.isArray(data.description) ? (data.description as string[]) : [],
-    coverImage: typeof data.coverImage === "string" ? data.coverImage : "",
+    coverImage: sanitizeImageSource(data.coverImage),
     startsAt: normalizeDateValue(data.startsAt),
     venue: typeof data.venue === "string" ? data.venue : "TBA",
     capacity: typeof data.capacity === "number" ? data.capacity : 0,

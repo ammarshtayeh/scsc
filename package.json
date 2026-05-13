@@ -22,6 +22,7 @@
     "firebase:deploy:rules": ".\\node_modules\\node\\bin\\node.exe .\\node_modules\\firebase-tools\\lib\\bin\\firebase.js deploy --only firestore:rules,firestore:indexes,storage",
     "firebase:admin:check": "node scripts/check-firebase-admin-env.mjs",
     "firebase:prod:check": "node scripts/check-production-firebase.mjs",
+    "firebase:repair-media": "node scripts/repair-production-media.mjs",
     "firebase:reset-users": "node scripts/reset-production-users.mjs",
     "firebase:seed": "node --env-file=.env.local scripts/seed-firestore.mjs",
     "functions:build": "npm --prefix functions run build",

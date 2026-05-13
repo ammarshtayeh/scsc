@@ -3,6 +3,7 @@ import "server-only";
 import { FieldPath } from "firebase-admin/firestore";
 
 import { adminDb, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { sanitizeImageSource, sanitizeImageSources } from "@/lib/utils";
 import type {
   Article,
   BoardMember,
@@ -90,7 +91,7 @@ function normalizeProduct(id: string, data: Record<string, unknown>) {
     category: cleanString(data.category, "Skin Care") as Product["category"],
     company: cleanString(data.company, "SCSC Partner"),
     stock: Math.max(0, cleanNumber(data.stock)),
-    images: cleanStringArray(data.images),
+    images: sanitizeImageSources(data.images),
     featured: Boolean(data.featured)
   } satisfies Product;
 }
@@ -102,7 +103,7 @@ function normalizeEvent(id: string, data: Record<string, unknown>) {
     title: cleanString(data.title, "Untitled event"),
     excerpt: cleanString(data.excerpt),
     description: cleanStringArray(data.description),
-    coverImage: cleanString(data.coverImage),
+    coverImage: sanitizeImageSource(data.coverImage),
     startsAt: normalizeDateValue(data.startsAt),
     venue: cleanString(data.venue, "TBA"),
     capacity: Math.max(0, cleanNumber(data.capacity)),
@@ -143,7 +144,7 @@ function normalizeHomeSettings(data: Record<string, unknown>) {
         .map((entry) => {
           const slide = entry as Record<string, unknown>;
           return {
-            image: cleanString(slide.image),
+            image: sanitizeImageSource(slide.image),
             title: cleanString(slide.title),
             caption: cleanString(slide.caption)
           };
@@ -158,7 +159,7 @@ function normalizeHomeSettings(data: Record<string, unknown>) {
           return {
             name: cleanString(partner.name),
             tagline: cleanString(partner.tagline),
-            logo: cleanString(partner.logo),
+            logo: sanitizeImageSource(partner.logo),
             url: cleanString(partner.url) || undefined
           } satisfies PartnerHighlight;
         })
