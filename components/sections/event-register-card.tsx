@@ -109,7 +109,7 @@ export function EventRegisterCard({
   return (
     <Card className="space-y-4">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent">
+        <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent-strong">
           {dictionary.eventRegistration.eyebrow}
         </p>
         <h2 className="mt-3 font-heading text-2xl font-semibold text-brand-primary">

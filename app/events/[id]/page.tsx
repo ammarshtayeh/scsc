@@ -53,15 +53,15 @@ export default async function EventDetailPage({
               </div>
               <div className="grid gap-3 text-sm text-slate-600 md:grid-cols-3">
                 <p className="flex items-center gap-2">
-                  <CalendarRange className="h-4 w-4 text-brand-accent" />
+                  <CalendarRange className="h-4 w-4 text-brand-accent-strong dark:text-[#f5d669]" />
                   {formatDateTime(event.startsAt, locale)}
                 </p>
                 <p className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-brand-accent" />
+                  <MapPin className="h-4 w-4 text-brand-accent-strong dark:text-[#f5d669]" />
                   {event.venue}
                 </p>
                 <p className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-brand-accent" />
+                  <Users className="h-4 w-4 text-brand-accent-strong dark:text-[#f5d669]" />
                   {formatNumber(event.registeredCount, locale)}/{formatNumber(event.capacity, locale)} {dictionary.events.registeredSuffix}
                 </p>
               </div>

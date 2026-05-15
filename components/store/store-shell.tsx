@@ -254,7 +254,7 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
                       <div>
                         <div className="mb-3 flex flex-wrap gap-2">
                           {product.featured ? (
-                            <span className="rounded-full bg-brand-accent/15 px-3 py-1 text-xs font-semibold text-brand-accent">
+                            <span className="rounded-full bg-brand-accent/15 px-3 py-1 text-xs font-semibold text-brand-accent-strong">
                               {locale === "ar" ? "منتج مميز" : "Featured"}
                             </span>
                           ) : null}

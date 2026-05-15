@@ -26,7 +26,7 @@ export function EventsPreview({ events }: { events: EventItem[] }) {
         <div className="rounded-[28px] border border-white/70 bg-white/88 p-5 shadow-soft backdrop-blur-xl dark:border-white/12 dark:bg-brand-surface sm:rounded-[32px] sm:p-8">
           <div className="mb-7 flex flex-col items-start justify-between gap-4 sm:mb-8 sm:flex-row sm:items-end">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent">
+              <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent-strong">
                 {dictionary.home.upcomingEventsLabel}
               </p>
               <h2 className="mt-3 font-heading text-2xl font-bold text-brand-primary dark:text-brand-ink sm:text-3xl">
@@ -71,11 +71,11 @@ export function EventsPreview({ events }: { events: EventItem[] }) {
                     </p>
                     <div className="space-y-2 text-sm font-medium text-slate-700 dark:text-[#d7e2f2]">
                       <p className="flex items-center gap-2">
-                        <CalendarRange className="h-4 w-4 text-brand-accent" />
+                        <CalendarRange className="h-4 w-4 text-brand-accent-strong dark:text-[#f5d669]" />
                         {formatDateTime(event.startsAt, locale)}
                       </p>
                       <p className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-brand-accent" />
+                        <MapPin className="h-4 w-4 text-brand-accent-strong dark:text-[#f5d669]" />
                         {event.venue}
                       </p>
                     </div>

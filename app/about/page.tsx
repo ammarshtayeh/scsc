@@ -53,7 +53,7 @@ export default async function AboutPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="space-y-5">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-accent/15 text-brand-accent">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-accent/15 text-brand-accent-strong">
                 <UsersRound className="h-5 w-5" />
               </div>
               <h2 className="font-heading text-2xl font-bold text-brand-primary">
@@ -63,7 +63,7 @@ export default async function AboutPage() {
             <ul className="space-y-3">
               {dictionary.about.principles.map((principle) => (
                 <li key={principle} className="flex gap-3 text-sm leading-7 text-slate-600">
-                  <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-brand-accent" />
+                  <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-brand-accent-strong" />
                   <span>{principle}</span>
                 </li>
               ))}
@@ -72,7 +72,7 @@ export default async function AboutPage() {
 
           <Card className="space-y-5">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-accent/15 text-brand-accent">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-accent/15 text-brand-accent-strong">
                 <CheckCircle2 className="h-5 w-5" />
               </div>
               <h2 className="font-heading text-2xl font-bold text-brand-primary">
@@ -102,7 +102,7 @@ export default async function AboutPage() {
             <ul className="space-y-3">
               {dictionary.about.membershipConditions.map((condition) => (
                 <li key={condition} className="flex gap-3 text-sm leading-7 text-slate-600">
-                  <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-brand-accent" />
+                  <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-brand-accent-strong" />
                   <span>{condition}</span>
                 </li>
               ))}

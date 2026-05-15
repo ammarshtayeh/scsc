@@ -74,7 +74,7 @@ export function ProductDetailClient({
 
         <Card className="space-y-5 dark:border-white/10 dark:bg-white/5">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent">
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent-strong">
               {translateProductCategory(product.category, locale)}
             </p>
             <h1 className="mt-3 font-heading text-4xl font-bold text-brand-primary">

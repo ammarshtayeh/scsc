@@ -10,7 +10,7 @@ export default function NotFound() {
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-3xl items-center px-4 py-16 sm:px-6 lg:px-8">
       <Card className="w-full text-center">
-        <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent">
+        <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent-strong">
           404
         </p>
         <h1 className="mt-4 font-heading text-4xl font-bold text-brand-primary">

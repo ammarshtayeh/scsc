@@ -105,7 +105,7 @@ export function BoardMembers({ groupedMembers }: BoardMembersProps) {
       <div className="rounded-[32px] border border-brand-primary/10 bg-white/82 p-8 shadow-soft backdrop-blur-xl dark:border-white/10 dark:bg-[#0d1829]/92 dark:shadow-[0_26px_70px_rgba(0,0,0,0.36)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent">
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent-strong">
               {dictionary.about.boardEyebrow}
             </p>
             <h2 className="mt-3 font-heading text-3xl font-bold text-brand-primary dark:text-brand-ink">
@@ -150,7 +150,7 @@ export function BoardMembers({ groupedMembers }: BoardMembersProps) {
                     <h3 className="font-heading text-xl font-semibold text-brand-primary">
                       {member.name}
                     </h3>
-                    <p className="text-sm font-medium text-brand-accent">
+                    <p className="text-sm font-medium text-brand-accent-strong">
                       {translateBoardRole(member.role, locale)}
                     </p>
                     <p className="text-sm leading-7 text-slate-600">{member.bio}</p>

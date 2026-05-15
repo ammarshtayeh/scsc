@@ -28,7 +28,7 @@ export function PartnersShowcase({
     <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
       <div className="rounded-[30px] border border-white/70 bg-section-mesh p-6 shadow-float dark:border-white/10 dark:bg-brand-surface/84 sm:p-8">
         <div className="max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent">
+          <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent-strong">
             {eyebrow}
           </p>
           <h2 className="mt-3 font-heading text-3xl font-bold text-brand-primary dark:text-brand-ink sm:text-4xl">

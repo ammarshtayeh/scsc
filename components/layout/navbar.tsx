@@ -33,8 +33,8 @@ export function Navbar() {
 
   const linkClass = (href: string) =>
     cn(
-      "text-sm font-medium transition hover:text-brand-accent",
-      pathname === href ? "text-brand-accent" : "text-slate-700 dark:text-brand-mist"
+      "text-sm font-medium transition hover:text-brand-accent-strong dark:hover:text-[#f5d669]",
+      pathname === href ? "text-brand-accent-strong dark:text-[#f5d669]" : "text-slate-700 dark:text-brand-mist"
     );
 
   return (

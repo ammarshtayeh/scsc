@@ -110,7 +110,7 @@ export function PwaInstallButton({
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.26em] text-brand-accent">
+                  <p className="text-xs font-bold uppercase tracking-[0.26em] text-brand-accent-strong">
                     {dictionary.nav.installGuideEyebrow}
                   </p>
                   <h3 className="mt-2 font-heading text-xl font-semibold text-brand-primary dark:text-brand-ink">
@@ -137,7 +137,7 @@ export function PwaInstallButton({
               <div className="mt-5 space-y-3">
                 <div className="rounded-2xl border border-brand-primary/10 bg-white/80 p-4 dark:border-white/10 dark:bg-white/[0.06]">
                   <div className="flex items-center gap-3">
-                    <div className="rounded-full bg-brand-accent/15 p-2 text-brand-accent">
+                    <div className="rounded-full bg-brand-accent/15 p-2 text-brand-accent-strong dark:text-[#f5d669]">
                       {isIos ? <Share className="h-4 w-4" /> : isAndroid ? <Smartphone className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
                     </div>
                     <p className="text-sm font-semibold text-brand-primary dark:text-brand-ink">

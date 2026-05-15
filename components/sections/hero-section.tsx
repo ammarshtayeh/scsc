@@ -52,7 +52,7 @@ export function HeroSection({ slides, featuredEvent }: HeroSectionProps) {
           <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.24),transparent_35%,transparent_65%,rgba(255,255,255,0.16))]" />
           <div className="relative">
             <motion.div variants={itemVariants}>
-              <Badge className="border-brand-accent/30 bg-brand-accent/15 text-brand-accent">
+              <Badge className="border-brand-accent/30 bg-brand-accent/15">
                 <Sparkles className="h-4 w-4" />
                 {dictionary.home.badge}
               </Badge>
@@ -74,18 +74,18 @@ export function HeroSection({ slides, featuredEvent }: HeroSectionProps) {
 
             <motion.div variants={itemVariants} className="mt-6 flex flex-wrap gap-3">
               <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/10 bg-white/70 px-4 py-2 text-sm font-medium text-brand-primary dark:border-white/10 dark:bg-white/5 dark:text-brand-ink">
-                <ShieldCheck className="h-4 w-4 text-brand-accent" />
+                <ShieldCheck className="h-4 w-4 text-brand-accent-strong dark:text-[#f5d669]" />
                 مجتمع طلابي موثوق
               </div>
               <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/10 bg-white/70 px-4 py-2 text-sm font-medium text-brand-primary dark:border-white/10 dark:bg-white/5 dark:text-brand-ink">
-                <Store className="h-4 w-4 text-brand-accent" />
+                <Store className="h-4 w-4 text-brand-accent-strong dark:text-[#f5d669]" />
                 متجر شركاء ومزايا أعضاء
               </div>
             </motion.div>
 
             <motion.div variants={itemVariants} className="mt-7 grid gap-4 sm:mt-8 sm:grid-cols-2">
               <div className="rounded-2xl border border-brand-primary/15 bg-white/82 p-5 transition-shadow dark:border-brand-accent/18 dark:bg-white/[0.06] dark:shadow-[0_16px_40px_rgba(0,0,0,0.22)] sm:p-6 sm:hover:shadow-card">
-                <p className="text-xs font-bold uppercase tracking-widest text-brand-accent dark:text-[#f5d669]">
+                <p className="text-xs font-bold uppercase tracking-widest text-brand-accent-strong">
                   {dictionary.home.visionLabel}
                 </p>
                 <p className="mt-4 text-sm leading-7 text-brand-text dark:text-[#eef4fd]">
@@ -93,7 +93,7 @@ export function HeroSection({ slides, featuredEvent }: HeroSectionProps) {
                 </p>
               </div>
               <div className="rounded-2xl border border-brand-primary/15 bg-white/82 p-5 transition-shadow dark:border-brand-accent/18 dark:bg-white/[0.06] dark:shadow-[0_16px_40px_rgba(0,0,0,0.22)] sm:p-6 sm:hover:shadow-card">
-                <p className="text-xs font-bold uppercase tracking-widest text-brand-accent dark:text-[#f5d669]">
+                <p className="text-xs font-bold uppercase tracking-widest text-brand-accent-strong">
                   {dictionary.home.missionLabel}
                 </p>
                 <p className="mt-4 text-sm leading-7 text-brand-text dark:text-[#eef4fd]">

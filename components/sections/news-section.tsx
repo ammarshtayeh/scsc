@@ -21,7 +21,7 @@ export function NewsSection({ articles }: { articles: Article[] }) {
       <div className="rounded-[28px] border border-white/70 bg-section-mesh p-5 shadow-soft dark:border-white/10 dark:bg-brand-surface/84 sm:rounded-[32px] sm:p-8">
         <div className="mb-7 flex flex-col items-start justify-between gap-4 sm:mb-8 sm:flex-row sm:items-end">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent">
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent-strong">
               {dictionary.home.latestNewsLabel}
             </p>
             <h2 className="mt-3 font-heading text-2xl font-bold text-brand-primary dark:text-brand-ink sm:text-3xl">
