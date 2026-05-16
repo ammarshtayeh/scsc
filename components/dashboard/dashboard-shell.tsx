@@ -293,6 +293,10 @@ function cleanFileName(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+function isWebPlayableHomepageVideo(value: string) {
+  return /\.(mp4|webm|ogv|ogg)([?#].*)?$/i.test(value.trim());
+}
+
 async function uploadDashboardAsset(pathPrefix: string, file: File) {
   const safeName = cleanFileName(file.name) || "image";
   const extension = safeName.includes(".") ? "" : ".jpg";
@@ -695,12 +699,14 @@ export function DashboardShell({
       ? {
           current: "الفيديو الحالي",
           remove: "حذف الفيديو الحالي",
-          replaceHint: "عند رفع فيديو جديد سيتم استبدال الحالي."
+          replaceHint: "عند رفع فيديو جديد سيتم استبدال الحالي.",
+          formatHint: "لضمان ظهور الفيديو في الرئيسية استخدم MP4 أو WebM أو OGG."
         }
       : {
           current: "Current video",
           remove: "Remove current video",
-          replaceHint: "Uploading a new video will replace the current one."
+          replaceHint: "Uploading a new video will replace the current one.",
+          formatHint: "Use MP4, WebM, or OGG to ensure the video renders on the homepage."
         };
   const currentBoardYear = String(new Date().getFullYear());
   const showManagementSections = mode === "admin";
@@ -1090,6 +1096,23 @@ export function DashboardShell({
     const shouldRemoveCurrentVideo = formData.get("featuredVideoRemove") === "on";
     const manualVideoUrl = getText(formData, "featuredVideoUrl");
     const videoFile = formData.get("featuredVideoFile");
+
+    if (manualVideoUrl && !isWebPlayableHomepageVideo(manualVideoUrl)) {
+      throw new Error(
+        locale === "ar"
+          ? "فيديو الصفحة الرئيسية يجب أن يكون بصيغة قابلة للعرض على الويب مثل MP4 أو WebM أو OGG."
+          : "Homepage video must use a web-playable format such as MP4, WebM, or OGG."
+      );
+    }
+
+    if (videoFile instanceof File && videoFile.size > 0 && !isWebPlayableHomepageVideo(videoFile.name)) {
+      throw new Error(
+        locale === "ar"
+          ? "رفع فيديو الرئيسية يدعم حاليًا MP4 وWebM وOGG فقط لضمان ظهوره في المتصفح."
+          : "Homepage video uploads currently support MP4, WebM, and OGG only so they render reliably in browsers."
+      );
+    }
+
     const uploadedVideo =
       videoFile instanceof File && videoFile.size > 0 ? await uploadDashboardVideo(videoFile) : "";
     const nextVideoUrl = uploadedVideo || (shouldRemoveCurrentVideo ? "" : manualVideoUrl || currentVideoUrl);
@@ -1362,6 +1385,11 @@ export function DashboardShell({
                     <p className={`mt-3 text-sm ${dashboardMutedTextClass}`}>
                       {homeVideoManagementLabels.replaceHint}
                     </p>
+                    {!isWebPlayableHomepageVideo(homeSettings.featuredVideo.url) ? (
+                      <p className="mt-2 text-sm font-medium text-amber-600 dark:text-amber-300">
+                        {homeVideoManagementLabels.formatHint}
+                      </p>
+                    ) : null}
                     <label className="mt-3 flex items-center gap-2 text-sm font-medium text-brand-primary">
                       <input name="featuredVideoRemove" type="checkbox" />
                       {homeVideoManagementLabels.remove}
@@ -1401,10 +1429,13 @@ export function DashboardShell({
                   <input
                     name="featuredVideoFile"
                     type="file"
-                    accept="video/*"
+                    accept="video/mp4,video/webm,video/ogg"
                     className={dashboardFieldClass}
                   />
                 </DashboardFieldLabel>
+                <p className={`text-sm md:col-span-2 ${dashboardMutedTextClass}`}>
+                  {homeVideoManagementLabels.formatHint}
+                </p>
                 <div className="md:col-span-2">
                   <Button loading={loadingAction === "save-home-video"} type="submit">
                     <Save className="h-4 w-4" />
