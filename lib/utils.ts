@@ -119,6 +119,9 @@ export function safeNumber(value: string | number | null | undefined, fallback =
 const IMAGE_SOURCE_PATTERN =
   /^(https?:\/\/.+|data:image\/.+|blob:.+|\/.+\.(avif|bmp|gif|ico|jpe?g|png|svg|webp)([?#].*)?)$/i;
 
+const VIDEO_SOURCE_PATTERN =
+  /^(https?:\/\/.+|blob:.+|\/.+\.(mp4|m4v|mov|ogg|ogv|webm)([?#].*)?)$/i;
+
 export function isValidImageSource(value: unknown) {
   return typeof value === "string" && IMAGE_SOURCE_PATTERN.test(value.trim());
 }
@@ -131,4 +134,12 @@ export function sanitizeImageSources(value: unknown) {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => isValidImageSource(entry)).map((entry) => entry.trim())
     : [];
+}
+
+export function isValidVideoSource(value: unknown) {
+  return typeof value === "string" && VIDEO_SOURCE_PATTERN.test(value.trim());
+}
+
+export function sanitizeVideoSource(value: unknown, fallback = "") {
+  return isValidVideoSource(value) ? String(value).trim() : fallback;
 }

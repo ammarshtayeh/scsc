@@ -159,6 +159,16 @@ function cleanImageStringArray(value: unknown) {
     .filter(Boolean);
 }
 
+const VIDEO_SOURCE_PATTERN = /^(https?:\/\/.+|blob:.+|\/.+\.(mp4|m4v|mov|ogg|ogv|webm)([?#].*)?)$/i;
+
+function isValidVideoSource(value: unknown) {
+  return typeof value === "string" && VIDEO_SOURCE_PATTERN.test(value.trim());
+}
+
+function cleanVideoString(value: unknown, fallback = "") {
+  return isValidVideoSource(value) ? cleanString(value) : fallback;
+}
+
 function cleanStringArray(value: unknown) {
   if (!Array.isArray(value)) {
     return [] as string[];
@@ -683,6 +693,7 @@ export const upsertHomeSettings = onCall(publicCallableOptions, async (request) 
     partnerTitle,
     partnerDescription,
     partners,
+    featuredVideo,
     storeEyebrow,
     storeTitle,
     storeDescription,
@@ -704,6 +715,12 @@ export const upsertHomeSettings = onCall(publicCallableOptions, async (request) 
       logo?: unknown;
       url?: unknown;
     }>;
+    featuredVideo?: {
+      enabled?: unknown;
+      url?: unknown;
+      title?: unknown;
+      description?: unknown;
+    };
     storeEyebrow?: unknown;
     storeTitle?: unknown;
     storeDescription?: unknown;
@@ -751,6 +768,22 @@ export const upsertHomeSettings = onCall(publicCallableOptions, async (request) 
     );
   }
 
+  const cleanFeaturedVideo = featuredVideo
+    ? {
+        enabled: Boolean(featuredVideo.enabled),
+        url: cleanVideoString(featuredVideo.url),
+        title: cleanString(featuredVideo.title),
+        description: cleanString(featuredVideo.description)
+      }
+    : null;
+
+  if (cleanFeaturedVideo?.enabled && !cleanFeaturedVideo.url) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Home page video URL is required when the video section is enabled."
+    );
+  }
+
   await db.collection("siteSettings").doc("home").set(
     {
       slides: cleanSlides,
@@ -758,6 +791,7 @@ export const upsertHomeSettings = onCall(publicCallableOptions, async (request) 
       partnerTitle: cleanString(partnerTitle),
       partnerDescription: cleanString(partnerDescription),
       partners: cleanPartners,
+      featuredVideo: cleanFeaturedVideo,
       storeEyebrow: cleanString(storeEyebrow),
       storeTitle: cleanString(storeTitle),
       storeDescription: cleanString(storeDescription),

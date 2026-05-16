@@ -80,12 +80,20 @@ export interface PartnerHighlight {
   url?: string;
 }
 
+export interface HomeFeaturedVideo {
+  enabled: boolean;
+  url: string;
+  title?: string;
+  description?: string;
+}
+
 export interface HomePageSettings {
   slides: HomeSlide[];
   partnerEyebrow?: string;
   partnerTitle?: string;
   partnerDescription?: string;
   partners?: PartnerHighlight[];
+  featuredVideo?: HomeFeaturedVideo;
   storeEyebrow?: string;
   storeTitle?: string;
   storeDescription?: string;

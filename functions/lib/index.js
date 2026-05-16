@@ -115,6 +115,13 @@ function cleanImageStringArray(value) {
         .map((entry) => cleanString(entry))
         .filter(Boolean);
 }
+const VIDEO_SOURCE_PATTERN = /^(https?:\/\/.+|blob:.+|\/.+\.(mp4|m4v|mov|ogg|ogv|webm)([?#].*)?)$/i;
+function isValidVideoSource(value) {
+    return typeof value === "string" && VIDEO_SOURCE_PATTERN.test(value.trim());
+}
+function cleanVideoString(value, fallback = "") {
+    return isValidVideoSource(value) ? cleanString(value) : fallback;
+}
 function cleanStringArray(value) {
     if (!Array.isArray(value)) {
         return [];
@@ -498,7 +505,7 @@ exports.deleteArchivedEvent = (0, https_1.onCall)(publicCallableOptions, async (
 exports.upsertHomeSettings = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     var _a;
     requireAdmin(request);
-    const { slides, partnerEyebrow, partnerTitle, partnerDescription, partners, storeEyebrow, storeTitle, storeDescription, storeCtaLabel, storeCtaHref, storePerks } = request.data;
+    const { slides, partnerEyebrow, partnerTitle, partnerDescription, partners, featuredVideo, storeEyebrow, storeTitle, storeDescription, storeCtaLabel, storeCtaHref, storePerks } = request.data;
     if (!Array.isArray(slides)) {
         throw new https_1.HttpsError("invalid-argument", "Home page slides are required.");
     }
@@ -527,12 +534,24 @@ exports.upsertHomeSettings = (0, https_1.onCall)(publicCallableOptions, async (r
     if (cleanPartners.some((partner) => !partner.name || !partner.tagline || !partner.logo)) {
         throw new https_1.HttpsError("invalid-argument", "Each partner must include a name, tagline, and logo.");
     }
+    const cleanFeaturedVideo = featuredVideo
+        ? {
+            enabled: Boolean(featuredVideo.enabled),
+            url: cleanVideoString(featuredVideo.url),
+            title: cleanString(featuredVideo.title),
+            description: cleanString(featuredVideo.description)
+        }
+        : null;
+    if ((cleanFeaturedVideo === null || cleanFeaturedVideo === void 0 ? void 0 : cleanFeaturedVideo.enabled) && !cleanFeaturedVideo.url) {
+        throw new https_1.HttpsError("invalid-argument", "Home page video URL is required when the video section is enabled.");
+    }
     await db.collection("siteSettings").doc("home").set({
         slides: cleanSlides,
         partnerEyebrow: cleanString(partnerEyebrow),
         partnerTitle: cleanString(partnerTitle),
         partnerDescription: cleanString(partnerDescription),
         partners: cleanPartners,
+        featuredVideo: cleanFeaturedVideo,
         storeEyebrow: cleanString(storeEyebrow),
         storeTitle: cleanString(storeTitle),
         storeDescription: cleanString(storeDescription),

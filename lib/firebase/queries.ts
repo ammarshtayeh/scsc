@@ -3,7 +3,7 @@ import "server-only";
 import { FieldPath } from "firebase-admin/firestore";
 
 import { adminDb, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import { sanitizeImageSource, sanitizeImageSources } from "@/lib/utils";
+import { sanitizeImageSource, sanitizeImageSources, sanitizeVideoSource } from "@/lib/utils";
 import type {
   Article,
   ArchivedEvent,
@@ -192,6 +192,16 @@ function normalizeHomeSettings(data: Record<string, unknown>) {
     partnerTitle: cleanString(data.partnerTitle) || undefined,
     partnerDescription: cleanString(data.partnerDescription) || undefined,
     partners,
+    featuredVideo:
+      typeof data.featuredVideo === "object" && data.featuredVideo
+        ? {
+            enabled: Boolean((data.featuredVideo as Record<string, unknown>).enabled),
+            url: sanitizeVideoSource((data.featuredVideo as Record<string, unknown>).url),
+            title: cleanString((data.featuredVideo as Record<string, unknown>).title) || undefined,
+            description:
+              cleanString((data.featuredVideo as Record<string, unknown>).description) || undefined
+          }
+        : undefined,
     storeEyebrow: cleanString(data.storeEyebrow) || undefined,
     storeTitle: cleanString(data.storeTitle) || undefined,
     storeDescription: cleanString(data.storeDescription) || undefined,

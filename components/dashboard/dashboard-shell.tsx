@@ -293,14 +293,27 @@ function cleanFileName(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+async function uploadDashboardAsset(pathPrefix: string, file: File) {
+  const safeName = cleanFileName(file.name) || "image";
+  const extension = safeName.includes(".") ? "" : ".jpg";
+  return uploadFileToStorage(
+    `${pathPrefix}/${Date.now()}-${crypto.randomUUID()}-${safeName}${extension}`,
+    file
+  );
+}
+
 async function uploadDashboardImage(
   folder: "events" | "archived-events" | "products" | "board" | "home",
   file: File
 ) {
-  const safeName = cleanFileName(file.name) || "image";
-  const extension = safeName.includes(".") ? "" : ".jpg";
+  return uploadDashboardAsset(`images/${folder}`, file);
+}
+
+async function uploadDashboardVideo(file: File) {
+  const safeName = cleanFileName(file.name) || "video.mp4";
+  const extension = safeName.includes(".") ? "" : ".mp4";
   return uploadFileToStorage(
-    `images/${folder}/${Date.now()}-${crypto.randomUUID()}-${safeName}${extension}`,
+    `videos/home/${Date.now()}-${crypto.randomUUID()}-${safeName}${extension}`,
     file
   );
 }
@@ -645,6 +658,12 @@ export function DashboardShell({
           partnerTagline: "Partner tagline",
           partnerLogo: "Partner logo or image",
           partnerUrl: "Partner URL",
+          videoSection: "Featured video section",
+          videoEnabled: "Show the video on the home page",
+          videoTitle: "Video title",
+          videoDescription: "Video description",
+          videoUrl: "Video URL",
+          videoUpload: "Upload video",
           storeSection: "Store promotion section",
           storeEyebrow: "Store eyebrow",
           storeTitle: "Store promotional title",
@@ -652,6 +671,24 @@ export function DashboardShell({
           storeCtaLabel: "Store button label",
           storeCtaHref: "Store button URL",
           storePerks: "Store perks, one per line"
+        };
+  const homeVideoLabels =
+    locale === "ar"
+      ? {
+          section: "قسم الفيديو",
+          enabled: "إظهار الفيديو في الصفحة الرئيسية",
+          title: "عنوان الفيديو",
+          description: "وصف الفيديو",
+          url: "رابط الفيديو",
+          upload: "رفع فيديو"
+        }
+      : {
+          section: "Featured video section",
+          enabled: "Show the video on the home page",
+          title: "Video title",
+          description: "Video description",
+          url: "Video URL",
+          upload: "Upload video"
         };
   const currentBoardYear = String(new Date().getFullYear());
   const showManagementSections = mode === "admin";
@@ -1100,6 +1137,11 @@ export function DashboardShell({
                       };
                     })
                   );
+                  const videoFile = formData.get("featuredVideoFile");
+                  const uploadedVideo =
+                    videoFile instanceof File && videoFile.size > 0
+                      ? await uploadDashboardVideo(videoFile)
+                      : "";
 
                   await upsertHomeSettingsAdmin({
                     slides,
@@ -1107,6 +1149,16 @@ export function DashboardShell({
                     partnerTitle: getText(formData, "partnerTitle"),
                     partnerDescription: getText(formData, "partnerDescription"),
                     partners,
+                    featuredVideo: {
+                      enabled: formData.get("featuredVideoEnabled") === "on",
+                      url:
+                        uploadedVideo ||
+                        getText(formData, "featuredVideoUrl") ||
+                        homeSettings?.featuredVideo?.url ||
+                        "",
+                      title: getText(formData, "featuredVideoTitle"),
+                      description: getText(formData, "featuredVideoDescription")
+                    },
                     storeEyebrow: getText(formData, "storeEyebrow"),
                     storeTitle: getText(formData, "storeTitle"),
                     storeDescription: getText(formData, "storeDescription"),
@@ -1221,6 +1273,48 @@ export function DashboardShell({
                     </DashboardFieldLabel>
                   </div>
                 ))}
+              </div>
+              <div className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}>
+                <h3 className="font-heading text-xl font-semibold text-brand-primary md:col-span-2">
+                  {homeVideoLabels.section}
+                </h3>
+                <label className="flex items-center gap-2 text-sm font-medium text-brand-primary md:col-span-2">
+                  <input
+                    name="featuredVideoEnabled"
+                    type="checkbox"
+                    defaultChecked={Boolean(homeSettings?.featuredVideo?.enabled)}
+                  />
+                  {homeVideoLabels.enabled}
+                </label>
+                <DashboardFieldLabel label={homeVideoLabels.title}>
+                  <input
+                    name="featuredVideoTitle"
+                    defaultValue={homeSettings?.featuredVideo?.title || ""}
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
+                <DashboardFieldLabel label={homeVideoLabels.url}>
+                  <input
+                    name="featuredVideoUrl"
+                    defaultValue={homeSettings?.featuredVideo?.url || ""}
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
+                <DashboardFieldLabel label={homeVideoLabels.description} className="md:col-span-2">
+                  <textarea
+                    name="featuredVideoDescription"
+                    defaultValue={homeSettings?.featuredVideo?.description || ""}
+                    className={dashboardTextAreaClass}
+                  />
+                </DashboardFieldLabel>
+                <DashboardFieldLabel label={homeVideoLabels.upload} className="md:col-span-2">
+                  <input
+                    name="featuredVideoFile"
+                    type="file"
+                    accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-m4v"
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
               </div>
               <div className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}>
                 <h3 className="font-heading text-xl font-semibold text-brand-primary md:col-span-2">

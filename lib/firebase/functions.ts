@@ -40,6 +40,7 @@ type AdminHomeSettingsInput = Pick<
   | "partnerTitle"
   | "partnerDescription"
   | "partners"
+  | "featuredVideo"
   | "storeEyebrow"
   | "storeTitle"
   | "storeDescription"
