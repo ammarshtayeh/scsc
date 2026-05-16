@@ -1,14 +1,18 @@
 "use client";
 
+import { doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import { ArrowRight, PlayCircle, ShieldCheck, Sparkles, Store } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import { ImageSlider } from "@/components/sections/image-slider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { db } from "@/lib/firebase/firebase";
 import { useLocale } from "@/hooks/useLocale";
+import { sanitizeImageSource, sanitizeVideoSource } from "@/lib/utils";
 import type { EventItem, HomePageSettings } from "@/types";
 
 interface HeroSectionProps {
@@ -35,8 +39,88 @@ const itemVariants = {
 export function HeroSection({ slides, featuredEvent, featuredVideo }: HeroSectionProps) {
   const { user } = useAuth();
   const { dictionary, direction } = useLocale();
+  const [resolvedSlides, setResolvedSlides] = useState(slides);
+  const [resolvedFeaturedVideo, setResolvedFeaturedVideo] = useState(featuredVideo);
   const joinHref = user ? "/profile" : "/auth/signup";
-  const hasFeaturedVideo = Boolean(featuredVideo?.enabled && featuredVideo.url);
+  const hasFeaturedVideo = Boolean(
+    resolvedFeaturedVideo?.enabled && resolvedFeaturedVideo.url
+  );
+
+  useEffect(() => {
+    setResolvedSlides(slides);
+  }, [slides]);
+
+  useEffect(() => {
+    setResolvedFeaturedVideo(featuredVideo);
+  }, [featuredVideo]);
+
+  useEffect(() => {
+    if (featuredVideo?.enabled && featuredVideo.url) {
+      return;
+    }
+
+    const publicDb = db;
+
+    if (!publicDb) {
+      return;
+    }
+    const firestore = publicDb as NonNullable<typeof publicDb>;
+
+    let cancelled = false;
+
+    async function loadHomeSettingsFromFirestore() {
+      try {
+        const snapshot = await getDoc(doc(firestore, "siteSettings", "home"));
+        const data = snapshot.data() as Record<string, unknown> | undefined;
+
+        if (!data || cancelled) {
+          return;
+        }
+
+        if (Array.isArray(data.slides)) {
+          const nextSlides = data.slides
+            .map((entry) => {
+              const slide = entry as Record<string, unknown>;
+              return {
+                image: sanitizeImageSource(slide.image),
+                title: typeof slide.title === "string" ? slide.title.trim() : "",
+                caption: typeof slide.caption === "string" ? slide.caption.trim() : ""
+              };
+            })
+            .filter((slide) => slide.image || slide.title || slide.caption);
+
+          if (nextSlides.length) {
+            setResolvedSlides(nextSlides);
+          }
+        }
+
+        if (typeof data.featuredVideo === "object" && data.featuredVideo) {
+          const nextVideo = data.featuredVideo as Record<string, unknown>;
+          const normalizedVideo = {
+            enabled: Boolean(nextVideo.enabled),
+            url: sanitizeVideoSource(nextVideo.url),
+            title: typeof nextVideo.title === "string" ? nextVideo.title.trim() : undefined,
+            description:
+              typeof nextVideo.description === "string"
+                ? nextVideo.description.trim()
+                : undefined
+          };
+
+          if (normalizedVideo.enabled && normalizedVideo.url) {
+            setResolvedFeaturedVideo(normalizedVideo);
+          }
+        }
+      } catch {
+        // Keep the server-rendered defaults if the public fallback cannot load.
+      }
+    }
+
+    void loadHomeSettingsFromFirestore();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [featuredVideo]);
 
   return (
     <section className="relative overflow-hidden">
@@ -115,7 +199,10 @@ export function HeroSection({ slides, featuredEvent, featuredVideo }: HeroSectio
                   />
                 </Button>
               </Link>
-              <Link href={featuredEvent ? `/events/${featuredEvent.slug}` : "/events"} className="w-full sm:w-auto">
+              <Link
+                href={featuredEvent ? `/events/${featuredEvent.slug}` : "/events"}
+                className="w-full sm:w-auto"
+              >
                 <Button variant="secondary" size="lg" className="w-full sm:w-auto">
                   {featuredEvent
                     ? dictionary.home.featuredEventCta
@@ -149,27 +236,30 @@ export function HeroSection({ slides, featuredEvent, featuredVideo }: HeroSectio
           transition={{ delay: 0.3, duration: 0.7 }}
           className="space-y-4 lg:pt-8"
         >
-          <ImageSlider slides={slides} />
+          <ImageSlider slides={resolvedSlides} />
           {hasFeaturedVideo ? (
             <div className="glass-surface overflow-hidden rounded-[24px] border border-white/55 p-4 shadow-float dark:border-white/10">
               <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-primary dark:text-brand-ink">
                 <PlayCircle className="h-4 w-4 text-brand-accent-strong" />
-                <span>{featuredVideo?.title || (direction === "rtl" ? "فيديو الجمعية" : "Association video")}</span>
+                <span>
+                  {resolvedFeaturedVideo?.title ||
+                    (direction === "rtl" ? "فيديو الجمعية" : "Association video")}
+                </span>
               </div>
-              {featuredVideo?.description ? (
+              {resolvedFeaturedVideo?.description ? (
                 <p className="mb-4 text-sm leading-6 text-brand-muted dark:text-[#d7e3f3]">
-                  {featuredVideo.description}
+                  {resolvedFeaturedVideo.description}
                 </p>
               ) : null}
               <div className="overflow-hidden rounded-[20px] border border-brand-primary/10 bg-slate-950">
                 <video
-                  key={featuredVideo?.url}
+                  key={resolvedFeaturedVideo?.url}
                   controls
                   playsInline
                   preload="metadata"
                   className="h-full max-h-[320px] w-full bg-black object-cover"
                 >
-                  <source src={featuredVideo?.url} />
+                  <source src={resolvedFeaturedVideo?.url} />
                 </video>
               </div>
             </div>
