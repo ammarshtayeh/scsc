@@ -19,6 +19,11 @@ service firebase.storage {
       allow write: if isAdminOrModerator();
     }
 
+    match /images/archived-events/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdminOrModerator();
+    }
+
     match /images/products/{allPaths=**} {
       allow read: if isSignedIn();
       allow write: if isAdminOrModerator();

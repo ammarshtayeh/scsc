@@ -1,6 +1,7 @@
 import { DashboardShell, type DashboardSection } from "@/components/dashboard/dashboard-shell";
 import { PageHero } from "@/components/ui/page-hero";
 import {
+  getArchivedEvents,
   getAllOrders,
   getAllBoardMembers,
   getAllProducts,
@@ -22,6 +23,7 @@ const dashboardSections: DashboardSection[] = [
   "overview",
   "home",
   "events",
+  "event-archive",
   "registrants",
   "products",
   "board-members",
@@ -39,11 +41,27 @@ function normalizeDashboardSection(section?: string): DashboardSection {
 export async function DashboardPageContent({ mode = "admin", section }: DashboardPageContentProps) {
   const dictionary = getServerDictionary();
   const locale = getServerLocale();
-  const activeSection = mode === "moderator" ? "moderation" : normalizeDashboardSection(section);
-  const [stats, events, products, users, orders, articles, boardMembers, eventRegistrations, homeSettings] =
-    await Promise.all([
+  const activeSection =
+    mode === "moderator"
+      ? section === "event-archive"
+        ? "event-archive"
+        : "moderation"
+      : normalizeDashboardSection(section);
+  const [
+    stats,
+    events,
+    archivedEvents,
+    products,
+    users,
+    orders,
+    articles,
+    boardMembers,
+    eventRegistrations,
+    homeSettings
+  ] = await Promise.all([
     getDashboardStats(),
     getUpcomingEvents(8),
+    getArchivedEvents(),
     getAllProducts(),
     getAllUsers(),
     getAllOrders(),
@@ -63,6 +81,7 @@ export async function DashboardPageContent({ mode = "admin", section }: Dashboar
       <DashboardShell
         stats={stats}
         events={events}
+        archivedEvents={archivedEvents}
         products={products}
         users={users}
         orders={orders}

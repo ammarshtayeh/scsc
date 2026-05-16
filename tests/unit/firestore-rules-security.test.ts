@@ -28,6 +28,16 @@ describe("Firestore security rules coverage", () => {
     expect(eventBlock).toContain("request.resource.data.registeredCount == resource.data.registeredCount - 1");
   });
 
+  it("allows public reads for archived events but restricts writes to admins and moderators", () => {
+    const archiveBlock = rules.slice(
+      rules.indexOf("match /archivedEvents/{archivedEventId}"),
+      rules.indexOf("match /articles/{articleId}")
+    );
+
+    expect(archiveBlock).toContain("allow read: if true;");
+    expect(archiveBlock).toContain("allow create, update, delete: if isAdminOrModerator();");
+  });
+
   it("prevents normal users from changing role and QR security fields", () => {
     const userUpdateBlock = rules.slice(rules.indexOf("match /users/{userId}"), rules.indexOf("match /events/{eventId}"));
 

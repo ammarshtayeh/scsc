@@ -8,10 +8,23 @@ describe("Dashboard data query contracts", () => {
   it("normalizes event and user dates before rendering dashboard/client pages", () => {
     expect(queriesSource).toContain("function normalizeDateValue");
     expect(queriesSource).toContain("function normalizeEvent");
+    expect(queriesSource).toContain("function normalizeArchivedEvent");
     expect(queriesSource).toContain("function normalizeUserProfile");
     expect(queriesSource).toContain("function normalizeHomeSettings");
     expect(queriesSource).toContain("normalizeEvent(doc.id, doc.data())");
+    expect(queriesSource).toContain("normalizeArchivedEvent(doc.id, doc.data())");
     expect(queriesSource).toContain("normalizeUserProfile(doc.id, doc.data())");
+  });
+
+  it("loads archived events from a dedicated collection and sorts them by historical event date", () => {
+    const archiveBlock = queriesSource.slice(
+      queriesSource.indexOf("export async function getArchivedEvents"),
+      queriesSource.indexOf("export async function getAllProducts")
+    );
+
+    expect(archiveBlock).toContain("collection(\"archivedEvents\")");
+    expect(archiveBlock).toContain("normalizeArchivedEvent(doc.id, doc.data())");
+    expect(archiveBlock).toContain("new Date(b.eventDate || 0).getTime() - new Date(a.eventDate || 0).getTime()");
   });
 
   it("loads editable home page settings from a single site settings document", () => {

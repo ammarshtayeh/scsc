@@ -5,6 +5,7 @@ import { httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase/firebase";
 import type {
   Article,
+  ArchivedEvent,
   BoardMember,
   ContactMessagePayload,
   EventItem,
@@ -28,6 +29,7 @@ interface IssueMembershipQrInput {
 }
 
 type AdminEventInput = Partial<EventItem> & Pick<EventItem, "title" | "startsAt" | "capacity">;
+type AdminArchivedEventInput = Partial<ArchivedEvent> & Pick<ArchivedEvent, "title" | "eventDate">;
 type AdminProductInput = Partial<Product> & Pick<Product, "name" | "price" | "stock">;
 type AdminArticleInput = Partial<Article> & Pick<Article, "title" | "excerpt" | "category">;
 type AdminBoardMemberInput = Partial<BoardMember> & Pick<BoardMember, "name" | "role" | "year">;
@@ -98,6 +100,14 @@ export async function deleteEventAdmin(id: string, cleanupRegistrations = false)
     id,
     cleanupRegistrations
   });
+}
+
+export async function upsertArchivedEventAdmin(payload: AdminArchivedEventInput) {
+  return callAdminFunction<AdminArchivedEventInput>("upsertArchivedEvent", payload);
+}
+
+export async function deleteArchivedEventAdmin(id: string) {
+  return callAdminFunction<{ id: string }>("deleteArchivedEvent", { id });
 }
 
 export async function upsertProductAdmin(payload: AdminProductInput) {

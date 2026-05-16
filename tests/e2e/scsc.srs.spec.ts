@@ -17,6 +17,7 @@ const USER_EMAIL = process.env.USER_EMAIL;
 const USER_PASSWORD = process.env.USER_PASSWORD;
 const MOD_EMAIL = process.env.MOD_EMAIL;
 const MOD_PASSWORD = process.env.MOD_PASSWORD;
+const isLocalBaseUrl = /localhost|127\.0\.0\.1/.test(BASE_URL);
 
 function randomSuffix() {
   return `${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
@@ -97,6 +98,15 @@ test.describe("GROUP 1 — URL Integrity & Clean Navigation @url", () => {
     // WHY: the session endpoint must not create cookies for arbitrary client input.
     expect(invalid.status()).toBe(401);
     expect(invalid.headers()["set-cookie"]).toBeFalsy();
+  });
+
+  test.skip("moderator can access archived events management route @moderator", async ({ page }) => {
+    test.skip(!isLocalBaseUrl, "Archived events route verification is intended for the local app build.");
+    testRequiresModerator();
+    await loginAs(page, MOD_EMAIL!, MOD_PASSWORD!);
+    await goTo(page, "/moderator/event-archive");
+    await expect(page.locator("main")).toContainText(/events archive|past events|Ø£Ø±Ø´ÙŠÙ Ø§Ù„ÙØ¹Ø§Ù„ÙŠØ§Øª/i);
+    await expect(page.locator("main")).toContainText(/add archived event|Ø¥Ø¶Ø§ÙØ© ÙØ¹Ø§Ù„ÙŠØ© Ø³Ø§Ø¨Ù‚Ø©/i);
   });
 });
 
@@ -477,6 +487,54 @@ test.describe("GROUP 9 — Admin Dashboard @admin", () => {
 
     await goTo(page, "/events");
     await expect(page.locator("main")).not.toContainText(editedName);
+  });
+
+  test.skip("admin can create and remove an archived event that appears on the about page @admin @about", async ({
+    page
+  }) => {
+    test.skip(!isLocalBaseUrl, "Archived events CRUD verification is intended for the local app build.");
+    testRequiresAdmin();
+    const name = `qa-archive-${randomSuffix()}`;
+    const archiveDate = new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString().slice(0, 16);
+
+    await loginAs(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
+    await goTo(page, "/admin/event-archive");
+    await page.waitForSelector("form");
+
+    await page.getByPlaceholder(/event title|Ø¹Ù†ÙˆØ§Ù† Ø§Ù„ÙØ¹Ø§Ù„ÙŠØ©/i).fill(name);
+    await page.locator("input[type='datetime-local']").first().fill(archiveDate);
+    await page.getByPlaceholder(/venue|Ø§Ù„Ù…ÙƒØ§Ù†/i).first().fill("QA Archive Hall");
+    await page.getByPlaceholder(/tags|ÙˆØ³ÙˆÙ…/i).first().fill("Workshop");
+    await page
+      .getByPlaceholder(/excerpt|ÙˆØµÙ Ù‚ØµÙŠØ±|Ù…Ù„Ø®Øµ/i)
+      .first()
+      .fill("Archived event created by Playwright.");
+    await page
+      .getByPlaceholder(/description|Ø§Ù„ÙˆØµÙ/i)
+      .first()
+      .fill("Archived event description.");
+    await page
+      .getByLabel(/image urls, one per line|Ø±ÙˆØ§Ø¨Ø· Ø§Ù„ØµÙˆØ±ØŒ ÙƒÙ„ ØµÙˆØ±Ø© ÙÙŠ Ø³Ø·Ø±/i)
+      .fill("https://placehold.co/800x500");
+    await clickAndWaitNetworkIdle(
+      page,
+      page.getByRole("button", { name: /add archived event|Ø¥Ø¶Ø§ÙØ© ÙØ¹Ø§Ù„ÙŠØ© Ø³Ø§Ø¨Ù‚Ø©/i })
+    );
+
+    await goTo(page, "/about");
+    await expect(page.locator("main")).toContainText(name);
+
+    await goTo(page, "/admin/event-archive");
+    const archiveCard = page.locator("div").filter({ hasText: name }).first();
+    await expect(archiveCard).toBeVisible();
+    await maybeAcceptDialog(page);
+    await clickAndWaitNetworkIdle(
+      page,
+      archiveCard.getByRole("button", { name: /^delete$|^Ø­Ø°Ù$/i }).first()
+    );
+
+    await goTo(page, "/about");
+    await expect(page.locator("main")).not.toContainText(name);
   });
 
   test("admin can assign moderator role to user @admin", async ({ page }) => {

@@ -39,6 +39,23 @@ export interface EventItem {
   isFeatured?: boolean;
 }
 
+export interface ArchivedEvent {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  description: string[];
+  eventDate: string;
+  venue: string;
+  images: string[];
+  tags: string[];
+  createdAt?: string;
+  createdBy?: string;
+  createdByRole?: Role;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
 export interface EventRegistration {
   id: string;
   eventId: string;

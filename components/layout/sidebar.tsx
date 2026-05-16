@@ -18,12 +18,20 @@ export function Sidebar() {
   const dashboardLinks = isModeratorPanel
     ? [
         { href: "/moderator", label: dictionary.dashboard.overview },
+        {
+          href: "/moderator/event-archive#event-archive",
+          label: dictionary.localeName === "العربية" ? "أرشيف الفعاليات" : "Events archive"
+        },
         { href: "/moderator/moderation#moderation", label: dictionary.dashboard.moderation }
       ]
     : [
         { href: basePath, label: dictionary.dashboard.overview },
         { href: `${basePath}/home#home`, label: dictionary.nav.home },
         { href: `${basePath}/events#events`, label: dictionary.nav.events },
+        {
+          href: `${basePath}/event-archive#event-archive`,
+          label: dictionary.localeName === "العربية" ? "أرشيف الفعاليات" : "Events archive"
+        },
         { href: `${basePath}/registrants#registrants`, label: dictionary.dashboard.eventRegistrants || "Registrants" },
         { href: `${basePath}/products#products`, label: dictionary.dashboard.productManagement },
         { href: `${basePath}/board-members#board-members`, label: dictionary.dashboard.boardMembers || "Board" },

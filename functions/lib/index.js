@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.deleteOrder = exports.updateOrderStatus = exports.deleteUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.upsertHomeSettings = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
+exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.deleteOrder = exports.updateOrderStatus = exports.deleteUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.upsertHomeSettings = exports.deleteArchivedEvent = exports.upsertArchivedEvent = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
 const crypto_1 = require("crypto");
 const app_1 = require("firebase-admin/app");
 const auth_1 = require("firebase-admin/auth");
@@ -452,6 +452,47 @@ exports.deleteEvent = (0, https_1.onCall)(publicCallableOptions, async (request)
         await batch.commit();
     }
     await db.collection("events").doc(id).delete();
+    return { success: true };
+});
+exports.upsertArchivedEvent = (0, https_1.onCall)(publicCallableOptions, async (request) => {
+    var _a, _b, _c, _d;
+    requireAdminOrModerator(request);
+    const data = request.data;
+    const requestedId = cleanString(data.id);
+    const id = requestedId || db.collection("archivedEvents").doc().id;
+    const title = cleanString(data.title);
+    const eventDate = cleanString(data.eventDate);
+    const isNewRecord = !requestedId;
+    if (!title || !eventDate) {
+        throw new https_1.HttpsError("invalid-argument", "Archived event title and date are required.");
+    }
+    const payload = {
+        slug: cleanString(data.slug) || slugify(title) || id,
+        title,
+        excerpt: cleanString(data.excerpt),
+        description: cleanStringArray(data.description),
+        eventDate,
+        venue: cleanString(data.venue, "TBA"),
+        images: cleanImageStringArray(data.images),
+        tags: cleanStringArray(data.tags),
+        updatedAt: new Date().toISOString(),
+        updatedBy: ((_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid) || "unknown"
+    };
+    if (isNewRecord) {
+        payload.createdAt = new Date().toISOString();
+        payload.createdBy = ((_b = request.auth) === null || _b === void 0 ? void 0 : _b.uid) || "unknown";
+        payload.createdByRole = ((_d = (_c = request.auth) === null || _c === void 0 ? void 0 : _c.token) === null || _d === void 0 ? void 0 : _d.role) || "unknown";
+    }
+    await db.collection("archivedEvents").doc(id).set(payload, { merge: true });
+    return { success: true, id };
+});
+exports.deleteArchivedEvent = (0, https_1.onCall)(publicCallableOptions, async (request) => {
+    requireAdminOrModerator(request);
+    const { id } = request.data;
+    if (!id) {
+        throw new https_1.HttpsError("invalid-argument", "Archived event ID is required.");
+    }
+    await db.collection("archivedEvents").doc(id).delete();
     return { success: true };
 });
 exports.upsertHomeSettings = (0, https_1.onCall)(publicCallableOptions, async (request) => {

@@ -9,6 +9,7 @@ import {
   Download,
   ExternalLink,
   Home,
+  Images,
   ImageUp,
   LinkIcon,
   Package,
@@ -30,6 +31,7 @@ import { SmartImage } from "@/components/ui/smart-image";
 import { useToast } from "@/components/ui/toast";
 import { STORE_CURRENCY } from "@/lib/constants";
 import {
+  deleteArchivedEventAdmin,
   deleteEventAdmin,
   deleteArticleAdmin,
   deleteBoardMemberAdmin,
@@ -41,6 +43,7 @@ import {
   setEventRegistrationCheckInAdmin,
   updateOrderStatusAdmin,
   updateUserAdmin,
+  upsertArchivedEventAdmin,
   upsertArticleAdmin,
   upsertBoardMemberAdmin,
   upsertEventAdmin,
@@ -66,6 +69,7 @@ import {
 } from "@/lib/utils";
 import type {
   Article,
+  ArchivedEvent,
   ArticleCategory,
   BoardMember,
   DashboardStats,
@@ -85,6 +89,7 @@ export type DashboardSection =
   | "overview"
   | "home"
   | "events"
+  | "event-archive"
   | "registrants"
   | "products"
   | "board-members"
@@ -183,6 +188,32 @@ function normalizeDashboardBoardMember(id: string, data: Record<string, unknown>
   };
 }
 
+function normalizeDashboardArchivedEvent(id: string, data: Record<string, unknown>): ArchivedEvent {
+  return {
+    id,
+    slug: typeof data.slug === "string" && data.slug.trim() ? data.slug.trim() : id,
+    title:
+      typeof data.title === "string" && data.title.trim()
+        ? data.title.trim()
+        : "Archived event",
+    excerpt: typeof data.excerpt === "string" ? data.excerpt : "",
+    description: Array.isArray(data.description)
+      ? data.description.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    eventDate: normalizeDashboardDateValue(data.eventDate),
+    venue: typeof data.venue === "string" && data.venue.trim() ? data.venue.trim() : "TBA",
+    images: sanitizeImageSources(data.images),
+    tags: Array.isArray(data.tags)
+      ? data.tags.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    createdAt: normalizeDashboardDateValue(data.createdAt) || undefined,
+    createdBy: typeof data.createdBy === "string" ? data.createdBy : undefined,
+    createdByRole: typeof data.createdByRole === "string" ? data.createdByRole as Role : undefined,
+    updatedAt: normalizeDashboardDateValue(data.updatedAt) || undefined,
+    updatedBy: typeof data.updatedBy === "string" ? data.updatedBy : undefined
+  };
+}
+
 function normalizeDashboardDateValue(value: unknown) {
   if (!value) {
     return "";
@@ -262,7 +293,10 @@ function cleanFileName(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-async function uploadDashboardImage(folder: "events" | "products" | "board" | "home", file: File) {
+async function uploadDashboardImage(
+  folder: "events" | "archived-events" | "products" | "board" | "home",
+  file: File
+) {
   const safeName = cleanFileName(file.name) || "image";
   const extension = safeName.includes(".") ? "" : ".jpg";
   return uploadFileToStorage(
@@ -312,6 +346,7 @@ function DashboardFieldLabel({
 export function DashboardShell({
   stats,
   events,
+  archivedEvents,
   products,
   users,
   orders,
@@ -326,6 +361,7 @@ export function DashboardShell({
 }: {
   stats: DashboardStats;
   events: EventItem[];
+  archivedEvents: ArchivedEvent[];
   products: Product[];
   users: UserProfile[];
   orders: Order[];
@@ -380,11 +416,13 @@ export function DashboardShell({
   const [localCounts, setLocalCounts] = useState({
     products: products.length,
     events: events.length,
+    archivedEvents: archivedEvents.length,
     users: users.length,
     orders: orders.length,
     boardMembers: boardMembers.length,
     pendingArticles: articles.filter((article) => !article.approved).length
   });
+  const [localArchivedEvents, setLocalArchivedEvents] = useState(archivedEvents);
   const [localProducts, setLocalProducts] = useState(products);
   const [localBoardMembers, setLocalBoardMembers] = useState(boardMembers);
   const [eventForm, setEventForm] = useState({
@@ -398,6 +436,16 @@ export function DashboardShell({
     tags: ""
   });
   const [eventImageFile, setEventImageFile] = useState<File | null>(null);
+  const [archivedEventForm, setArchivedEventForm] = useState({
+    title: "",
+    eventDate: "",
+    venue: "",
+    excerpt: "",
+    description: "",
+    tags: "",
+    images: ""
+  });
+  const [archivedEventImageFiles, setArchivedEventImageFiles] = useState<File[]>([]);
   const [productForm, setProductForm] = useState({
     name: "",
     price: "10",
@@ -608,7 +656,8 @@ export function DashboardShell({
   const currentBoardYear = String(new Date().getFullYear());
   const showManagementSections = mode === "admin";
   const showOverview = showManagementSections && activeSection === "overview";
-  const showModerationSection = mode === "moderator" || activeSection === "moderation";
+  const showModerationSection = activeSection === "moderation";
+  const showArchiveSection = activeSection === "event-archive";
   const showAdminSection = (section: DashboardSection) =>
     showManagementSections && activeSection === section;
   const adminLabels =
@@ -622,6 +671,16 @@ export function DashboardShell({
           checkIn: "تسجيل حضور",
           undoCheckIn: "إلغاء الحضور",
           removeRegistration: "إزالة التسجيل",
+          eventArchive: "أرشيف الفعاليات السابقة",
+          addArchivedEvent: "إضافة فعالية سابقة",
+          archivedEventGuidance:
+            "هذا القسم مخصص لإضافة الفعاليات السابقة مع أكثر من صورة لكل فعالية. يمكن للمدير والمشرف تنظيم الأرشيف بسهولة دون أي معرفة برمجية.",
+          archivedEventDate: "تاريخ الفعالية السابقة",
+          archivedEventImages: "روابط الصور، كل صورة في سطر",
+          archivedEventImagesHint:
+            "أضيفوا روابط الصور أو ارفعوا عدة صور من الجهاز، وسيتم حفظها كلها داخل نفس الفعالية.",
+          archivedEventDeleteConfirm: "هل تريد حذف هذه الفعالية من الأرشيف؟",
+          archivedEventPhotoCount: "عدد الصور",
           boardMembers: "إدارة الهيئة الإدارية",
           addBoardMember: "إضافة عضو هيئة",
           articles: "إنشاء وتعديل المقالات",
@@ -655,6 +714,16 @@ export function DashboardShell({
           checkIn: "Check in",
           undoCheckIn: "Undo check-in",
           removeRegistration: "Remove registration",
+          eventArchive: "Past events archive",
+          addArchivedEvent: "Add archived event",
+          archivedEventGuidance:
+            "Use this section to add previous events with multiple photos per event. Admins and moderators can keep the archive tidy without touching code.",
+          archivedEventDate: "Past event date",
+          archivedEventImages: "Image URLs, one per line",
+          archivedEventImagesHint:
+            "Paste image URLs or upload multiple files from the device and they will all be saved inside the same archived event.",
+          archivedEventDeleteConfirm: "Delete this archived event?",
+          archivedEventPhotoCount: "Photo count",
           boardMembers: "Board members",
           addBoardMember: "Add board member",
           articles: "Create and edit articles",
@@ -692,6 +761,19 @@ export function DashboardShell({
     setLocalProducts(nextProducts);
     setLocalCounts((current) => ({ ...current, products: nextProducts.length }));
   }, [products]);
+  const refreshClientArchivedEvents = useCallback(async () => {
+    if (!db) {
+      setLocalArchivedEvents(archivedEvents);
+      return;
+    }
+
+    const snapshot = await getDocs(query(collection(db, "archivedEvents"), orderBy("eventDate", "desc")));
+    const nextArchivedEvents = snapshot.docs.map((entry) =>
+      normalizeDashboardArchivedEvent(entry.id, entry.data() as Record<string, unknown>)
+    );
+    setLocalArchivedEvents(nextArchivedEvents);
+    setLocalCounts((current) => ({ ...current, archivedEvents: nextArchivedEvents.length }));
+  }, [archivedEvents]);
   const refreshClientBoardMembers = useCallback(async () => {
     if (!db) {
       setLocalBoardMembers(boardMembers);
@@ -721,6 +803,7 @@ export function DashboardShell({
       usersSnapshot,
       upcomingEventsSnapshot,
       totalEventsSnapshot,
+      archivedEventsSnapshot,
       ordersSnapshot,
       productSnapshot,
       boardMembersSnapshot,
@@ -729,6 +812,7 @@ export function DashboardShell({
       getDocs(collection(db, "users")),
       getDocs(collection(db, "events")),
       getDocs(collection(db, "events")),
+      getDocs(collection(db, "archivedEvents")),
       getDocs(collection(db, "orders")),
       getDocs(collection(db, "products")),
       getDocs(collection(db, "boardMembers")),
@@ -752,6 +836,7 @@ export function DashboardShell({
     setLocalCounts({
       products: productSnapshot.docs.length,
       events: totalEventsSnapshot.docs.length,
+      archivedEvents: archivedEventsSnapshot.docs.length,
       users: usersSnapshot.docs.length,
       orders: ordersSnapshot.docs.length,
       boardMembers: boardMembersSnapshot.docs.length,
@@ -764,14 +849,16 @@ export function DashboardShell({
     setLocalCounts({
       products: products.length,
       events: events.length,
+      archivedEvents: archivedEvents.length,
       users: users.length,
       orders: orders.length,
       boardMembers: boardMembers.length,
       pendingArticles: articles.filter((article) => !article.approved).length
     });
+    setLocalArchivedEvents(archivedEvents);
     setLocalProducts(products);
     setLocalBoardMembers(boardMembers);
-  }, [articles, boardMembers, events, orders, products, stats, users]);
+  }, [archivedEvents, articles, boardMembers, events, orders, products, stats, users]);
 
   useEffect(() => {
     if (activeSection !== "products") {
@@ -785,15 +872,26 @@ export function DashboardShell({
     if (activeSection === "overview") {
       void Promise.all([
         refreshClientStats(),
+        refreshClientArchivedEvents(),
         refreshClientProducts(),
         refreshClientBoardMembers()
       ]).catch(() => undefined);
     }
 
+    if (activeSection === "event-archive") {
+      void refreshClientArchivedEvents().catch(() => undefined);
+    }
+
     if (activeSection === "board-members") {
       void refreshClientBoardMembers().catch(() => undefined);
     }
-  }, [activeSection, refreshClientBoardMembers, refreshClientProducts, refreshClientStats]);
+  }, [
+    activeSection,
+    refreshClientArchivedEvents,
+    refreshClientBoardMembers,
+    refreshClientProducts,
+    refreshClientStats
+  ]);
 
   const registrationsByEvent = useMemo(() => {
     return eventRegistrations.reduce<Record<string, EventRegistration[]>>((acc, registration) => {
@@ -835,6 +933,12 @@ export function DashboardShell({
         icon: CalendarDays
       },
       {
+        href: "/admin/event-archive",
+        title: adminLabels.eventArchive,
+        metric: localCounts.archivedEvents,
+        icon: Images
+      },
+      {
         href: "/admin/users",
         title: labels.userManagement,
         metric: localCounts.users,
@@ -861,6 +965,7 @@ export function DashboardShell({
     ],
     [
       adminLabels.boardMembers,
+      adminLabels.eventArchive,
       adminLabels.homeSettings,
       editableHomeSlides.length,
       labels,
@@ -916,8 +1021,8 @@ export function DashboardShell({
                     </h2>
                     <p className={`mt-2 text-sm ${dashboardMutedTextClass}`}>
                       {locale === "ar"
-                        ? "اختصارات مباشرة لإدارة المنتجات، المستخدمين، الفعاليات، الطلبات، والهيئة الإدارية."
-                        : "Fast access to products, users, events, orders, board members, and moderation."}
+                        ? "اختصارات مباشرة لإدارة المنتجات، الفعاليات القادمة، أرشيف الفعاليات، المستخدمين، الطلبات، والهيئة الإدارية."
+                        : "Fast access to products, live events, archived events, users, orders, board members, and moderation."}
                     </p>
                   </div>
                   <Badge>{locale === "ar" ? "صلاحيات كاملة" : "Full admin controls"}</Badge>
@@ -1721,6 +1826,375 @@ export function DashboardShell({
                         {adminLabels.featured}
                       </label>
                       <Button loading={loadingAction === `edit-product-${product.id}`} type="submit">
+                        <Save className="h-4 w-4" />
+                        {adminLabels.saveChanges}
+                      </Button>
+                    </form>
+                  </details>
+                </div>
+              ))}
+            </div>
+          </Card>
+          ) : null}
+
+          {showArchiveSection ? (
+          <Card id="event-archive" className="space-y-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h2 className="font-heading text-2xl font-semibold text-brand-primary">
+                  {adminLabels.eventArchive}
+                </h2>
+                <p className={`mt-2 max-w-3xl text-sm leading-7 ${dashboardMutedTextClass}`}>
+                  {adminLabels.archivedEventGuidance}
+                </p>
+              </div>
+              <Badge>
+                {mode === "moderator"
+                  ? locale === "ar"
+                    ? "متاح للمشرف"
+                    : "Moderator access"
+                  : locale === "ar"
+                    ? "متاح للمدير والمشرف"
+                    : "Admin and moderator access"}
+              </Badge>
+            </div>
+            <form
+              className="grid gap-3 md:grid-cols-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void runAction("create-archived-event", async () => {
+                  const uploadedImages = await Promise.all(
+                    archivedEventImageFiles.map((file) =>
+                      uploadDashboardImage("archived-events", file)
+                    )
+                  );
+
+                  await upsertArchivedEventAdmin({
+                    title: archivedEventForm.title,
+                    eventDate: archivedEventForm.eventDate,
+                    venue: archivedEventForm.venue,
+                    excerpt: archivedEventForm.excerpt,
+                    description: splitLines(archivedEventForm.description),
+                    tags: splitCsv(archivedEventForm.tags),
+                    images: [...splitLines(archivedEventForm.images), ...uploadedImages]
+                  });
+
+                  setArchivedEventForm({
+                    title: "",
+                    eventDate: "",
+                    venue: "",
+                    excerpt: "",
+                    description: "",
+                    tags: "",
+                    images: ""
+                  });
+                  setArchivedEventImageFiles([]);
+                  await refreshClientArchivedEvents();
+                });
+              }}
+            >
+              <DashboardFieldLabel label={labels.eventTitlePlaceholder}>
+                <input
+                  required
+                  value={archivedEventForm.title}
+                  onChange={(event) =>
+                    setArchivedEventForm((current) => ({ ...current, title: event.target.value }))
+                  }
+                  placeholder={labels.eventTitlePlaceholder}
+                  className={dashboardFieldClass}
+                />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={adminLabels.archivedEventDate}>
+                <input
+                  required
+                  type="datetime-local"
+                  value={archivedEventForm.eventDate}
+                  onChange={(event) =>
+                    setArchivedEventForm((current) => ({
+                      ...current,
+                      eventDate: event.target.value
+                    }))
+                  }
+                  className={dashboardFieldClass}
+                />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={labels.eventVenuePlaceholder}>
+                <input
+                  value={archivedEventForm.venue}
+                  onChange={(event) =>
+                    setArchivedEventForm((current) => ({ ...current, venue: event.target.value }))
+                  }
+                  placeholder={labels.eventVenuePlaceholder}
+                  className={dashboardFieldClass}
+                />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={labels.eventTagsPlaceholder}>
+                <input
+                  value={archivedEventForm.tags}
+                  onChange={(event) =>
+                    setArchivedEventForm((current) => ({ ...current, tags: event.target.value }))
+                  }
+                  placeholder={labels.eventTagsPlaceholder}
+                  className={dashboardFieldClass}
+                />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={labels.eventExcerptPlaceholder} className="md:col-span-2">
+                <textarea
+                  value={archivedEventForm.excerpt}
+                  onChange={(event) =>
+                    setArchivedEventForm((current) => ({ ...current, excerpt: event.target.value }))
+                  }
+                  placeholder={labels.eventExcerptPlaceholder}
+                  className={dashboardTextAreaClass}
+                />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel
+                label={labels.eventDescriptionPlaceholder}
+                className="md:col-span-2"
+              >
+                <textarea
+                  value={archivedEventForm.description}
+                  onChange={(event) =>
+                    setArchivedEventForm((current) => ({
+                      ...current,
+                      description: event.target.value
+                    }))
+                  }
+                  placeholder={labels.eventDescriptionPlaceholder}
+                  className={dashboardTextAreaClass}
+                />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel
+                label={adminLabels.archivedEventImages}
+                className="md:col-span-2"
+              >
+                <textarea
+                  value={archivedEventForm.images}
+                  onChange={(event) =>
+                    setArchivedEventForm((current) => ({ ...current, images: event.target.value }))
+                  }
+                  placeholder="https://.../image-1.jpg"
+                  className={dashboardTextAreaClass}
+                />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel
+                label={imageLabels.uploadMany}
+                className="md:col-span-2"
+              >
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(event) =>
+                    setArchivedEventImageFiles(Array.from(event.target.files || []))
+                  }
+                  className={dashboardFieldClass}
+                />
+                <p className={`mt-2 text-xs leading-5 ${dashboardMutedTextClass}`}>
+                  {adminLabels.archivedEventImagesHint}
+                  {archivedEventImageFiles.length
+                    ? ` ${imageLabels.selected}: ${archivedEventImageFiles
+                        .map((file) => file.name)
+                        .join(", ")}`
+                    : ""}
+                </p>
+              </DashboardFieldLabel>
+              <Button
+                loading={loadingAction === "create-archived-event"}
+                type="submit"
+                className="md:col-span-2"
+              >
+                <Save className="h-4 w-4" />
+                {adminLabels.addArchivedEvent}
+              </Button>
+            </form>
+
+            <div className="grid gap-4">
+              {localArchivedEvents.map((item) => (
+                <div key={item.id} className={dashboardPanelClass}>
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div className="flex gap-4">
+                      <div className="relative h-24 w-24 overflow-hidden rounded-2xl bg-slate-100 dark:bg-white/8">
+                        {item.images[0] ? (
+                          <SmartImage
+                            src={item.images[0]}
+                            alt={item.title}
+                            fill
+                            className="object-cover"
+                            sizes="96px"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center">
+                            <Images className="h-7 w-7 text-slate-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-brand-primary">{item.title}</p>
+                        <p className={`text-sm ${dashboardMutedTextClass}`}>
+                          {formatDateTime(item.eventDate, locale)} - {item.venue}
+                        </p>
+                        <p className={`mt-1 text-sm ${dashboardMutedTextClass}`}>
+                          {adminLabels.archivedEventPhotoCount}: {formatNumber(item.images.length, locale)}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      loading={loadingAction === `delete-archived-event-${item.id}`}
+                      onClick={() => {
+                        if (!window.confirm(adminLabels.archivedEventDeleteConfirm)) {
+                          return;
+                        }
+
+                        void runAction(`delete-archived-event-${item.id}`, async () => {
+                          await deleteArchivedEventAdmin(item.id);
+                          await refreshClientArchivedEvents();
+                        });
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {labels.delete}
+                    </Button>
+                  </div>
+
+                  {item.excerpt ? (
+                    <p className={`mt-4 text-sm leading-7 ${dashboardMutedTextClass}`}>
+                      {item.excerpt}
+                    </p>
+                  ) : null}
+
+                  {item.images.length ? (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                      {item.images.slice(0, 4).map((image, index) => (
+                        <div
+                          key={`${item.id}-preview-${index}`}
+                          className="relative h-24 overflow-hidden rounded-2xl bg-slate-100 dark:bg-white/8"
+                        >
+                          <SmartImage
+                            src={image}
+                            alt={`${item.title} ${index + 1}`}
+                            fill
+                            className="object-cover"
+                            sizes="160px"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <details className={`mt-4 ${dashboardSubtlePanelClass}`}>
+                    <summary className="cursor-pointer text-sm font-semibold text-brand-primary">
+                      {adminLabels.edit}
+                    </summary>
+                    <form
+                      className="mt-4 grid gap-3 md:grid-cols-2"
+                      onSubmit={(submitEvent) => {
+                        submitEvent.preventDefault();
+                        const formData = new FormData(submitEvent.currentTarget);
+                        void runAction(`edit-archived-event-${item.id}`, async () => {
+                          const removedImages = new Set(getTexts(formData, "removeImages"));
+                          const imageUrls = splitLines(getText(formData, "images")).filter(
+                            (image) => !removedImages.has(image)
+                          );
+                          const imageFiles = formData
+                            .getAll("imageFiles")
+                            .filter(
+                              (entry): entry is File => entry instanceof File && entry.size > 0
+                            );
+                          const uploadedImages = await Promise.all(
+                            imageFiles.map((file) => uploadDashboardImage("archived-events", file))
+                          );
+
+                          await upsertArchivedEventAdmin({
+                            id: item.id,
+                            title: getText(formData, "title"),
+                            eventDate: getText(formData, "eventDate"),
+                            venue: getText(formData, "venue"),
+                            excerpt: getText(formData, "excerpt"),
+                            description: splitLines(getText(formData, "description")),
+                            tags: splitCsv(getText(formData, "tags")),
+                            images: [...imageUrls, ...uploadedImages]
+                          });
+                          await refreshClientArchivedEvents();
+                        });
+                      }}
+                    >
+                      <input
+                        name="title"
+                        required
+                        defaultValue={item.title}
+                        className={dashboardEditFieldClass}
+                      />
+                      <input
+                        name="eventDate"
+                        required
+                        type="datetime-local"
+                        defaultValue={toInputDateTime(item.eventDate)}
+                        className={dashboardEditFieldClass}
+                      />
+                      <input
+                        name="venue"
+                        defaultValue={item.venue}
+                        className={dashboardEditFieldClass}
+                      />
+                      <input
+                        name="tags"
+                        defaultValue={item.tags.join(", ")}
+                        className={dashboardEditFieldClass}
+                      />
+                      <textarea
+                        name="excerpt"
+                        defaultValue={item.excerpt}
+                        className={`${dashboardEditTextAreaClass} md:col-span-2`}
+                      />
+                      <textarea
+                        name="description"
+                        defaultValue={item.description.join("\n")}
+                        className={`${dashboardEditTextAreaClass} md:col-span-2`}
+                      />
+                      <textarea
+                        name="images"
+                        defaultValue={item.images.join("\n")}
+                        className={`${dashboardEditTextAreaClass} md:col-span-2`}
+                      />
+                      {item.images.length ? (
+                        <div className="grid gap-3 md:col-span-2 sm:grid-cols-2 lg:grid-cols-3">
+                          {item.images.map((image, index) => (
+                            <label
+                              key={`${item.id}-remove-${index}`}
+                              className="space-y-2 rounded-2xl border border-brand-primary/10 bg-white/70 p-3 dark:border-white/10 dark:bg-white/5"
+                            >
+                              <div className="relative h-24 overflow-hidden rounded-xl bg-slate-100 dark:bg-white/8">
+                                <SmartImage
+                                  src={image}
+                                  alt={`${item.title} ${index + 1}`}
+                                  fill
+                                  className="object-cover"
+                                  sizes="160px"
+                                />
+                              </div>
+                              <span className="flex items-center gap-2 text-sm text-slate-600 dark:text-brand-mist">
+                                <input name="removeImages" type="checkbox" value={image} />
+                                {locale === "ar" ? "إزالة هذه الصورة" : "Remove this photo"}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      ) : null}
+                      <input
+                        name="imageFiles"
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        className={`${dashboardEditFieldClass} md:col-span-2`}
+                      />
+                      <Button
+                        loading={loadingAction === `edit-archived-event-${item.id}`}
+                        type="submit"
+                        className="md:col-span-2"
+                      >
                         <Save className="h-4 w-4" />
                         {adminLabels.saveChanges}
                       </Button>

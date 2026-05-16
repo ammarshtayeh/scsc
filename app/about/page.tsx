@@ -1,9 +1,9 @@
-import { BoardMembers } from "@/components/sections/board-members";
+import { EventArchive } from "@/components/sections/event-archive";
 import { OrganizationStructure } from "@/components/sections/organization-structure";
 import { Card } from "@/components/ui/card";
 import { PageHero } from "@/components/ui/page-hero";
 import { SmartImage } from "@/components/ui/smart-image";
-import { getBoardMembersByYear } from "@/lib/firebase/queries";
+import { getArchivedEvents, getBoardMembersByYear } from "@/lib/firebase/queries";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { CheckCircle2, UsersRound } from "lucide-react";
 
@@ -11,7 +11,10 @@ export const dynamic = "force-dynamic";
 
 export default async function AboutPage() {
   const dictionary = getServerDictionary();
-  const groupedMembers = await getBoardMembersByYear();
+  const [groupedMembers, archivedEvents] = await Promise.all([
+    getBoardMembersByYear(),
+    getArchivedEvents()
+  ]);
   const managedBoardMembers = Object.values(groupedMembers).flat();
 
   return (
@@ -120,7 +123,7 @@ export default async function AboutPage() {
         members={managedBoardMembers}
       />
 
-      <BoardMembers groupedMembers={groupedMembers} />
+      <EventArchive initialEvents={archivedEvents} />
     </>
   );
 }

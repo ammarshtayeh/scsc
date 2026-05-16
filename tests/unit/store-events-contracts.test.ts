@@ -146,6 +146,28 @@ describe("Events enterprise QA contracts", () => {
     expect(deleteEventBlock).toContain("FieldValue.arrayRemove(id)");
   });
 
+  it("exposes archived events management with multi-image uploads for admin and moderator workflows", () => {
+    const archiveBlock = dashboardSource.slice(
+      dashboardSource.indexOf("<Card id=\"event-archive\""),
+      dashboardSource.indexOf("<Card id=\"board-members\"")
+    );
+    const archiveFunctionsBlock = functionsSource.slice(
+      functionsSource.indexOf("export const upsertArchivedEvent"),
+      functionsSource.indexOf("export const upsertHomeSettings")
+    );
+
+    expect(archiveBlock).toContain("upsertArchivedEventAdmin");
+    expect(archiveBlock).toContain("deleteArchivedEventAdmin(item.id)");
+    expect(archiveBlock).toContain("uploadDashboardImage(\"archived-events\", file)");
+    expect(archiveBlock).toContain("archivedEventImageFiles.map((file)");
+    expect(archiveBlock).toContain("images: [...splitLines(archivedEventForm.images), ...uploadedImages]");
+    expect(archiveBlock).toContain("getAll(\"imageFiles\")");
+    expect(archiveBlock).toContain("getTexts(formData, \"removeImages\")");
+    expect(archiveFunctionsBlock).toContain("requireAdminOrModerator(request);");
+    expect(archiveFunctionsBlock).toContain("if (!title || !eventDate)");
+    expect(archiveFunctionsBlock).toContain("images: cleanImageStringArray(data.images)");
+  });
+
   it("exposes admin home page slider management and protects it with admin callable auth", () => {
     const homeBlock = dashboardSource.slice(
       dashboardSource.indexOf("<Card id=\"home\""),

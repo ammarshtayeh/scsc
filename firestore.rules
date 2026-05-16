@@ -74,6 +74,11 @@ service cloud.firestore {
       }
     }
 
+    match /archivedEvents/{archivedEventId} {
+      allow read: if true;
+      allow create, update, delete: if isAdminOrModerator();
+    }
+
     match /articles/{articleId} {
       allow read: if resource.data.approved == true || isAdminOrModerator();
       allow create, update, delete: if isAdminOrModerator();

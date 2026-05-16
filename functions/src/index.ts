@@ -625,6 +625,55 @@ export const deleteEvent = onCall(publicCallableOptions, async (request) => {
   return { success: true };
 });
 
+export const upsertArchivedEvent = onCall(publicCallableOptions, async (request) => {
+  requireAdminOrModerator(request);
+
+  const data = request.data as Record<string, unknown>;
+  const requestedId = cleanString(data.id);
+  const id = requestedId || db.collection("archivedEvents").doc().id;
+  const title = cleanString(data.title);
+  const eventDate = cleanString(data.eventDate);
+  const isNewRecord = !requestedId;
+
+  if (!title || !eventDate) {
+    throw new HttpsError("invalid-argument", "Archived event title and date are required.");
+  }
+
+  const payload: Record<string, unknown> = {
+    slug: cleanString(data.slug) || slugify(title) || id,
+    title,
+    excerpt: cleanString(data.excerpt),
+    description: cleanStringArray(data.description),
+    eventDate,
+    venue: cleanString(data.venue, "TBA"),
+    images: cleanImageStringArray(data.images),
+    tags: cleanStringArray(data.tags),
+    updatedAt: new Date().toISOString(),
+    updatedBy: request.auth?.uid || "unknown"
+  };
+
+  if (isNewRecord) {
+    payload.createdAt = new Date().toISOString();
+    payload.createdBy = request.auth?.uid || "unknown";
+    payload.createdByRole = request.auth?.token?.role || "unknown";
+  }
+
+  await db.collection("archivedEvents").doc(id).set(payload, { merge: true });
+  return { success: true, id };
+});
+
+export const deleteArchivedEvent = onCall(publicCallableOptions, async (request) => {
+  requireAdminOrModerator(request);
+  const { id } = request.data as { id?: string };
+
+  if (!id) {
+    throw new HttpsError("invalid-argument", "Archived event ID is required.");
+  }
+
+  await db.collection("archivedEvents").doc(id).delete();
+  return { success: true };
+});
+
 export const upsertHomeSettings = onCall(publicCallableOptions, async (request) => {
   requireAdmin(request);
 

@@ -6,6 +6,7 @@ import { adminDb, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { sanitizeImageSource, sanitizeImageSources } from "@/lib/utils";
 import type {
   Article,
+  ArchivedEvent,
   BoardMember,
   DashboardStats,
   EventRegistration,
@@ -111,6 +112,25 @@ function normalizeEvent(id: string, data: Record<string, unknown>) {
     tags: cleanStringArray(data.tags),
     isFeatured: Boolean(data.isFeatured)
   } satisfies EventItem;
+}
+
+function normalizeArchivedEvent(id: string, data: Record<string, unknown>) {
+  return {
+    id,
+    slug: cleanString(data.slug, id) || id,
+    title: cleanString(data.title, "Untitled archived event"),
+    excerpt: cleanString(data.excerpt),
+    description: cleanStringArray(data.description),
+    eventDate: normalizeDateValue(data.eventDate),
+    venue: cleanString(data.venue, "TBA"),
+    images: sanitizeImageSources(data.images),
+    tags: cleanStringArray(data.tags),
+    createdAt: normalizeDateValue(data.createdAt) || undefined,
+    createdBy: cleanString(data.createdBy) || undefined,
+    createdByRole: cleanString(data.createdByRole) as ArchivedEvent["createdByRole"],
+    updatedAt: normalizeDateValue(data.updatedAt) || undefined,
+    updatedBy: cleanString(data.updatedBy) || undefined
+  } satisfies ArchivedEvent;
 }
 
 function normalizeUserProfile(id: string, data: Record<string, unknown>) {
@@ -295,6 +315,19 @@ export async function getEventBySlug(slug: string): Promise<EventItem | null> {
 
   const doc = snapshot.docs[0];
   return normalizeEvent(doc.id, doc.data());
+}
+
+export async function getArchivedEvents(limit?: number): Promise<ArchivedEvent[]> {
+  if (!isFirebaseAdminConfigured || !adminDb) {
+    return [];
+  }
+
+  const snapshot = await adminDb.collection("archivedEvents").get();
+  const archivedEvents = snapshot.docs
+    .map((doc) => normalizeArchivedEvent(doc.id, doc.data()))
+    .sort((a, b) => new Date(b.eventDate || 0).getTime() - new Date(a.eventDate || 0).getTime());
+
+  return typeof limit === "number" ? archivedEvents.slice(0, limit) : archivedEvents;
 }
 
 export async function getAllProducts(): Promise<Product[]> {
