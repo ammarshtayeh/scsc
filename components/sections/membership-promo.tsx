@@ -32,7 +32,10 @@ export function MembershipPromo() {
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-      <Card className="overflow-hidden bg-gradient-to-br from-brand-primary to-brand-primary/90 p-0 text-white shadow-elevated">
+      <Card
+        surface="none"
+        className="overflow-hidden bg-gradient-to-br from-brand-primary via-[#11488d] to-[#0b3b78] p-0 text-white shadow-elevated"
+      >
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
           <motion.div 
             className="p-6 sm:p-12"
