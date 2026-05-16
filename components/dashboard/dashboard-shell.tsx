@@ -65,7 +65,8 @@ import {
   formatDateTime,
   formatNumber,
   sanitizeImageSource,
-  sanitizeImageSources
+  sanitizeImageSources,
+  sanitizeVideoSource
 } from "@/lib/utils";
 import type {
   Article,
@@ -211,6 +212,133 @@ function normalizeDashboardArchivedEvent(id: string, data: Record<string, unknow
     createdByRole: typeof data.createdByRole === "string" ? data.createdByRole as Role : undefined,
     updatedAt: normalizeDashboardDateValue(data.updatedAt) || undefined,
     updatedBy: typeof data.updatedBy === "string" ? data.updatedBy : undefined
+  };
+}
+
+function normalizeDashboardUser(id: string, data: Record<string, unknown>): UserProfile {
+  return {
+    id,
+    membershipId:
+      typeof data.membershipId === "string" && data.membershipId.trim()
+        ? data.membershipId.trim()
+        : undefined,
+    displayName:
+      typeof data.displayName === "string" && data.displayName.trim()
+        ? data.displayName.trim()
+        : typeof data.email === "string" && data.email.includes("@")
+          ? data.email.split("@")[0]
+          : "Association Member",
+    email: typeof data.email === "string" ? data.email.trim() : "",
+    role: (typeof data.role === "string" ? data.role : "user") as Role,
+    phone: typeof data.phone === "string" && data.phone.trim() ? data.phone.trim() : undefined,
+    company: typeof data.company === "string" && data.company.trim() ? data.company.trim() : undefined,
+    photoURL: typeof data.photoURL === "string" && data.photoURL.trim() ? data.photoURL.trim() : undefined,
+    membershipStatus:
+      (typeof data.membershipStatus === "string" ? data.membershipStatus : "active") as UserProfile["membershipStatus"],
+    membershipExpiresAt:
+      typeof data.membershipExpiresAt === "string" && data.membershipExpiresAt.trim()
+        ? data.membershipExpiresAt.trim()
+        : undefined,
+    joinedAt:
+      typeof data.joinedAt === "string" && data.joinedAt.trim()
+        ? data.joinedAt.trim()
+        : new Date(0).toISOString(),
+    qrToken: typeof data.qrToken === "string" && data.qrToken.trim() ? data.qrToken.trim() : undefined,
+    savedArticleIds: Array.isArray(data.savedArticleIds)
+      ? data.savedArticleIds.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    registeredEventIds: Array.isArray(data.registeredEventIds)
+      ? data.registeredEventIds.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    activeQrSessionId:
+      typeof data.activeQrSessionId === "string" ? data.activeQrSessionId : null,
+    activeQrSessionExpiresAt:
+      typeof data.activeQrSessionExpiresAt === "string" ? data.activeQrSessionExpiresAt : null,
+    lastQrIssuedAt: typeof data.lastQrIssuedAt === "string" ? data.lastQrIssuedAt : null,
+    lastQrScanAt: typeof data.lastQrScanAt === "string" ? data.lastQrScanAt : null,
+    discountRate: typeof data.discountRate === "number" ? data.discountRate : undefined
+  };
+}
+
+function normalizeDashboardHomeSettings(data: Record<string, unknown>): HomePageSettings {
+  return {
+    slides: Array.isArray(data.slides)
+      ? data.slides
+          .map((entry) => {
+            const slide = entry as Record<string, unknown>;
+            return {
+              image: sanitizeImageSource(slide.image),
+              title: typeof slide.title === "string" ? slide.title.trim() : "",
+              caption: typeof slide.caption === "string" ? slide.caption.trim() : ""
+            };
+          })
+          .filter((slide) => slide.image || slide.title || slide.caption)
+      : [],
+    partnerEyebrow:
+      typeof data.partnerEyebrow === "string" && data.partnerEyebrow.trim()
+        ? data.partnerEyebrow.trim()
+        : undefined,
+    partnerTitle:
+      typeof data.partnerTitle === "string" && data.partnerTitle.trim()
+        ? data.partnerTitle.trim()
+        : undefined,
+    partnerDescription:
+      typeof data.partnerDescription === "string" && data.partnerDescription.trim()
+        ? data.partnerDescription.trim()
+        : undefined,
+    partners: Array.isArray(data.partners)
+      ? data.partners
+          .map((entry) => {
+            const partner = entry as Record<string, unknown>;
+            return {
+              name: typeof partner.name === "string" ? partner.name.trim() : "",
+              tagline: typeof partner.tagline === "string" ? partner.tagline.trim() : "",
+              logo: sanitizeImageSource(partner.logo),
+              url: typeof partner.url === "string" && partner.url.trim() ? partner.url.trim() : undefined
+            };
+          })
+          .filter((partner) => partner.name || partner.tagline || partner.logo || partner.url)
+      : [],
+    featuredVideo:
+      typeof data.featuredVideo === "object" && data.featuredVideo
+        ? {
+            enabled: Boolean((data.featuredVideo as Record<string, unknown>).enabled),
+            url: sanitizeVideoSource((data.featuredVideo as Record<string, unknown>).url),
+            title:
+              typeof (data.featuredVideo as Record<string, unknown>).title === "string"
+                ? ((data.featuredVideo as Record<string, unknown>).title as string).trim()
+                : undefined,
+            description:
+              typeof (data.featuredVideo as Record<string, unknown>).description === "string"
+                ? ((data.featuredVideo as Record<string, unknown>).description as string).trim()
+                : undefined
+          }
+        : undefined,
+    storeEyebrow:
+      typeof data.storeEyebrow === "string" && data.storeEyebrow.trim()
+        ? data.storeEyebrow.trim()
+        : undefined,
+    storeTitle:
+      typeof data.storeTitle === "string" && data.storeTitle.trim()
+        ? data.storeTitle.trim()
+        : undefined,
+    storeDescription:
+      typeof data.storeDescription === "string" && data.storeDescription.trim()
+        ? data.storeDescription.trim()
+        : undefined,
+    storeCtaLabel:
+      typeof data.storeCtaLabel === "string" && data.storeCtaLabel.trim()
+        ? data.storeCtaLabel.trim()
+        : undefined,
+    storeCtaHref:
+      typeof data.storeCtaHref === "string" && data.storeCtaHref.trim()
+        ? data.storeCtaHref.trim()
+        : undefined,
+    storePerks: Array.isArray(data.storePerks)
+      ? data.storePerks.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    updatedAt:
+      typeof data.updatedAt === "string" && data.updatedAt.trim() ? data.updatedAt.trim() : undefined
   };
 }
 
@@ -442,6 +570,8 @@ export function DashboardShell({
   const [localArchivedEvents, setLocalArchivedEvents] = useState(archivedEvents);
   const [localProducts, setLocalProducts] = useState(products);
   const [localBoardMembers, setLocalBoardMembers] = useState(boardMembers);
+  const [localUsers, setLocalUsers] = useState(users);
+  const [resolvedHomeSettings, setResolvedHomeSettings] = useState(homeSettings);
   const [eventForm, setEventForm] = useState({
     title: "",
     startsAt: "",
@@ -582,9 +712,9 @@ export function DashboardShell({
           }
         ];
   const editableHomeSlides = defaultHomeSlides.map((slide, index) => ({
-    image: homeSettings?.slides[index]?.image || slide.image,
-    title: homeSettings?.slides[index]?.title || slide.title,
-    caption: homeSettings?.slides[index]?.caption || slide.caption
+    image: resolvedHomeSettings?.slides[index]?.image || slide.image,
+    title: resolvedHomeSettings?.slides[index]?.title || slide.title,
+    caption: resolvedHomeSettings?.slides[index]?.caption || slide.caption
   }));
   const defaultPartners =
     locale === "ar"
@@ -629,10 +759,10 @@ export function DashboardShell({
           }
         ];
   const editablePartners = defaultPartners.map((partner, index) => ({
-    name: homeSettings?.partners?.[index]?.name || partner.name,
-    tagline: homeSettings?.partners?.[index]?.tagline || partner.tagline,
-    logo: homeSettings?.partners?.[index]?.logo || partner.logo,
-    url: homeSettings?.partners?.[index]?.url || partner.url
+    name: resolvedHomeSettings?.partners?.[index]?.name || partner.name,
+    tagline: resolvedHomeSettings?.partners?.[index]?.tagline || partner.tagline,
+    logo: resolvedHomeSettings?.partners?.[index]?.logo || partner.logo,
+    url: resolvedHomeSettings?.partners?.[index]?.url || partner.url
   }));
   const homeContentLabels =
     locale === "ar"
@@ -899,6 +1029,41 @@ export function DashboardShell({
     });
   }, [stats]);
 
+  const refreshClientUsers = useCallback(async () => {
+    if (!db) {
+      setLocalUsers(users);
+      return;
+    }
+
+    const usersSnapshot = await getDocs(collection(db, "users"));
+    const nextUsers = usersSnapshot.docs
+      .map((entry) => normalizeDashboardUser(entry.id, entry.data() as Record<string, unknown>))
+      .sort((a, b) => {
+        return (
+          new Date(b.joinedAt || 0).getTime() - new Date(a.joinedAt || 0).getTime() ||
+          a.displayName.localeCompare(b.displayName)
+        );
+      });
+
+    setLocalUsers(nextUsers);
+    setLocalCounts((current) => ({ ...current, users: nextUsers.length }));
+  }, [users]);
+
+  const refreshClientHomeSettings = useCallback(async () => {
+    if (!db) {
+      setResolvedHomeSettings(homeSettings);
+      return;
+    }
+
+    const homeDocSnapshot = await getDocs(query(collection(db, "siteSettings")));
+    const homeDoc = homeDocSnapshot.docs.find((entry) => entry.id === "home");
+    if (!homeDoc) {
+      return;
+    }
+
+    setResolvedHomeSettings(normalizeDashboardHomeSettings(homeDoc.data() as Record<string, unknown>));
+  }, [homeSettings]);
+
   useEffect(() => {
     setLocalStats(stats);
     setLocalCounts({
@@ -913,7 +1078,9 @@ export function DashboardShell({
     setLocalArchivedEvents(archivedEvents);
     setLocalProducts(products);
     setLocalBoardMembers(boardMembers);
-  }, [archivedEvents, articles, boardMembers, events, orders, products, stats, users]);
+    setLocalUsers(users);
+    setResolvedHomeSettings(homeSettings);
+  }, [archivedEvents, articles, boardMembers, events, homeSettings, orders, products, stats, users]);
 
   useEffect(() => {
     if (activeSection !== "products") {
@@ -929,7 +1096,9 @@ export function DashboardShell({
         refreshClientStats(),
         refreshClientArchivedEvents(),
         refreshClientProducts(),
-        refreshClientBoardMembers()
+        refreshClientBoardMembers(),
+        refreshClientUsers(),
+        refreshClientHomeSettings()
       ]).catch(() => undefined);
     }
 
@@ -940,12 +1109,22 @@ export function DashboardShell({
     if (activeSection === "board-members") {
       void refreshClientBoardMembers().catch(() => undefined);
     }
+
+    if (activeSection === "users") {
+      void refreshClientUsers().catch(() => undefined);
+    }
+
+    if (activeSection === "home") {
+      void refreshClientHomeSettings().catch(() => undefined);
+    }
   }, [
     activeSection,
     refreshClientArchivedEvents,
     refreshClientBoardMembers,
+    refreshClientHomeSettings,
     refreshClientProducts,
-    refreshClientStats
+    refreshClientStats,
+    refreshClientUsers
   ]);
 
   const registrationsByEvent = useMemo(() => {
@@ -1092,7 +1271,7 @@ export function DashboardShell({
   }
 
   async function saveHomeVideo(formData: FormData) {
-    const currentVideoUrl = homeSettings?.featuredVideo?.url || "";
+    const currentVideoUrl = resolvedHomeSettings?.featuredVideo?.url || "";
     const shouldRemoveCurrentVideo = formData.get("featuredVideoRemove") === "on";
     const manualVideoUrl = getText(formData, "featuredVideoUrl");
     const videoFile = formData.get("featuredVideoFile");
@@ -1133,6 +1312,18 @@ export function DashboardShell({
         description: getText(formData, "featuredVideoDescription")
       }
     });
+    setResolvedHomeSettings((current) => ({
+      slides: current?.slides || [],
+      partners: current?.partners || [],
+      ...current,
+      featuredVideo: {
+        enabled: formData.get("featuredVideoEnabled") === "on" && Boolean(nextVideoUrl),
+        url: nextVideoUrl,
+        title: getText(formData, "featuredVideoTitle") || undefined,
+        description: getText(formData, "featuredVideoDescription") || undefined
+      },
+      updatedAt: new Date().toISOString()
+    }));
   }
 
   async function saveHomeStore(formData: FormData) {
@@ -1357,6 +1548,7 @@ export function DashboardShell({
                 </div>
               </form>
               <form
+                key={`home-video-${resolvedHomeSettings?.featuredVideo?.url || "empty"}-${resolvedHomeSettings?.updatedAt || ""}`}
                 className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}
                 onSubmit={(submitEvent) => {
                   submitEvent.preventDefault();
@@ -1367,7 +1559,7 @@ export function DashboardShell({
                 <h3 className="font-heading text-xl font-semibold text-brand-primary md:col-span-2">
                   {homeVideoLabels.section}
                 </h3>
-                {homeSettings?.featuredVideo?.url ? (
+                {resolvedHomeSettings?.featuredVideo?.url ? (
                   <div className="rounded-2xl border border-brand-primary/10 bg-brand-sky/40 p-4 md:col-span-2">
                     <p className="mb-3 text-sm font-semibold text-brand-primary">
                       {homeVideoManagementLabels.current}
@@ -1379,13 +1571,13 @@ export function DashboardShell({
                         preload="metadata"
                         className="max-h-72 w-full bg-black object-cover"
                       >
-                        <source src={homeSettings.featuredVideo.url} />
+                        <source src={resolvedHomeSettings.featuredVideo.url} />
                       </video>
                     </div>
                     <p className={`mt-3 text-sm ${dashboardMutedTextClass}`}>
                       {homeVideoManagementLabels.replaceHint}
                     </p>
-                    {!isWebPlayableHomepageVideo(homeSettings.featuredVideo.url) ? (
+                    {!isWebPlayableHomepageVideo(resolvedHomeSettings.featuredVideo.url) ? (
                       <p className="mt-2 text-sm font-medium text-amber-600 dark:text-amber-300">
                         {homeVideoManagementLabels.formatHint}
                       </p>
@@ -1400,28 +1592,28 @@ export function DashboardShell({
                   <input
                     name="featuredVideoEnabled"
                     type="checkbox"
-                    defaultChecked={Boolean(homeSettings?.featuredVideo?.enabled)}
+                    defaultChecked={Boolean(resolvedHomeSettings?.featuredVideo?.enabled)}
                   />
                   {homeVideoLabels.enabled}
                 </label>
                 <DashboardFieldLabel label={homeVideoLabels.title}>
                   <input
                     name="featuredVideoTitle"
-                    defaultValue={homeSettings?.featuredVideo?.title || ""}
+                    defaultValue={resolvedHomeSettings?.featuredVideo?.title || ""}
                     className={dashboardFieldClass}
                   />
                 </DashboardFieldLabel>
                 <DashboardFieldLabel label={homeVideoLabels.url}>
                   <input
                     name="featuredVideoUrl"
-                    defaultValue={homeSettings?.featuredVideo?.url || ""}
+                    defaultValue={resolvedHomeSettings?.featuredVideo?.url || ""}
                     className={dashboardFieldClass}
                   />
                 </DashboardFieldLabel>
                 <DashboardFieldLabel label={homeVideoLabels.description} className="md:col-span-2">
                   <textarea
                     name="featuredVideoDescription"
-                    defaultValue={homeSettings?.featuredVideo?.description || ""}
+                    defaultValue={resolvedHomeSettings?.featuredVideo?.description || ""}
                     className={dashboardTextAreaClass}
                   />
                 </DashboardFieldLabel>
@@ -2603,11 +2795,15 @@ export function DashboardShell({
               {labels.userManagement}
             </h2>
             <div className="grid gap-4">
-              {users.map((entry) => (
+              {localUsers.map((entry) => (
                 <div key={entry.id} className={`${dashboardPanelClass} grid gap-3 md:grid-cols-[1fr_auto_auto_auto_auto] md:items-center`}>
                   <div>
                     <p className="font-medium text-brand-primary">{entry.displayName}</p>
                     <p className={`text-sm ${dashboardMutedTextClass}`}>{entry.email}</p>
+                    <p className={`text-xs ${dashboardMutedTextClass}`}>
+                      {entry.membershipId || entry.id}
+                      {entry.phone ? ` | ${entry.phone}` : ""}
+                    </p>
                   </div>
                   <select defaultValue={entry.role} id={`role-${entry.id}`} className={dashboardEditFieldClass}>
                     {roles.map((role) => (
@@ -2630,13 +2826,14 @@ export function DashboardShell({
                     onClick={() => {
                       const role = (document.getElementById(`role-${entry.id}`) as HTMLSelectElement).value as Role;
                       const membershipStatus = (document.getElementById(`status-${entry.id}`) as HTMLSelectElement).value as UserProfile["membershipStatus"];
-                      void runAction(`user-${entry.id}`, () =>
-                        updateUserAdmin({
+                      void runAction(`user-${entry.id}`, async () => {
+                        await updateUserAdmin({
                           uid: entry.id,
                           role,
                           membershipStatus
-                        })
-                      );
+                        });
+                        await refreshClientUsers();
+                      });
                     }}
                   >
                     <Save className="h-4 w-4" />
@@ -2651,7 +2848,10 @@ export function DashboardShell({
                         return;
                       }
 
-                      void runAction(`delete-user-${entry.id}`, () => deleteUserAdmin(entry.id));
+                      void runAction(`delete-user-${entry.id}`, async () => {
+                        await deleteUserAdmin(entry.id);
+                        await refreshClientUsers();
+                      });
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -2659,6 +2859,13 @@ export function DashboardShell({
                   </Button>
                 </div>
               ))}
+              {!localUsers.length ? (
+                <div className={`${dashboardPanelClass} text-sm ${dashboardMutedTextClass}`}>
+                  {locale === "ar"
+                    ? "لا توجد بيانات مستخدمين محمّلة حاليًا. إذا كانت الحسابات موجودة في Firebase فسيتم جلبها تلقائيًا عند توفر القراءة."
+                    : "No user records are currently loaded. Existing Firebase users will appear here once the dashboard can read them."}
+                </div>
+              ) : null}
             </div>
           </Card>
           ) : null}
