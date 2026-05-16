@@ -44,8 +44,12 @@ const tajawal = Tajawal({
 
 export function generateMetadata(): Metadata {
   const dictionary = getServerDictionary();
+  const metadataBase = process.env.NEXT_PUBLIC_APP_URL
+    ? new URL(process.env.NEXT_PUBLIC_APP_URL)
+    : undefined;
 
   return {
+    metadataBase,
     title: {
       default: dictionary.site.title,
       template: `%s | ${dictionary.site.title}`
