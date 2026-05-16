@@ -1,10 +1,8 @@
 declare module "framer-motion" {
   import * as React from "react";
-
   export const AnimatePresence: React.ComponentType<
     React.PropsWithChildren<{ mode?: string }>
   >;
-
   export const motion: {
     [key: string]: React.ComponentType<any>;
   };

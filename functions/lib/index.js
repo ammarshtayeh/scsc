@@ -506,22 +506,33 @@ exports.upsertHomeSettings = (0, https_1.onCall)(publicCallableOptions, async (r
     var _a;
     requireAdmin(request);
     const { slides, partnerEyebrow, partnerTitle, partnerDescription, partners, featuredVideo, storeEyebrow, storeTitle, storeDescription, storeCtaLabel, storeCtaHref, storePerks } = request.data;
-    if (!Array.isArray(slides)) {
-        throw new https_1.HttpsError("invalid-argument", "Home page slides are required.");
+    const payload = {
+        updatedAt: new Date().toISOString(),
+        updatedBy: ((_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid) || "unknown"
+    };
+    if (typeof slides !== "undefined") {
+        if (!Array.isArray(slides)) {
+            throw new https_1.HttpsError("invalid-argument", "Home page slides must be an array.");
+        }
+        const cleanSlides = slides
+            .slice(0, 6)
+            .map((slide) => ({
+            image: cleanImageString(slide.image),
+            title: cleanString(slide.title),
+            caption: cleanString(slide.caption)
+        }))
+            .filter((slide) => slide.image || slide.title || slide.caption);
+        if (!cleanSlides.length ||
+            cleanSlides.some((slide) => !slide.image || !slide.title || !slide.caption)) {
+            throw new https_1.HttpsError("invalid-argument", "Each home page slide must include an image, title, and caption.");
+        }
+        payload.slides = cleanSlides;
     }
-    const cleanSlides = slides
-        .slice(0, 6)
-        .map((slide) => ({
-        image: cleanImageString(slide.image),
-        title: cleanString(slide.title),
-        caption: cleanString(slide.caption)
-    }))
-        .filter((slide) => slide.image || slide.title || slide.caption);
-    if (!cleanSlides.length || cleanSlides.some((slide) => !slide.image || !slide.title || !slide.caption)) {
-        throw new https_1.HttpsError("invalid-argument", "Each home page slide must include an image, title, and caption.");
-    }
-    const cleanPartners = Array.isArray(partners)
-        ? partners
+    if (typeof partners !== "undefined") {
+        if (!Array.isArray(partners)) {
+            throw new https_1.HttpsError("invalid-argument", "Partners must be an array.");
+        }
+        const cleanPartners = partners
             .slice(0, 6)
             .map((partner) => ({
             name: cleanString(partner.name),
@@ -529,10 +540,11 @@ exports.upsertHomeSettings = (0, https_1.onCall)(publicCallableOptions, async (r
             logo: cleanImageString(partner.logo),
             url: cleanString(partner.url)
         }))
-            .filter((partner) => partner.name || partner.tagline || partner.logo || partner.url)
-        : [];
-    if (cleanPartners.some((partner) => !partner.name || !partner.tagline || !partner.logo)) {
-        throw new https_1.HttpsError("invalid-argument", "Each partner must include a name, tagline, and logo.");
+            .filter((partner) => partner.name || partner.tagline || partner.logo || partner.url);
+        if (cleanPartners.some((partner) => !partner.name || !partner.tagline || !partner.logo)) {
+            throw new https_1.HttpsError("invalid-argument", "Each partner must include a name, tagline, and logo.");
+        }
+        payload.partners = cleanPartners;
     }
     const cleanFeaturedVideo = featuredVideo
         ? {
@@ -545,22 +557,37 @@ exports.upsertHomeSettings = (0, https_1.onCall)(publicCallableOptions, async (r
     if ((cleanFeaturedVideo === null || cleanFeaturedVideo === void 0 ? void 0 : cleanFeaturedVideo.enabled) && !cleanFeaturedVideo.url) {
         throw new https_1.HttpsError("invalid-argument", "Home page video URL is required when the video section is enabled.");
     }
-    await db.collection("siteSettings").doc("home").set({
-        slides: cleanSlides,
-        partnerEyebrow: cleanString(partnerEyebrow),
-        partnerTitle: cleanString(partnerTitle),
-        partnerDescription: cleanString(partnerDescription),
-        partners: cleanPartners,
-        featuredVideo: cleanFeaturedVideo,
-        storeEyebrow: cleanString(storeEyebrow),
-        storeTitle: cleanString(storeTitle),
-        storeDescription: cleanString(storeDescription),
-        storeCtaLabel: cleanString(storeCtaLabel),
-        storeCtaHref: cleanString(storeCtaHref),
-        storePerks: cleanStringArray(storePerks).slice(0, 6),
-        updatedAt: new Date().toISOString(),
-        updatedBy: ((_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid) || "unknown"
-    }, { merge: true });
+    if (typeof featuredVideo !== "undefined") {
+        payload.featuredVideo = cleanFeaturedVideo;
+    }
+    if (typeof partnerEyebrow !== "undefined") {
+        payload.partnerEyebrow = cleanString(partnerEyebrow);
+    }
+    if (typeof partnerTitle !== "undefined") {
+        payload.partnerTitle = cleanString(partnerTitle);
+    }
+    if (typeof partnerDescription !== "undefined") {
+        payload.partnerDescription = cleanString(partnerDescription);
+    }
+    if (typeof storeEyebrow !== "undefined") {
+        payload.storeEyebrow = cleanString(storeEyebrow);
+    }
+    if (typeof storeTitle !== "undefined") {
+        payload.storeTitle = cleanString(storeTitle);
+    }
+    if (typeof storeDescription !== "undefined") {
+        payload.storeDescription = cleanString(storeDescription);
+    }
+    if (typeof storeCtaLabel !== "undefined") {
+        payload.storeCtaLabel = cleanString(storeCtaLabel);
+    }
+    if (typeof storeCtaHref !== "undefined") {
+        payload.storeCtaHref = cleanString(storeCtaHref);
+    }
+    if (typeof storePerks !== "undefined") {
+        payload.storePerks = cleanStringArray(storePerks).slice(0, 6);
+    }
+    await db.collection("siteSettings").doc("home").set(payload, { merge: true });
     return { success: true };
 });
 exports.upsertProduct = (0, https_1.onCall)(publicCallableOptions, async (request) => {

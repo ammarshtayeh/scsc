@@ -1035,6 +1035,94 @@ export function DashboardShell({
     }
   }
 
+  async function saveHomeSlide(index: number, formData: FormData) {
+    const slides = await Promise.all(
+      editableHomeSlides.map(async (slide, slideIndex) => {
+        if (slideIndex !== index) {
+          return slide;
+        }
+
+        const imageFile = formData.get(`homeSlideFile-${slideIndex}`);
+        const uploadedImage =
+          imageFile instanceof File && imageFile.size > 0
+            ? await uploadDashboardImage("home", imageFile)
+            : "";
+
+        return {
+          image: uploadedImage || getText(formData, `homeSlideImage-${slideIndex}`) || slide.image,
+          title: getText(formData, `homeSlideTitle-${slideIndex}`),
+          caption: getText(formData, `homeSlideCaption-${slideIndex}`)
+        };
+      })
+    );
+
+    await upsertHomeSettingsAdmin({ slides });
+  }
+
+  async function saveHomePartners(formData: FormData) {
+    const partners = await Promise.all(
+      editablePartners.map(async (partner, index) => {
+        const imageFile = formData.get(`partnerLogoFile-${index}`);
+        const uploadedLogo =
+          imageFile instanceof File && imageFile.size > 0
+            ? await uploadDashboardImage("home", imageFile)
+            : "";
+
+        return {
+          name: getText(formData, `partnerName-${index}`) || partner.name,
+          tagline: getText(formData, `partnerTagline-${index}`) || partner.tagline,
+          logo: uploadedLogo || getText(formData, `partnerLogo-${index}`) || partner.logo,
+          url: getText(formData, `partnerUrl-${index}`)
+        };
+      })
+    );
+
+    await upsertHomeSettingsAdmin({
+      partnerEyebrow: getText(formData, "partnerEyebrow"),
+      partnerTitle: getText(formData, "partnerTitle"),
+      partnerDescription: getText(formData, "partnerDescription"),
+      partners
+    });
+  }
+
+  async function saveHomeVideo(formData: FormData) {
+    const currentVideoUrl = homeSettings?.featuredVideo?.url || "";
+    const shouldRemoveCurrentVideo = formData.get("featuredVideoRemove") === "on";
+    const manualVideoUrl = getText(formData, "featuredVideoUrl");
+    const videoFile = formData.get("featuredVideoFile");
+    const uploadedVideo =
+      videoFile instanceof File && videoFile.size > 0 ? await uploadDashboardVideo(videoFile) : "";
+    const nextVideoUrl = uploadedVideo || (shouldRemoveCurrentVideo ? "" : manualVideoUrl || currentVideoUrl);
+
+    if (uploadedVideo && currentVideoUrl && currentVideoUrl !== uploadedVideo) {
+      await deleteFileFromStorage(currentVideoUrl);
+    } else if (manualVideoUrl && currentVideoUrl && manualVideoUrl !== currentVideoUrl) {
+      await deleteFileFromStorage(currentVideoUrl);
+    } else if (shouldRemoveCurrentVideo && currentVideoUrl && !uploadedVideo && !manualVideoUrl) {
+      await deleteFileFromStorage(currentVideoUrl);
+    }
+
+    await upsertHomeSettingsAdmin({
+      featuredVideo: {
+        enabled: formData.get("featuredVideoEnabled") === "on" && Boolean(nextVideoUrl),
+        url: nextVideoUrl,
+        title: getText(formData, "featuredVideoTitle"),
+        description: getText(formData, "featuredVideoDescription")
+      }
+    });
+  }
+
+  async function saveHomeStore(formData: FormData) {
+    await upsertHomeSettingsAdmin({
+      storeEyebrow: getText(formData, "storeEyebrow"),
+      storeTitle: getText(formData, "storeTitle"),
+      storeDescription: getText(formData, "storeDescription"),
+      storeCtaLabel: getText(formData, "storeCtaLabel"),
+      storeCtaHref: getText(formData, "storeCtaHref"),
+      storePerks: splitLines(getText(formData, "storePerks"))
+    });
+  }
+
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="grid gap-6 lg:grid-cols-[0.32fr_0.68fr]">
@@ -1112,85 +1200,17 @@ export function DashboardShell({
                 {adminLabels.homeGuidance}
               </p>
             </div>
-            <form
-              className="grid gap-4"
-              onSubmit={(submitEvent) => {
-                submitEvent.preventDefault();
-                const formData = new FormData(submitEvent.currentTarget);
-                void runAction("save-home-settings", async () => {
-                  const slides = await Promise.all(
-                    editableHomeSlides.map(async (slide, index) => {
-                      const imageFile = formData.get(`homeSlideFile-${index}`);
-                      const uploadedImage =
-                        imageFile instanceof File && imageFile.size > 0
-                          ? await uploadDashboardImage("home", imageFile)
-                          : "";
-
-                      return {
-                        image: uploadedImage || getText(formData, `homeSlideImage-${index}`) || slide.image,
-                        title: getText(formData, `homeSlideTitle-${index}`),
-                        caption: getText(formData, `homeSlideCaption-${index}`)
-                      };
-                    })
-                  );
-                  const partners = await Promise.all(
-                    editablePartners.map(async (partner, index) => {
-                      const imageFile = formData.get(`partnerLogoFile-${index}`);
-                      const uploadedLogo =
-                        imageFile instanceof File && imageFile.size > 0
-                          ? await uploadDashboardImage("home", imageFile)
-                          : "";
-
-                      return {
-                        name: getText(formData, `partnerName-${index}`) || partner.name,
-                        tagline: getText(formData, `partnerTagline-${index}`) || partner.tagline,
-                        logo: uploadedLogo || getText(formData, `partnerLogo-${index}`) || partner.logo,
-                        url: getText(formData, `partnerUrl-${index}`)
-                      };
-                    })
-                  );
-                  const videoFile = formData.get("featuredVideoFile");
-                  const currentVideoUrl = homeSettings?.featuredVideo?.url || "";
-                  const shouldRemoveCurrentVideo = formData.get("featuredVideoRemove") === "on";
-                  const manualVideoUrl = getText(formData, "featuredVideoUrl");
-                  const uploadedVideo =
-                    videoFile instanceof File && videoFile.size > 0
-                      ? await uploadDashboardVideo(videoFile)
-                      : "";
-                  const nextVideoUrl = uploadedVideo || (shouldRemoveCurrentVideo ? "" : manualVideoUrl || currentVideoUrl);
-
-                  if (uploadedVideo && currentVideoUrl && currentVideoUrl !== uploadedVideo) {
-                    await deleteFileFromStorage(currentVideoUrl);
-                  } else if (manualVideoUrl && currentVideoUrl && manualVideoUrl !== currentVideoUrl) {
-                    await deleteFileFromStorage(currentVideoUrl);
-                  } else if (shouldRemoveCurrentVideo && currentVideoUrl && !uploadedVideo && !manualVideoUrl) {
-                    await deleteFileFromStorage(currentVideoUrl);
-                  }
-
-                  await upsertHomeSettingsAdmin({
-                    slides,
-                    partnerEyebrow: getText(formData, "partnerEyebrow"),
-                    partnerTitle: getText(formData, "partnerTitle"),
-                    partnerDescription: getText(formData, "partnerDescription"),
-                    partners,
-                    featuredVideo: {
-                      enabled: formData.get("featuredVideoEnabled") === "on" && Boolean(nextVideoUrl),
-                      url: nextVideoUrl,
-                      title: getText(formData, "featuredVideoTitle"),
-                      description: getText(formData, "featuredVideoDescription")
-                    },
-                    storeEyebrow: getText(formData, "storeEyebrow"),
-                    storeTitle: getText(formData, "storeTitle"),
-                    storeDescription: getText(formData, "storeDescription"),
-                    storeCtaLabel: getText(formData, "storeCtaLabel"),
-                    storeCtaHref: getText(formData, "storeCtaHref"),
-                    storePerks: splitLines(getText(formData, "storePerks"))
-                  });
-                });
-              }}
-            >
+            <div className="grid gap-4">
               {editableHomeSlides.map((slide, index) => (
-                <div key={`home-slide-${index}`} className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}>
+                <form
+                  key={`home-slide-${index}`}
+                  className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}
+                  onSubmit={(submitEvent) => {
+                    submitEvent.preventDefault();
+                    const formData = new FormData(submitEvent.currentTarget);
+                    void runAction(`save-home-slide-${index}`, () => saveHomeSlide(index, formData));
+                  }}
+                >
                   <h3 className="font-heading text-xl font-semibold text-brand-primary md:col-span-2">
                     {adminLabels.slide} {formatNumber(index + 1, locale)}
                   </h3>
@@ -1226,9 +1246,22 @@ export function DashboardShell({
                       className={dashboardFieldClass}
                     />
                   </DashboardFieldLabel>
-                </div>
+                  <div className="md:col-span-2">
+                    <Button loading={loadingAction === `save-home-slide-${index}`} type="submit">
+                      <Save className="h-4 w-4" />
+                      {labels.save}
+                    </Button>
+                  </div>
+                </form>
               ))}
-              <div className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}>
+              <form
+                className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}
+                onSubmit={(submitEvent) => {
+                  submitEvent.preventDefault();
+                  const formData = new FormData(submitEvent.currentTarget);
+                  void runAction("save-home-partners", () => saveHomePartners(formData));
+                }}
+              >
                 <h3 className="font-heading text-xl font-semibold text-brand-primary md:col-span-2">
                   {homeContentLabels.partnerSection}
                 </h3>
@@ -1293,8 +1326,21 @@ export function DashboardShell({
                     </DashboardFieldLabel>
                   </div>
                 ))}
-              </div>
-              <div className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}>
+                <div className="md:col-span-2">
+                  <Button loading={loadingAction === "save-home-partners"} type="submit">
+                    <Save className="h-4 w-4" />
+                    {labels.save}
+                  </Button>
+                </div>
+              </form>
+              <form
+                className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}
+                onSubmit={(submitEvent) => {
+                  submitEvent.preventDefault();
+                  const formData = new FormData(submitEvent.currentTarget);
+                  void runAction("save-home-video", () => saveHomeVideo(formData));
+                }}
+              >
                 <h3 className="font-heading text-xl font-semibold text-brand-primary md:col-span-2">
                   {homeVideoLabels.section}
                 </h3>
@@ -1359,8 +1405,21 @@ export function DashboardShell({
                     className={dashboardFieldClass}
                   />
                 </DashboardFieldLabel>
-              </div>
-              <div className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}>
+                <div className="md:col-span-2">
+                  <Button loading={loadingAction === "save-home-video"} type="submit">
+                    <Save className="h-4 w-4" />
+                    {labels.save}
+                  </Button>
+                </div>
+              </form>
+              <form
+                className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}
+                onSubmit={(submitEvent) => {
+                  submitEvent.preventDefault();
+                  const formData = new FormData(submitEvent.currentTarget);
+                  void runAction("save-home-store", () => saveHomeStore(formData));
+                }}
+              >
                 <h3 className="font-heading text-xl font-semibold text-brand-primary md:col-span-2">
                   {homeContentLabels.storeSection}
                 </h3>
@@ -1406,12 +1465,14 @@ export function DashboardShell({
                     className={dashboardTextAreaClass}
                   />
                 </DashboardFieldLabel>
-              </div>
-              <Button loading={loadingAction === "save-home-settings"} type="submit">
-                <Save className="h-4 w-4" />
-                {labels.save}
-              </Button>
-            </form>
+                <div className="md:col-span-2">
+                  <Button loading={loadingAction === "save-home-store"} type="submit">
+                    <Save className="h-4 w-4" />
+                    {labels.save}
+                  </Button>
+                </div>
+              </form>
+            </div>
           </Card>
           ) : null}
 

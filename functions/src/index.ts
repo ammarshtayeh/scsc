@@ -730,43 +730,61 @@ export const upsertHomeSettings = onCall(publicCallableOptions, async (request) 
     storePerks?: unknown;
   };
 
-  if (!Array.isArray(slides)) {
-    throw new HttpsError("invalid-argument", "Home page slides are required.");
+  const payload: Record<string, unknown> = {
+    updatedAt: new Date().toISOString(),
+    updatedBy: request.auth?.uid || "unknown"
+  };
+
+  if (typeof slides !== "undefined") {
+    if (!Array.isArray(slides)) {
+      throw new HttpsError("invalid-argument", "Home page slides must be an array.");
+    }
+
+    const cleanSlides = slides
+      .slice(0, 6)
+      .map((slide) => ({
+        image: cleanImageString(slide.image),
+        title: cleanString(slide.title),
+        caption: cleanString(slide.caption)
+      }))
+      .filter((slide) => slide.image || slide.title || slide.caption);
+
+    if (
+      !cleanSlides.length ||
+      cleanSlides.some((slide) => !slide.image || !slide.title || !slide.caption)
+    ) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Each home page slide must include an image, title, and caption."
+      );
+    }
+
+    payload.slides = cleanSlides;
   }
 
-  const cleanSlides = slides
-    .slice(0, 6)
-    .map((slide) => ({
-      image: cleanImageString(slide.image),
-      title: cleanString(slide.title),
-      caption: cleanString(slide.caption)
-    }))
-    .filter((slide) => slide.image || slide.title || slide.caption);
+  if (typeof partners !== "undefined") {
+    if (!Array.isArray(partners)) {
+      throw new HttpsError("invalid-argument", "Partners must be an array.");
+    }
 
-  if (!cleanSlides.length || cleanSlides.some((slide) => !slide.image || !slide.title || !slide.caption)) {
-    throw new HttpsError(
-      "invalid-argument",
-      "Each home page slide must include an image, title, and caption."
-    );
-  }
+    const cleanPartners = partners
+      .slice(0, 6)
+      .map((partner) => ({
+        name: cleanString(partner.name),
+        tagline: cleanString(partner.tagline),
+        logo: cleanImageString(partner.logo),
+        url: cleanString(partner.url)
+      }))
+      .filter((partner) => partner.name || partner.tagline || partner.logo || partner.url);
 
-  const cleanPartners = Array.isArray(partners)
-    ? partners
-        .slice(0, 6)
-        .map((partner) => ({
-          name: cleanString(partner.name),
-          tagline: cleanString(partner.tagline),
-          logo: cleanImageString(partner.logo),
-          url: cleanString(partner.url)
-        }))
-        .filter((partner) => partner.name || partner.tagline || partner.logo || partner.url)
-    : [];
+    if (cleanPartners.some((partner) => !partner.name || !partner.tagline || !partner.logo)) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Each partner must include a name, tagline, and logo."
+      );
+    }
 
-  if (cleanPartners.some((partner) => !partner.name || !partner.tagline || !partner.logo)) {
-    throw new HttpsError(
-      "invalid-argument",
-      "Each partner must include a name, tagline, and logo."
-    );
+    payload.partners = cleanPartners;
   }
 
   const cleanFeaturedVideo = featuredVideo
@@ -785,23 +803,48 @@ export const upsertHomeSettings = onCall(publicCallableOptions, async (request) 
     );
   }
 
+  if (typeof featuredVideo !== "undefined") {
+    payload.featuredVideo = cleanFeaturedVideo;
+  }
+
+  if (typeof partnerEyebrow !== "undefined") {
+    payload.partnerEyebrow = cleanString(partnerEyebrow);
+  }
+
+  if (typeof partnerTitle !== "undefined") {
+    payload.partnerTitle = cleanString(partnerTitle);
+  }
+
+  if (typeof partnerDescription !== "undefined") {
+    payload.partnerDescription = cleanString(partnerDescription);
+  }
+
+  if (typeof storeEyebrow !== "undefined") {
+    payload.storeEyebrow = cleanString(storeEyebrow);
+  }
+
+  if (typeof storeTitle !== "undefined") {
+    payload.storeTitle = cleanString(storeTitle);
+  }
+
+  if (typeof storeDescription !== "undefined") {
+    payload.storeDescription = cleanString(storeDescription);
+  }
+
+  if (typeof storeCtaLabel !== "undefined") {
+    payload.storeCtaLabel = cleanString(storeCtaLabel);
+  }
+
+  if (typeof storeCtaHref !== "undefined") {
+    payload.storeCtaHref = cleanString(storeCtaHref);
+  }
+
+  if (typeof storePerks !== "undefined") {
+    payload.storePerks = cleanStringArray(storePerks).slice(0, 6);
+  }
+
   await db.collection("siteSettings").doc("home").set(
-    {
-      slides: cleanSlides,
-      partnerEyebrow: cleanString(partnerEyebrow),
-      partnerTitle: cleanString(partnerTitle),
-      partnerDescription: cleanString(partnerDescription),
-      partners: cleanPartners,
-      featuredVideo: cleanFeaturedVideo,
-      storeEyebrow: cleanString(storeEyebrow),
-      storeTitle: cleanString(storeTitle),
-      storeDescription: cleanString(storeDescription),
-      storeCtaLabel: cleanString(storeCtaLabel),
-      storeCtaHref: cleanString(storeCtaHref),
-      storePerks: cleanStringArray(storePerks).slice(0, 6),
-      updatedAt: new Date().toISOString(),
-      updatedBy: request.auth?.uid || "unknown"
-    },
+    payload,
     { merge: true }
   );
 

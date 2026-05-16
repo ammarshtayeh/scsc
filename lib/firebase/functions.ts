@@ -33,20 +33,22 @@ type AdminArchivedEventInput = Partial<ArchivedEvent> & Pick<ArchivedEvent, "tit
 type AdminProductInput = Partial<Product> & Pick<Product, "name" | "price" | "stock">;
 type AdminArticleInput = Partial<Article> & Pick<Article, "title" | "excerpt" | "category">;
 type AdminBoardMemberInput = Partial<BoardMember> & Pick<BoardMember, "name" | "role" | "year">;
-type AdminHomeSettingsInput = Pick<
-  HomePageSettings,
-  | "slides"
-  | "partnerEyebrow"
-  | "partnerTitle"
-  | "partnerDescription"
-  | "partners"
-  | "featuredVideo"
-  | "storeEyebrow"
-  | "storeTitle"
-  | "storeDescription"
-  | "storeCtaLabel"
-  | "storeCtaHref"
-  | "storePerks"
+type AdminHomeSettingsInput = Partial<
+  Pick<
+    HomePageSettings,
+    | "slides"
+    | "partnerEyebrow"
+    | "partnerTitle"
+    | "partnerDescription"
+    | "partners"
+    | "featuredVideo"
+    | "storeEyebrow"
+    | "storeTitle"
+    | "storeDescription"
+    | "storeCtaLabel"
+    | "storeCtaHref"
+    | "storePerks"
+  >
 >;
 
 function requireFunctions() {

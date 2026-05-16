@@ -20,7 +20,15 @@ export async function deleteFileFromStorage(pathOrUrl: string) {
   }
 
   try {
-    await deleteObject(ref(storage, pathOrUrl));
+    const normalizedPath = pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")
+      ? decodeURIComponent(pathOrUrl.split("/o/")[1]?.split("?")[0] || "")
+      : pathOrUrl;
+
+    if (!normalizedPath) {
+      return false;
+    }
+
+    await deleteObject(ref(storage, normalizedPath));
     return true;
   } catch {
     return false;
