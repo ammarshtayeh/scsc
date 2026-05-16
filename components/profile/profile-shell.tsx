@@ -174,6 +174,18 @@ function normalizeEvent(id: string, data: Record<string, unknown>): EventItem {
   };
 }
 
+function getDashboardHref(role?: UserProfile["role"]) {
+  if (role === "admin") {
+    return "/admin";
+  }
+
+  if (role === "moderator") {
+    return "/moderator";
+  }
+
+  return "/profile";
+}
+
 export function ProfileShell({
   view = "dashboard"
 }: {
@@ -675,6 +687,21 @@ export function ProfileShell({
               </div>
             </div>
 
+            <div className="flex flex-wrap gap-3">
+              {(profile.role === "admin" || profile.role === "moderator") && (
+                <Link href={getDashboardHref(profile.role)}>
+                  <Button variant="secondary" className="w-full sm:w-auto">
+                    {dictionary.nav.dashboard}
+                  </Button>
+                </Link>
+              )}
+              <Link href={MEMBERSHIP_CARD_PATH}>
+                <Button className="w-full sm:w-auto">
+                  {dictionary.profile.viewMembershipCard}
+                </Button>
+              </Link>
+            </div>
+
             <div className="grid gap-3 text-sm text-slate-600">
               <p>{dictionary.profile.memberId}: {profile.membershipId || profile.id}</p>
               <p>{dictionary.profile.role}: {translateRole(profile.role, locale)}</p>
@@ -720,11 +747,6 @@ export function ProfileShell({
               <p>{dictionary.profile.joined}: {formatDateShort(profile.joinedAt, locale)}</p>
             </div>
 
-            <Link href={MEMBERSHIP_CARD_PATH} className="block sm:inline-block">
-              <Button className="w-full sm:w-auto">
-                {dictionary.profile.viewMembershipCard}
-              </Button>
-            </Link>
             <p className="text-xs leading-6 text-slate-500">
               {dictionary.profile.membershipCardOnlyHint}
             </p>
