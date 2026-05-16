@@ -179,6 +179,7 @@ declare module "firebase/storage" {
     data: Blob | Uint8Array | ArrayBuffer
   ): Promise<UploadResult>;
   export function getDownloadURL(reference: StorageReference): Promise<string>;
+  export function deleteObject(reference: StorageReference): Promise<void>;
 }
 
 declare module "qrcode" {

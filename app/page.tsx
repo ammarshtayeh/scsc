@@ -1,6 +1,5 @@
 import { EventsPreview } from "@/components/sections/events-preview";
 import { HeroSection } from "@/components/sections/hero-section";
-import { HomeVideoSection } from "@/components/sections/home-video-section";
 import { MembershipPromo } from "@/components/sections/membership-promo";
 import { NewsSection } from "@/components/sections/news-section";
 import { PartnersShowcase } from "@/components/sections/partners-showcase";
@@ -110,26 +109,13 @@ export default async function HomePage() {
   const storeCtaLabel =
     homeSettings?.storeCtaLabel || (locale === "ar" ? "ادخل إلى المتجر" : "Explore the store");
   const storeCtaHref = homeSettings?.storeCtaHref || "/store";
-  const featuredVideo = homeSettings?.featuredVideo;
-  const featuredVideoTitle =
-    featuredVideo?.title ||
-    (locale === "ar" ? "شاهد جانبًا من أنشطة الجمعية" : "Watch a glimpse of the association");
-  const featuredVideoDescription =
-    featuredVideo?.description ||
-    (locale === "ar"
-      ? "فيديو يمكن إدارته من لوحة التحكم ليظهر مباشرة تحت السلايدر في الصفحة الرئيسية."
-      : "An admin-managed video section shown directly below the home page slider.");
-
   return (
     <>
-      <HeroSection slides={slides} featuredEvent={events[0]} />
-      {featuredVideo?.enabled && featuredVideo.url ? (
-        <HomeVideoSection
-          title={featuredVideoTitle}
-          description={featuredVideoDescription}
-          videoUrl={featuredVideo.url}
-        />
-      ) : null}
+      <HeroSection
+        slides={slides}
+        featuredEvent={events[0]}
+        featuredVideo={homeSettings?.featuredVideo}
+      />
       <MembershipPromo />
       <NewsSection articles={articles} />
       <PartnersShowcase

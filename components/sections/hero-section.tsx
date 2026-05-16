@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, ShieldCheck, Sparkles, Store } from "lucide-react";
+import { ArrowRight, PlayCircle, ShieldCheck, Sparkles, Store } from "lucide-react";
 import Link from "next/link";
 
 import { ImageSlider } from "@/components/sections/image-slider";
@@ -9,11 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "@/hooks/useLocale";
-import type { EventItem } from "@/types";
+import type { EventItem, HomePageSettings } from "@/types";
 
 interface HeroSectionProps {
   slides: Array<{ image: string; title: string; caption: string }>;
   featuredEvent?: EventItem | null;
+  featuredVideo?: HomePageSettings["featuredVideo"];
 }
 
 const containerVariants = {
@@ -31,10 +32,11 @@ const itemVariants = {
   visible: { opacity: 1, y: 0 }
 };
 
-export function HeroSection({ slides, featuredEvent }: HeroSectionProps) {
+export function HeroSection({ slides, featuredEvent, featuredVideo }: HeroSectionProps) {
   const { user } = useAuth();
   const { dictionary, direction } = useLocale();
   const joinHref = user ? "/profile" : "/auth/signup";
+  const hasFeaturedVideo = Boolean(featuredVideo?.enabled && featuredVideo.url);
 
   return (
     <section className="relative overflow-hidden">
@@ -145,9 +147,33 @@ export function HeroSection({ slides, featuredEvent }: HeroSectionProps) {
           initial={{ opacity: 0, y: 24, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: 0.3, duration: 0.7 }}
-          className="lg:pt-8"
+          className="space-y-4 lg:pt-8"
         >
           <ImageSlider slides={slides} />
+          {hasFeaturedVideo ? (
+            <div className="glass-surface overflow-hidden rounded-[24px] border border-white/55 p-4 shadow-float dark:border-white/10">
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-primary dark:text-brand-ink">
+                <PlayCircle className="h-4 w-4 text-brand-accent-strong" />
+                <span>{featuredVideo?.title || (direction === "rtl" ? "فيديو الجمعية" : "Association video")}</span>
+              </div>
+              {featuredVideo?.description ? (
+                <p className="mb-4 text-sm leading-6 text-brand-muted dark:text-[#d7e3f3]">
+                  {featuredVideo.description}
+                </p>
+              ) : null}
+              <div className="overflow-hidden rounded-[20px] border border-brand-primary/10 bg-slate-950">
+                <video
+                  key={featuredVideo?.url}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="h-full max-h-[320px] w-full bg-black object-cover"
+                >
+                  <source src={featuredVideo?.url} />
+                </video>
+              </div>
+            </div>
+          ) : null}
         </motion.div>
       </div>
     </section>

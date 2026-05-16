@@ -51,7 +51,7 @@ import {
   upsertProductAdmin
 } from "@/lib/firebase/functions";
 import { db } from "@/lib/firebase/firebase";
-import { uploadFileToStorage } from "@/lib/firebase/storage";
+import { deleteFileFromStorage, uploadFileToStorage } from "@/lib/firebase/storage";
 import {
   translateArticleCategory,
   translateMembershipStatus,
@@ -690,6 +690,18 @@ export function DashboardShell({
           url: "Video URL",
           upload: "Upload video"
         };
+  const homeVideoManagementLabels =
+    locale === "ar"
+      ? {
+          current: "الفيديو الحالي",
+          remove: "حذف الفيديو الحالي",
+          replaceHint: "عند رفع فيديو جديد سيتم استبدال الحالي."
+        }
+      : {
+          current: "Current video",
+          remove: "Remove current video",
+          replaceHint: "Uploading a new video will replace the current one."
+        };
   const currentBoardYear = String(new Date().getFullYear());
   const showManagementSections = mode === "admin";
   const showOverview = showManagementSections && activeSection === "overview";
@@ -1138,10 +1150,22 @@ export function DashboardShell({
                     })
                   );
                   const videoFile = formData.get("featuredVideoFile");
+                  const currentVideoUrl = homeSettings?.featuredVideo?.url || "";
+                  const shouldRemoveCurrentVideo = formData.get("featuredVideoRemove") === "on";
+                  const manualVideoUrl = getText(formData, "featuredVideoUrl");
                   const uploadedVideo =
                     videoFile instanceof File && videoFile.size > 0
                       ? await uploadDashboardVideo(videoFile)
                       : "";
+                  const nextVideoUrl = uploadedVideo || (shouldRemoveCurrentVideo ? "" : manualVideoUrl || currentVideoUrl);
+
+                  if (uploadedVideo && currentVideoUrl && currentVideoUrl !== uploadedVideo) {
+                    await deleteFileFromStorage(currentVideoUrl);
+                  } else if (manualVideoUrl && currentVideoUrl && manualVideoUrl !== currentVideoUrl) {
+                    await deleteFileFromStorage(currentVideoUrl);
+                  } else if (shouldRemoveCurrentVideo && currentVideoUrl && !uploadedVideo && !manualVideoUrl) {
+                    await deleteFileFromStorage(currentVideoUrl);
+                  }
 
                   await upsertHomeSettingsAdmin({
                     slides,
@@ -1150,12 +1174,8 @@ export function DashboardShell({
                     partnerDescription: getText(formData, "partnerDescription"),
                     partners,
                     featuredVideo: {
-                      enabled: formData.get("featuredVideoEnabled") === "on",
-                      url:
-                        uploadedVideo ||
-                        getText(formData, "featuredVideoUrl") ||
-                        homeSettings?.featuredVideo?.url ||
-                        "",
+                      enabled: formData.get("featuredVideoEnabled") === "on" && Boolean(nextVideoUrl),
+                      url: nextVideoUrl,
                       title: getText(formData, "featuredVideoTitle"),
                       description: getText(formData, "featuredVideoDescription")
                     },
@@ -1278,6 +1298,30 @@ export function DashboardShell({
                 <h3 className="font-heading text-xl font-semibold text-brand-primary md:col-span-2">
                   {homeVideoLabels.section}
                 </h3>
+                {homeSettings?.featuredVideo?.url ? (
+                  <div className="rounded-2xl border border-brand-primary/10 bg-brand-sky/40 p-4 md:col-span-2">
+                    <p className="mb-3 text-sm font-semibold text-brand-primary">
+                      {homeVideoManagementLabels.current}
+                    </p>
+                    <div className="overflow-hidden rounded-2xl border border-brand-primary/10 bg-slate-950">
+                      <video
+                        controls
+                        playsInline
+                        preload="metadata"
+                        className="max-h-72 w-full bg-black object-cover"
+                      >
+                        <source src={homeSettings.featuredVideo.url} />
+                      </video>
+                    </div>
+                    <p className={`mt-3 text-sm ${dashboardMutedTextClass}`}>
+                      {homeVideoManagementLabels.replaceHint}
+                    </p>
+                    <label className="mt-3 flex items-center gap-2 text-sm font-medium text-brand-primary">
+                      <input name="featuredVideoRemove" type="checkbox" />
+                      {homeVideoManagementLabels.remove}
+                    </label>
+                  </div>
+                ) : null}
                 <label className="flex items-center gap-2 text-sm font-medium text-brand-primary md:col-span-2">
                   <input
                     name="featuredVideoEnabled"

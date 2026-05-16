@@ -1,6 +1,6 @@
 "use client";
 
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 import { storage } from "@/lib/firebase/firebase";
 
@@ -12,4 +12,17 @@ export async function uploadFileToStorage(path: string, file: File) {
   const storageRef = ref(storage, path);
   await uploadBytes(storageRef, file);
   return getDownloadURL(storageRef);
+}
+
+export async function deleteFileFromStorage(pathOrUrl: string) {
+  if (!storage || !pathOrUrl.trim()) {
+    return false;
+  }
+
+  try {
+    await deleteObject(ref(storage, pathOrUrl));
+    return true;
+  } catch {
+    return false;
+  }
 }
