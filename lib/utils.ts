@@ -117,10 +117,10 @@ export function safeNumber(value: string | number | null | undefined, fallback =
 }
 
 const IMAGE_SOURCE_PATTERN =
-  /^(https?:\/\/.+|data:image\/.+|blob:.+|\/.+\.(avif|bmp|gif|ico|jpe?g|png|svg|webp)([?#].*)?)$/i;
+  /^(https?:\/\/.+|data:image\/.+|blob:.+|\/.+\.[a-z0-9]+([?#].*)?)$/i;
 
 const VIDEO_SOURCE_PATTERN =
-  /^(https?:\/\/.+|blob:.+|\/.+\.(mp4|m4v|mov|ogg|ogv|webm)([?#].*)?)$/i;
+  /^(https?:\/\/.+|data:video\/.+|blob:.+|\/.+\.[a-z0-9]+([?#].*)?)$/i;
 
 export function isValidImageSource(value: unknown) {
   return typeof value === "string" && IMAGE_SOURCE_PATTERN.test(value.trim());

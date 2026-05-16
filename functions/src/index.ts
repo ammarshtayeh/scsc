@@ -138,7 +138,7 @@ function cleanString(value: unknown, fallback = "") {
 }
 
 const IMAGE_SOURCE_PATTERN =
-  /^(https?:\/\/.+|data:image\/.+|blob:.+|\/.+\.(avif|bmp|gif|ico|jpe?g|png|svg|webp)([?#].*)?)$/i;
+  /^(https?:\/\/.+|data:image\/.+|blob:.+|\/.+\.[a-z0-9]+([?#].*)?)$/i;
 
 function isValidImageSource(value: unknown) {
   return typeof value === "string" && IMAGE_SOURCE_PATTERN.test(value.trim());
@@ -159,7 +159,8 @@ function cleanImageStringArray(value: unknown) {
     .filter(Boolean);
 }
 
-const VIDEO_SOURCE_PATTERN = /^(https?:\/\/.+|blob:.+|\/.+\.(mp4|m4v|mov|ogg|ogv|webm)([?#].*)?)$/i;
+const VIDEO_SOURCE_PATTERN =
+  /^(https?:\/\/.+|data:video\/.+|blob:.+|\/.+\.[a-z0-9]+([?#].*)?)$/i;
 
 function isValidVideoSource(value: unknown) {
   return typeof value === "string" && VIDEO_SOURCE_PATTERN.test(value.trim());

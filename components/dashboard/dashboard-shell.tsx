@@ -1311,7 +1311,7 @@ export function DashboardShell({
                   <input
                     name="featuredVideoFile"
                     type="file"
-                    accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-m4v"
+                    accept="video/*"
                     className={dashboardFieldClass}
                   />
                 </DashboardFieldLabel>
