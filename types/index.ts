@@ -166,6 +166,7 @@ export interface UserProfile {
   email: string;
   role: Role;
   phone?: string;
+  studentId?: string;
   company?: string;
   photoURL?: string;
   membershipStatus: MembershipStatus;

@@ -101,6 +101,8 @@ async function ensureFirebaseUserProfile(firebaseUser: FirebaseUser) {
       displayName:
         firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "Association Member",
       email: firebaseUser.email || "",
+      phone: "",
+      studentId: "",
       company: "",
       photoURL: firebaseUser.photoURL || "",
       role: "user",

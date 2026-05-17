@@ -31,6 +31,7 @@ import { SmartImage } from "@/components/ui/smart-image";
 import { useToast } from "@/components/ui/toast";
 import { STORE_CURRENCY } from "@/lib/constants";
 import {
+  createUserAdmin,
   deleteArchivedEventAdmin,
   deleteEventAdmin,
   deleteArticleAdmin,
@@ -231,6 +232,8 @@ function normalizeDashboardUser(id: string, data: Record<string, unknown>): User
     email: typeof data.email === "string" ? data.email.trim() : "",
     role: (typeof data.role === "string" ? data.role : "user") as Role,
     phone: typeof data.phone === "string" && data.phone.trim() ? data.phone.trim() : undefined,
+    studentId:
+      typeof data.studentId === "string" && data.studentId.trim() ? data.studentId.trim() : undefined,
     company: typeof data.company === "string" && data.company.trim() ? data.company.trim() : undefined,
     photoURL: typeof data.photoURL === "string" && data.photoURL.trim() ? data.photoURL.trim() : undefined,
     membershipStatus:
@@ -607,6 +610,15 @@ export function DashboardShell({
   });
   const [productImageFiles, setProductImageFiles] = useState<File[]>([]);
   const [boardMemberImageFile, setBoardMemberImageFile] = useState<File | null>(null);
+  const [createUserForm, setCreateUserForm] = useState({
+    displayName: "",
+    email: "",
+    password: "",
+    phone: "",
+    studentId: "",
+    role: "user" as Role,
+    membershipStatus: "active" as UserProfile["membershipStatus"]
+  });
   const imageLabels =
     locale === "ar"
       ? {
@@ -2794,17 +2806,138 @@ export function DashboardShell({
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">
               {labels.userManagement}
             </h2>
+            <form
+              className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void runAction("create-user", async () => {
+                  await createUserAdmin({
+                    displayName: createUserForm.displayName.trim(),
+                    email: createUserForm.email.trim(),
+                    password: createUserForm.password,
+                    phone: createUserForm.phone.trim(),
+                    studentId: createUserForm.studentId.trim(),
+                    role: createUserForm.role,
+                    membershipStatus: createUserForm.membershipStatus
+                  });
+                  setCreateUserForm({
+                    displayName: "",
+                    email: "",
+                    password: "",
+                    phone: "",
+                    studentId: "",
+                    role: "user",
+                    membershipStatus: "active"
+                  });
+                  await refreshClientUsers();
+                });
+              }}
+            >
+              <DashboardFieldLabel label={locale === "ar" ? "الاسم الرباعي" : "Full name"}>
+                <input
+                  required
+                  value={createUserForm.displayName}
+                  onChange={(event) =>
+                    setCreateUserForm((current) => ({ ...current, displayName: event.target.value }))
+                  }
+                  className={dashboardFieldClass}
+                />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "البريد الإلكتروني" : "Email"}>
+                <input
+                  required
+                  type="email"
+                  value={createUserForm.email}
+                  onChange={(event) =>
+                    setCreateUserForm((current) => ({ ...current, email: event.target.value }))
+                  }
+                  className={dashboardFieldClass}
+                />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "كلمة المرور" : "Password"}>
+                <input
+                  required
+                  type="password"
+                  minLength={8}
+                  value={createUserForm.password}
+                  onChange={(event) =>
+                    setCreateUserForm((current) => ({ ...current, password: event.target.value }))
+                  }
+                  className={dashboardFieldClass}
+                />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "رقم الهاتف" : "Phone number"}>
+                <input
+                  value={createUserForm.phone}
+                  onChange={(event) =>
+                    setCreateUserForm((current) => ({ ...current, phone: event.target.value }))
+                  }
+                  className={dashboardFieldClass}
+                />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "الرقم الجامعي" : "Student ID"}>
+                <input
+                  value={createUserForm.studentId}
+                  onChange={(event) =>
+                    setCreateUserForm((current) => ({ ...current, studentId: event.target.value }))
+                  }
+                  className={dashboardFieldClass}
+                />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "الصلاحية" : "Role"}>
+                <select
+                  value={createUserForm.role}
+                  onChange={(event) =>
+                    setCreateUserForm((current) => ({ ...current, role: event.target.value as Role }))
+                  }
+                  className={dashboardFieldClass}
+                >
+                  {roles.map((role) => (
+                    <option key={role} value={role}>
+                      {translateRole(role, locale)}
+                    </option>
+                  ))}
+                </select>
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "حالة العضوية" : "Membership status"}>
+                <select
+                  value={createUserForm.membershipStatus}
+                  onChange={(event) =>
+                    setCreateUserForm((current) => ({
+                      ...current,
+                      membershipStatus: event.target.value as UserProfile["membershipStatus"]
+                    }))
+                  }
+                  className={dashboardFieldClass}
+                >
+                  {membershipStatuses.map((status) => (
+                    <option key={status} value={status}>
+                      {translateMembershipStatus(status, locale)}
+                    </option>
+                  ))}
+                </select>
+              </DashboardFieldLabel>
+              <Button loading={loadingAction === "create-user"} type="submit" className="md:col-span-2">
+                <Save className="h-4 w-4" />
+                {locale === "ar" ? "إضافة مستخدم" : "Add user"}
+              </Button>
+            </form>
             <div className="grid gap-4">
               {localUsers.map((entry) => (
-                <div key={entry.id} className={`${dashboardPanelClass} grid gap-3 md:grid-cols-[1fr_auto_auto_auto_auto] md:items-center`}>
+                <div key={entry.id} className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.2fr)_repeat(6,minmax(0,1fr))_auto_auto] xl:items-center`}>
                   <div>
                     <p className="font-medium text-brand-primary">{entry.displayName}</p>
                     <p className={`text-sm ${dashboardMutedTextClass}`}>{entry.email}</p>
                     <p className={`text-xs ${dashboardMutedTextClass}`}>
                       {entry.membershipId || entry.id}
                       {entry.phone ? ` | ${entry.phone}` : ""}
+                      {entry.studentId ? ` | ${entry.studentId}` : ""}
                     </p>
                   </div>
+                  <input defaultValue={entry.displayName} id={`name-${entry.id}`} className={dashboardEditFieldClass} />
+                  <input defaultValue={entry.email} id={`email-${entry.id}`} type="email" className={dashboardEditFieldClass} />
+                  <input defaultValue={entry.phone || ""} id={`phone-${entry.id}`} className={dashboardEditFieldClass} />
+                  <input defaultValue={entry.studentId || ""} id={`studentId-${entry.id}`} className={dashboardEditFieldClass} />
                   <select defaultValue={entry.role} id={`role-${entry.id}`} className={dashboardEditFieldClass}>
                     {roles.map((role) => (
                       <option key={role} value={role}>
@@ -2824,11 +2957,19 @@ export function DashboardShell({
                     variant="secondary"
                     loading={loadingAction === `user-${entry.id}`}
                     onClick={() => {
+                      const displayName = (document.getElementById(`name-${entry.id}`) as HTMLInputElement).value;
+                      const email = (document.getElementById(`email-${entry.id}`) as HTMLInputElement).value;
+                      const phone = (document.getElementById(`phone-${entry.id}`) as HTMLInputElement).value;
+                      const studentId = (document.getElementById(`studentId-${entry.id}`) as HTMLInputElement).value;
                       const role = (document.getElementById(`role-${entry.id}`) as HTMLSelectElement).value as Role;
                       const membershipStatus = (document.getElementById(`status-${entry.id}`) as HTMLSelectElement).value as UserProfile["membershipStatus"];
                       void runAction(`user-${entry.id}`, async () => {
                         await updateUserAdmin({
                           uid: entry.id,
+                          displayName,
+                          email,
+                          phone,
+                          studentId,
                           role,
                           membershipStatus
                         });

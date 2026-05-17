@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.deleteOrder = exports.updateOrderStatus = exports.deleteUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.upsertHomeSettings = exports.deleteArchivedEvent = exports.upsertArchivedEvent = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
+exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.deleteOrder = exports.updateOrderStatus = exports.deleteUserAdmin = exports.createUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.upsertHomeSettings = exports.deleteArchivedEvent = exports.upsertArchivedEvent = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
 const crypto_1 = require("crypto");
 const app_1 = require("firebase-admin/app");
 const auth_1 = require("firebase-admin/auth");
@@ -83,6 +83,9 @@ function normalizeMembershipStatus(data) {
     }
     return (data.membershipStatus || "active");
 }
+function cleanString(value, fallback = "") {
+    return typeof value === "string" ? value.trim() || fallback : fallback;
+}
 function requireAdminOrModerator(request) {
     var _a, _b;
     const callerRole = (_b = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.role;
@@ -95,9 +98,6 @@ function requireAdmin(request) {
     if (((_b = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.role) !== "admin") {
         throw new https_1.HttpsError("permission-denied", "Only admins can perform this action.");
     }
-}
-function cleanString(value, fallback = "") {
-    return typeof value === "string" ? value.trim() : fallback;
 }
 const IMAGE_SOURCE_PATTERN = /^(https?:\/\/.+|data:image\/.+|blob:.+|\/.+\.[a-z0-9]+([?#].*)?)$/i;
 function isValidImageSource(value) {
@@ -658,7 +658,7 @@ exports.deleteBoardMember = (0, https_1.onCall)(publicCallableOptions, async (re
 });
 exports.updateUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdmin(request);
-    const { uid, role, membershipStatus, membershipExpiresAt } = request.data;
+    const { uid, displayName, email, phone, studentId, role, membershipStatus, membershipExpiresAt } = request.data;
     if (!uid) {
         throw new https_1.HttpsError("invalid-argument", "User ID is required.");
     }
@@ -667,6 +667,29 @@ exports.updateUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
     const payload = {
         updatedAt: new Date().toISOString()
     };
+    const authUpdates = {};
+    if (typeof displayName === "string") {
+        const nextDisplayName = cleanString(displayName);
+        if (!nextDisplayName) {
+            throw new https_1.HttpsError("invalid-argument", "Display name is required.");
+        }
+        payload.displayName = nextDisplayName;
+        authUpdates.displayName = nextDisplayName;
+    }
+    if (typeof email === "string") {
+        const nextEmail = cleanString(email).toLowerCase();
+        if (!nextEmail) {
+            throw new https_1.HttpsError("invalid-argument", "Email is required.");
+        }
+        payload.email = nextEmail;
+        authUpdates.email = nextEmail;
+    }
+    if (typeof phone === "string") {
+        payload.phone = cleanString(phone);
+    }
+    if (typeof studentId === "string") {
+        payload.studentId = cleanString(studentId);
+    }
     if (role) {
         if (!allowedRoles.includes(role)) {
             throw new https_1.HttpsError("invalid-argument", "Invalid role.");
@@ -683,8 +706,67 @@ exports.updateUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
     if (membershipExpiresAt) {
         payload.membershipExpiresAt = membershipExpiresAt;
     }
+    if (Object.keys(authUpdates).length) {
+        await (0, auth_1.getAuth)().updateUser(uid, authUpdates);
+    }
     await db.collection("users").doc(uid).set(payload, { merge: true });
     return { success: true };
+});
+exports.createUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (request) => {
+    requireAdmin(request);
+    const { displayName, email, password, phone, studentId, role, membershipStatus } = request.data;
+    const nextDisplayName = cleanString(displayName);
+    const nextEmail = cleanString(email).toLowerCase();
+    const nextPassword = typeof password === "string" ? password : "";
+    const nextRole = role || "user";
+    const nextMembershipStatus = membershipStatus || "active";
+    if (!nextDisplayName) {
+        throw new https_1.HttpsError("invalid-argument", "Display name is required.");
+    }
+    if (!nextEmail) {
+        throw new https_1.HttpsError("invalid-argument", "Email is required.");
+    }
+    if (nextPassword.length < 8) {
+        throw new https_1.HttpsError("invalid-argument", "Password must be at least 8 characters.");
+    }
+    if (!["admin", "moderator", "user"].includes(nextRole)) {
+        throw new https_1.HttpsError("invalid-argument", "Invalid role.");
+    }
+    if (!["active", "expired", "pendingRenewal"].includes(nextMembershipStatus)) {
+        throw new https_1.HttpsError("invalid-argument", "Invalid membership status.");
+    }
+    const userRecord = await (0, auth_1.getAuth)().createUser({
+        displayName: nextDisplayName,
+        email: nextEmail,
+        password: nextPassword
+    });
+    if (nextRole !== "user") {
+        await (0, auth_1.getAuth)().setCustomUserClaims(userRecord.uid, { role: nextRole });
+    }
+    const joinedAt = new Date().toISOString();
+    await db.collection("users").doc(userRecord.uid).set({
+        membershipId: `SCSC-${userRecord.uid.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10).toUpperCase()}`,
+        displayName: nextDisplayName,
+        email: nextEmail,
+        phone: cleanString(phone),
+        studentId: cleanString(studentId),
+        company: "",
+        photoURL: "",
+        role: nextRole,
+        membershipStatus: nextMembershipStatus,
+        membershipExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
+        joinedAt,
+        qrToken: (0, uuid_1.v4)(),
+        savedArticleIds: [],
+        registeredEventIds: [],
+        activeQrSessionId: null,
+        activeQrSessionExpiresAt: null,
+        lastQrIssuedAt: null,
+        lastQrScanAt: null,
+        discountRate: 0.12,
+        updatedAt: joinedAt
+    });
+    return { success: true, uid: userRecord.uid };
 });
 exports.deleteUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     var _a;

@@ -93,6 +93,7 @@ function normalizeUserProfile(id: string, data: Record<string, unknown>): UserPr
     email: typeof data.email === "string" ? data.email : "",
     role: (data.role as UserProfile["role"]) || "user",
     phone: typeof data.phone === "string" ? data.phone : "",
+    studentId: typeof data.studentId === "string" ? data.studentId : "",
     company: typeof data.company === "string" ? data.company : "",
     photoURL: typeof data.photoURL === "string" ? data.photoURL : undefined,
     membershipStatus: (data.membershipStatus as UserProfile["membershipStatus"]) || "active",
@@ -715,6 +716,7 @@ export function ProfileShell({
               <p>{dictionary.profile.joined}: {formatDateShort(profile.joinedAt, locale)}</p>
               <p>{dictionary.profile.company}: {profile.company || dictionary.common.notProvided}</p>
               <p>{dictionary.profile.phone}: {profile.phone || dictionary.common.notProvided}</p>
+              <p>{locale === "ar" ? "الرقم الجامعي" : "Student ID"}: {profile.studentId || dictionary.common.notProvided}</p>
             </div>
           </Card>
 

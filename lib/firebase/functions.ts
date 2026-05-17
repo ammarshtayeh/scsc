@@ -155,11 +155,38 @@ export async function removeEventRegistrationAdmin(payload: Pick<EventRegistrati
 
 export async function updateUserAdmin(payload: {
   uid: string;
+  displayName?: string;
+  email?: string;
+  phone?: string;
+  studentId?: string;
   role?: Role;
   membershipStatus?: UserProfile["membershipStatus"];
   membershipExpiresAt?: string;
 }) {
   return callAdminFunction("updateUserAdmin", payload);
+}
+
+export async function createUserAdmin(payload: {
+  displayName: string;
+  email: string;
+  password: string;
+  phone?: string;
+  studentId?: string;
+  role?: Role;
+  membershipStatus?: UserProfile["membershipStatus"];
+}) {
+  return callAdminFunction<
+    {
+      displayName: string;
+      email: string;
+      password: string;
+      phone?: string;
+      studentId?: string;
+      role?: Role;
+      membershipStatus?: UserProfile["membershipStatus"];
+    },
+    { success: boolean; uid: string }
+  >("createUserAdmin", payload);
 }
 
 export async function deleteUserAdmin(uid: string) {
