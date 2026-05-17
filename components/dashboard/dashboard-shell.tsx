@@ -20,7 +20,7 @@ import {
   UserCog,
   Users
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Sidebar } from "@/components/layout/sidebar";
@@ -559,6 +559,7 @@ export function DashboardShell({
   };
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { pushToast } = useToast();
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [localStats, setLocalStats] = useState(stats);
@@ -851,6 +852,12 @@ export function DashboardShell({
           replaceHint: "Uploading a new video will replace the current one.",
           formatHint: "Use MP4, WebM, or OGG to ensure the video renders on the homepage."
         };
+  const selectedUserId = searchParams.get("user");
+  const selectedUser = useMemo(
+    () => localUsers.find((entry) => entry.id === selectedUserId) || null,
+    [localUsers, selectedUserId]
+  );
+  const isUserDetailOpen = Boolean(selectedUserId);
   const currentBoardYear = String(new Date().getFullYear());
   const showManagementSections = mode === "admin";
   const showOverview = showManagementSections && activeSection === "overview";
@@ -2808,7 +2815,7 @@ export function DashboardShell({
               {labels.userManagement}
             </h2>
             <form
-              className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}
+              className={`${dashboardPanelClass} ${isUserDetailOpen ? "hidden" : "grid gap-3 md:grid-cols-2"}`}
               onSubmit={(event) => {
                 event.preventDefault();
                 void runAction("create-user", async () => {
@@ -2924,29 +2931,45 @@ export function DashboardShell({
               </Button>
             </form>
             <div className="grid gap-4">
-              {localUsers.map((entry) => (
-                <div key={entry.id} className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.2fr)_repeat(6,minmax(0,1fr))_auto_auto_auto] xl:items-center`}>
-                  <div>
-                    <p className="font-medium text-brand-primary">{entry.displayName}</p>
-                    <p className={`text-sm ${dashboardMutedTextClass}`}>{entry.email}</p>
-                    <p className={`text-xs ${dashboardMutedTextClass}`}>
-                      {entry.membershipId || entry.id}
-                      {entry.phone ? ` | ${entry.phone}` : ""}
-                      {entry.studentId ? ` | ${entry.studentId}` : ""}
-                    </p>
+              {localUsers.map((entry) => {
+                const isSelectedUser = selectedUserId === entry.id;
+
+                return (
+                <div
+                  key={entry.id}
+                  className={`${dashboardPanelClass} ${isUserDetailOpen && !isSelectedUser ? "hidden" : "grid gap-3 md:grid-cols-2"} ${isSelectedUser ? "xl:grid-cols-[minmax(0,1.2fr)_repeat(6,minmax(0,1fr))_auto_auto_auto]" : ""} xl:items-center`}
+                >
+                  <div className={isSelectedUser ? "" : "md:col-span-2"}>
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/admin/users?user=${encodeURIComponent(entry.id)}`)}
+                      className="text-start"
+                    >
+                      <p className="font-medium text-brand-primary">{entry.displayName}</p>
+                    </button>
+                    {isSelectedUser ? (
+                      <>
+                        <p className={`text-sm ${dashboardMutedTextClass}`}>{entry.email}</p>
+                        <p className={`text-xs ${dashboardMutedTextClass}`}>
+                          {entry.membershipId || entry.id}
+                          {entry.phone ? ` | ${entry.phone}` : ""}
+                          {entry.studentId ? ` | ${entry.studentId}` : ""}
+                        </p>
+                      </>
+                    ) : null}
                   </div>
-                  <input defaultValue={entry.displayName} id={`name-${entry.id}`} className={dashboardEditFieldClass} />
-                  <input defaultValue={entry.email} id={`email-${entry.id}`} type="email" className={dashboardEditFieldClass} />
-                  <input defaultValue={entry.phone || ""} id={`phone-${entry.id}`} className={dashboardEditFieldClass} />
-                  <input defaultValue={entry.studentId || ""} id={`studentId-${entry.id}`} className={dashboardEditFieldClass} />
-                  <select defaultValue={entry.role} id={`role-${entry.id}`} className={dashboardEditFieldClass}>
+                  <input defaultValue={entry.displayName} id={`name-${entry.id}`} className={`${dashboardEditFieldClass} ${isSelectedUser ? "" : "hidden"}`} />
+                  <input defaultValue={entry.email} id={`email-${entry.id}`} type="email" className={`${dashboardEditFieldClass} ${isSelectedUser ? "" : "hidden"}`} />
+                  <input defaultValue={entry.phone || ""} id={`phone-${entry.id}`} className={`${dashboardEditFieldClass} ${isSelectedUser ? "" : "hidden"}`} />
+                  <input defaultValue={entry.studentId || ""} id={`studentId-${entry.id}`} className={`${dashboardEditFieldClass} ${isSelectedUser ? "" : "hidden"}`} />
+                  <select defaultValue={entry.role} id={`role-${entry.id}`} className={`${dashboardEditFieldClass} ${isSelectedUser ? "" : "hidden"}`}>
                     {roles.map((role) => (
                       <option key={role} value={role}>
                         {translateRole(role, locale)}
                       </option>
                     ))}
                   </select>
-                  <select defaultValue={entry.membershipStatus} id={`status-${entry.id}`} className={dashboardEditFieldClass}>
+                  <select defaultValue={entry.membershipStatus} id={`status-${entry.id}`} className={`${dashboardEditFieldClass} ${isSelectedUser ? "" : "hidden"}`}>
                     {membershipStatuses.map((status) => (
                       <option key={status} value={status}>
                         {translateMembershipStatus(status, locale)}
@@ -2956,6 +2979,7 @@ export function DashboardShell({
                   <Button
                     size="sm"
                     variant="secondary"
+                    className={isSelectedUser ? "" : "hidden"}
                     loading={loadingAction === `user-${entry.id}`}
                     onClick={() => {
                       const displayName = (document.getElementById(`name-${entry.id}`) as HTMLInputElement).value;
@@ -2984,6 +3008,7 @@ export function DashboardShell({
                   <Button
                     size="sm"
                     variant="secondary"
+                    className={isSelectedUser ? "" : "hidden"}
                     loading={loadingAction === `reset-password-${entry.id}`}
                     onClick={() => {
                       void runAction(`reset-password-${entry.id}`, async () => {
@@ -3022,6 +3047,7 @@ export function DashboardShell({
                   <Button
                     size="sm"
                     variant="secondary"
+                    className={isSelectedUser ? "" : "hidden"}
                     loading={loadingAction === `delete-user-${entry.id}`}
                     onClick={() => {
                       if (!window.confirm("Delete this user account?")) {
@@ -3031,14 +3057,21 @@ export function DashboardShell({
                       void runAction(`delete-user-${entry.id}`, async () => {
                         await deleteUserAdmin(entry.id);
                         await refreshClientUsers();
+                        router.push("/admin/users");
                       });
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
                     {labels.delete}
                   </Button>
+                  {isSelectedUser ? (
+                    <Button size="sm" variant="secondary" onClick={() => router.push("/admin/users")}>
+                      {locale === "ar" ? "رجوع" : "Back"}
+                    </Button>
+                  ) : null}
                 </div>
-              ))}
+                );
+              })}
               {!localUsers.length ? (
                 <div className={`${dashboardPanelClass} text-sm ${dashboardMutedTextClass}`}>
                   {locale === "ar"
