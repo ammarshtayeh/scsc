@@ -86,6 +86,11 @@ function normalizeMembershipStatus(data) {
 function cleanString(value, fallback = "") {
     return typeof value === "string" ? value.trim() || fallback : fallback;
 }
+function getErrorCode(error) {
+    return typeof error === "object" && error !== null && "code" in error
+        ? String(error.code || "")
+        : "";
+}
 function requireAdminOrModerator(request) {
     var _a, _b;
     const callerRole = (_b = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.role;
@@ -735,38 +740,53 @@ exports.createUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
     if (!["active", "expired", "pendingRenewal"].includes(nextMembershipStatus)) {
         throw new https_1.HttpsError("invalid-argument", "Invalid membership status.");
     }
-    const userRecord = await (0, auth_1.getAuth)().createUser({
-        displayName: nextDisplayName,
-        email: nextEmail,
-        password: nextPassword
-    });
-    if (nextRole !== "user") {
-        await (0, auth_1.getAuth)().setCustomUserClaims(userRecord.uid, { role: nextRole });
+    try {
+        const userRecord = await (0, auth_1.getAuth)().createUser({
+            displayName: nextDisplayName,
+            email: nextEmail,
+            password: nextPassword
+        });
+        if (nextRole !== "user") {
+            await (0, auth_1.getAuth)().setCustomUserClaims(userRecord.uid, { role: nextRole });
+        }
+        const joinedAt = new Date().toISOString();
+        await db.collection("users").doc(userRecord.uid).set({
+            membershipId: `SCSC-${userRecord.uid.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10).toUpperCase()}`,
+            displayName: nextDisplayName,
+            email: nextEmail,
+            phone: cleanString(phone),
+            studentId: cleanString(studentId),
+            company: "",
+            photoURL: "",
+            role: nextRole,
+            membershipStatus: nextMembershipStatus,
+            membershipExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
+            joinedAt,
+            qrToken: (0, uuid_1.v4)(),
+            savedArticleIds: [],
+            registeredEventIds: [],
+            activeQrSessionId: null,
+            activeQrSessionExpiresAt: null,
+            lastQrIssuedAt: null,
+            lastQrScanAt: null,
+            discountRate: 0.12,
+            updatedAt: joinedAt
+        });
+        return { success: true, uid: userRecord.uid };
     }
-    const joinedAt = new Date().toISOString();
-    await db.collection("users").doc(userRecord.uid).set({
-        membershipId: `SCSC-${userRecord.uid.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10).toUpperCase()}`,
-        displayName: nextDisplayName,
-        email: nextEmail,
-        phone: cleanString(phone),
-        studentId: cleanString(studentId),
-        company: "",
-        photoURL: "",
-        role: nextRole,
-        membershipStatus: nextMembershipStatus,
-        membershipExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
-        joinedAt,
-        qrToken: (0, uuid_1.v4)(),
-        savedArticleIds: [],
-        registeredEventIds: [],
-        activeQrSessionId: null,
-        activeQrSessionExpiresAt: null,
-        lastQrIssuedAt: null,
-        lastQrScanAt: null,
-        discountRate: 0.12,
-        updatedAt: joinedAt
-    });
-    return { success: true, uid: userRecord.uid };
+    catch (error) {
+        const code = getErrorCode(error);
+        if (code.includes("email-already-exists")) {
+            throw new https_1.HttpsError("already-exists", "This email is already in use.");
+        }
+        if (code.includes("invalid-email")) {
+            throw new https_1.HttpsError("invalid-argument", "The email address is invalid.");
+        }
+        if (code.includes("invalid-password")) {
+            throw new https_1.HttpsError("invalid-argument", "The password does not meet Firebase requirements.");
+        }
+        throw new https_1.HttpsError("internal", error instanceof Error ? error.message : "Unable to create user.");
+    }
 });
 exports.sendUserPasswordResetAdmin = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdmin(request);

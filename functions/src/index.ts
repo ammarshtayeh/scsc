@@ -124,6 +124,12 @@ function cleanString(value: unknown, fallback = "") {
   return typeof value === "string" ? value.trim() || fallback : fallback;
 }
 
+function getErrorCode(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error
+    ? String((error as { code?: unknown }).code || "")
+    : "";
+}
+
 function requireAdminOrModerator(request: { auth?: { token?: Record<string, unknown> } }) {
   const callerRole = request.auth?.token?.role;
   if (callerRole !== "admin" && callerRole !== "moderator") {
@@ -1064,41 +1070,59 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
     throw new HttpsError("invalid-argument", "Invalid membership status.");
   }
 
-  const userRecord = await getAuth().createUser({
-    displayName: nextDisplayName,
-    email: nextEmail,
-    password: nextPassword
-  });
+  try {
+    const userRecord = await getAuth().createUser({
+      displayName: nextDisplayName,
+      email: nextEmail,
+      password: nextPassword
+    });
 
-  if (nextRole !== "user") {
-    await getAuth().setCustomUserClaims(userRecord.uid, { role: nextRole });
+    if (nextRole !== "user") {
+      await getAuth().setCustomUserClaims(userRecord.uid, { role: nextRole });
+    }
+
+    const joinedAt = new Date().toISOString();
+    await db.collection("users").doc(userRecord.uid).set({
+      membershipId: `SCSC-${userRecord.uid.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10).toUpperCase()}`,
+      displayName: nextDisplayName,
+      email: nextEmail,
+      phone: cleanString(phone),
+      studentId: cleanString(studentId),
+      company: "",
+      photoURL: "",
+      role: nextRole,
+      membershipStatus: nextMembershipStatus,
+      membershipExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
+      joinedAt,
+      qrToken: uuidv4(),
+      savedArticleIds: [],
+      registeredEventIds: [],
+      activeQrSessionId: null,
+      activeQrSessionExpiresAt: null,
+      lastQrIssuedAt: null,
+      lastQrScanAt: null,
+      discountRate: 0.12,
+      updatedAt: joinedAt
+    });
+
+    return { success: true, uid: userRecord.uid };
+  } catch (error) {
+    const code = getErrorCode(error);
+
+    if (code.includes("email-already-exists")) {
+      throw new HttpsError("already-exists", "This email is already in use.");
+    }
+
+    if (code.includes("invalid-email")) {
+      throw new HttpsError("invalid-argument", "The email address is invalid.");
+    }
+
+    if (code.includes("invalid-password")) {
+      throw new HttpsError("invalid-argument", "The password does not meet Firebase requirements.");
+    }
+
+    throw new HttpsError("internal", error instanceof Error ? error.message : "Unable to create user.");
   }
-
-  const joinedAt = new Date().toISOString();
-  await db.collection("users").doc(userRecord.uid).set({
-    membershipId: `SCSC-${userRecord.uid.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10).toUpperCase()}`,
-    displayName: nextDisplayName,
-    email: nextEmail,
-    phone: cleanString(phone),
-    studentId: cleanString(studentId),
-    company: "",
-    photoURL: "",
-    role: nextRole,
-    membershipStatus: nextMembershipStatus,
-    membershipExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
-    joinedAt,
-    qrToken: uuidv4(),
-    savedArticleIds: [],
-    registeredEventIds: [],
-    activeQrSessionId: null,
-    activeQrSessionExpiresAt: null,
-    lastQrIssuedAt: null,
-    lastQrScanAt: null,
-    discountRate: 0.12,
-    updatedAt: joinedAt
-  });
-
-  return { success: true, uid: userRecord.uid };
 });
 
 export const sendUserPasswordResetAdmin = onCall(publicCallableOptions, async (request) => {

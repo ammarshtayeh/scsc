@@ -2852,7 +2852,6 @@ export function DashboardShell({
                           uid: selectedUser.id,
                           email: selectedUser.email
                         });
-
                         if (result.emailed) {
                           pushToast(
                             locale === "ar"
@@ -2862,7 +2861,6 @@ export function DashboardShell({
                           );
                           return;
                         }
-
                         if (result.resetLink) {
                           if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
                             await navigator.clipboard.writeText(result.resetLink);
@@ -2888,7 +2886,6 @@ export function DashboardShell({
                       if (!window.confirm("Delete this user account?")) {
                         return;
                       }
-
                       void runAction(`detail-delete-user-${selectedUser.id}`, async () => {
                         await deleteUserAdmin(selectedUser.id);
                         await refreshClientUsers();
