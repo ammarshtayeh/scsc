@@ -189,6 +189,23 @@ export async function createUserAdmin(payload: {
   >("createUserAdmin", payload);
 }
 
+export async function sendUserPasswordResetAdmin(payload: {
+  uid?: string;
+  email?: string;
+}) {
+  return callAdminFunction<
+    {
+      uid?: string;
+      email?: string;
+    },
+    {
+      success: boolean;
+      emailed: boolean;
+      resetLink?: string;
+    }
+  >("sendUserPasswordResetAdmin", payload);
+}
+
 export async function deleteUserAdmin(uid: string) {
   return callAdminFunction<{ uid: string }>("deleteUserAdmin", { uid });
 }

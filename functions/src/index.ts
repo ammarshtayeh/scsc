@@ -1101,6 +1101,48 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
   return { success: true, uid: userRecord.uid };
 });
 
+export const sendUserPasswordResetAdmin = onCall(publicCallableOptions, async (request) => {
+  requireAdmin(request);
+
+  const { uid, email } = request.data as {
+    uid?: string;
+    email?: string;
+  };
+
+  if (!uid && !email) {
+    throw new HttpsError("invalid-argument", "User ID or email is required.");
+  }
+
+  const auth = getAuth();
+  const userRecord = uid
+    ? await auth.getUser(uid)
+    : await auth.getUserByEmail(cleanString(email).toLowerCase());
+  const userEmail = cleanString(userRecord.email).toLowerCase();
+
+  if (!userEmail) {
+    throw new HttpsError("failed-precondition", "Selected user does not have an email address.");
+  }
+
+  const resetLink = await auth.generatePasswordResetLink(userEmail);
+  const transporter = createTransport();
+
+  if (transporter) {
+    await transporter.sendMail({
+      from: process.env.SMTP_USER,
+      to: userEmail,
+      subject: "Reset your SCSC password",
+      text:
+        `Hello ${userRecord.displayName || "SCSC member"},\n\n` +
+        `Use the secure link below to reset your password:\n${resetLink}\n\n` +
+        "If you did not request this change, you can ignore this email.\n\nSCSC"
+    });
+
+    return { success: true, emailed: true };
+  }
+
+  return { success: true, emailed: false, resetLink };
+});
+
 export const deleteUserAdmin = onCall(publicCallableOptions, async (request) => {
   requireAdmin(request);
 

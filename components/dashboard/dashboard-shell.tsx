@@ -41,6 +41,7 @@ import {
   deleteUserAdmin,
   moderateArticleAdmin,
   removeEventRegistrationAdmin,
+  sendUserPasswordResetAdmin,
   setEventRegistrationCheckInAdmin,
   updateOrderStatusAdmin,
   updateUserAdmin,
@@ -2924,7 +2925,7 @@ export function DashboardShell({
             </form>
             <div className="grid gap-4">
               {localUsers.map((entry) => (
-                <div key={entry.id} className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.2fr)_repeat(6,minmax(0,1fr))_auto_auto] xl:items-center`}>
+                <div key={entry.id} className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.2fr)_repeat(6,minmax(0,1fr))_auto_auto_auto] xl:items-center`}>
                   <div>
                     <p className="font-medium text-brand-primary">{entry.displayName}</p>
                     <p className={`text-sm ${dashboardMutedTextClass}`}>{entry.email}</p>
@@ -2979,6 +2980,44 @@ export function DashboardShell({
                   >
                     <Save className="h-4 w-4" />
                     {labels.save}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={loadingAction === `reset-password-${entry.id}`}
+                    onClick={() => {
+                      void runAction(`reset-password-${entry.id}`, async () => {
+                        const result = await sendUserPasswordResetAdmin({
+                          uid: entry.id,
+                          email: entry.email
+                        });
+
+                        if (result.emailed) {
+                          pushToast(
+                            locale === "ar"
+                              ? "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريد المستخدم."
+                              : "Password reset link sent to the user's email.",
+                            "success"
+                          );
+                          return;
+                        }
+
+                        if (result.resetLink) {
+                          if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+                            await navigator.clipboard.writeText(result.resetLink);
+                          }
+                          pushToast(
+                            locale === "ar"
+                              ? "تم نسخ رابط إعادة التعيين لأن البريد غير مفعّل على الخادم."
+                              : "Reset link copied because server email is not configured.",
+                            "success"
+                          );
+                        }
+                      });
+                    }}
+                  >
+                    <LinkIcon className="h-4 w-4" />
+                    {locale === "ar" ? "إعادة التعيين" : "Reset password"}
                   </Button>
                   <Button
                     size="sm"

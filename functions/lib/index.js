@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.deleteOrder = exports.updateOrderStatus = exports.deleteUserAdmin = exports.createUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.upsertHomeSettings = exports.deleteArchivedEvent = exports.upsertArchivedEvent = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
+exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.deleteOrder = exports.updateOrderStatus = exports.deleteUserAdmin = exports.sendUserPasswordResetAdmin = exports.createUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.upsertHomeSettings = exports.deleteArchivedEvent = exports.upsertArchivedEvent = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
 const crypto_1 = require("crypto");
 const app_1 = require("firebase-admin/app");
 const auth_1 = require("firebase-admin/auth");
@@ -767,6 +767,35 @@ exports.createUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
         updatedAt: joinedAt
     });
     return { success: true, uid: userRecord.uid };
+});
+exports.sendUserPasswordResetAdmin = (0, https_1.onCall)(publicCallableOptions, async (request) => {
+    requireAdmin(request);
+    const { uid, email } = request.data;
+    if (!uid && !email) {
+        throw new https_1.HttpsError("invalid-argument", "User ID or email is required.");
+    }
+    const auth = (0, auth_1.getAuth)();
+    const userRecord = uid
+        ? await auth.getUser(uid)
+        : await auth.getUserByEmail(cleanString(email).toLowerCase());
+    const userEmail = cleanString(userRecord.email).toLowerCase();
+    if (!userEmail) {
+        throw new https_1.HttpsError("failed-precondition", "Selected user does not have an email address.");
+    }
+    const resetLink = await auth.generatePasswordResetLink(userEmail);
+    const transporter = createTransport();
+    if (transporter) {
+        await transporter.sendMail({
+            from: process.env.SMTP_USER,
+            to: userEmail,
+            subject: "Reset your SCSC password",
+            text: `Hello ${userRecord.displayName || "SCSC member"},\n\n` +
+                `Use the secure link below to reset your password:\n${resetLink}\n\n` +
+                "If you did not request this change, you can ignore this email.\n\nSCSC"
+        });
+        return { success: true, emailed: true };
+    }
+    return { success: true, emailed: false, resetLink };
 });
 exports.deleteUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     var _a;
