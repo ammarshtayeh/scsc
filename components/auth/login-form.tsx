@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -187,6 +188,12 @@ export function LoginForm() {
         >
           {dictionary.auth.forgotPassword}
         </button>
+        <Link
+          href="/auth/signup"
+          className="block text-sm font-medium text-brand-accent-strong underline underline-offset-4"
+        >
+          {locale === "ar" ? "انضم ك عضو" : "Join as a member"}
+        </Link>
       </form>
     </Card>
   );

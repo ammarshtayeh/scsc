@@ -646,6 +646,30 @@ export function ProfileShell({
     );
   }
 
+  if (!isMembershipActive) {
+    return (
+      <section className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+        <Card className="space-y-5 text-center">
+          <span
+            className={`mx-auto inline-flex rounded-full border px-3 py-1 text-sm font-medium ${getMembershipStatusClasses(membershipStatus)}`}
+          >
+            {getMembershipStatusLabel(membershipStatus, locale)}
+          </span>
+          <div className="space-y-3">
+            <h1 className="font-heading text-3xl font-bold text-brand-primary">
+              {inactiveMembershipTitle}
+            </h1>
+            <p className="text-base leading-8 text-slate-600">
+              {locale === "ar"
+                ? "يرجى التاكد من الانتساب او تجديد العضوية والموافقة على عضويتك."
+                : "Please confirm your enrollment, renew your membership, and wait for membership approval."}
+            </p>
+          </div>
+        </Card>
+      </section>
+    );
+  }
+
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
