@@ -99,6 +99,10 @@ function normalizeUserProfile(id: string, data: Record<string, unknown>): UserPr
       data.memberGrade === "first" || data.memberGrade === "second"
         ? (data.memberGrade as UserProfile["memberGrade"])
         : "second",
+    accountStatus:
+      data.accountStatus === "new" || data.accountStatus === "approved" || data.accountStatus === "rejected"
+        ? (data.accountStatus as UserProfile["accountStatus"])
+        : "approved",
     company: typeof data.company === "string" ? data.company : "",
     photoURL: typeof data.photoURL === "string" ? data.photoURL : undefined,
     membershipStatus: (data.membershipStatus as UserProfile["membershipStatus"]) || "active",

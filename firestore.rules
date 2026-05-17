@@ -38,6 +38,7 @@ service cloud.firestore {
           "studentId",
           "specialization",
           "memberGrade",
+          "accountStatus",
           "company",
           "photoURL",
           "role",

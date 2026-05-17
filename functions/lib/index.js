@@ -669,13 +669,14 @@ exports.deleteBoardMember = (0, https_1.onCall)(publicCallableOptions, async (re
 });
 exports.updateUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdmin(request);
-    const { uid, displayName, email, phone, studentId, specialization, memberGrade, role, membershipStatus, membershipExpiresAt } = request.data;
+    const { uid, displayName, email, phone, studentId, specialization, memberGrade, accountStatus, role, membershipStatus, membershipExpiresAt } = request.data;
     if (!uid) {
         throw new https_1.HttpsError("invalid-argument", "User ID is required.");
     }
     const allowedRoles = ["admin", "moderator", "user"];
     const allowedStatuses = ["active", "expired", "pendingRenewal"];
     const allowedGrades = ["first", "second"];
+    const allowedAccountStatuses = ["new", "approved", "rejected"];
     const payload = {
         updatedAt: new Date().toISOString()
     };
@@ -713,6 +714,12 @@ exports.updateUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
     if (hasSpecialization || hasMemberGrade) {
         payload.memberGrade = resolveMemberGrade(hasSpecialization ? specialization : undefined, hasMemberGrade ? memberGrade : undefined);
     }
+    if (typeof accountStatus === "string") {
+        if (!allowedAccountStatuses.includes(accountStatus)) {
+            throw new https_1.HttpsError("invalid-argument", "Invalid account status.");
+        }
+        payload.accountStatus = accountStatus;
+    }
     if (role) {
         if (!allowedRoles.includes(role)) {
             throw new https_1.HttpsError("invalid-argument", "Invalid role.");
@@ -737,7 +744,7 @@ exports.updateUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
 });
 exports.createUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdmin(request);
-    const { displayName, email, password, phone, studentId, specialization, memberGrade, role, membershipStatus } = request.data;
+    const { displayName, email, password, phone, studentId, specialization, memberGrade, accountStatus, role, membershipStatus } = request.data;
     const nextDisplayName = cleanString(displayName);
     const nextEmail = cleanString(email).toLowerCase();
     const nextPassword = typeof password === "string" ? password : "";
@@ -745,6 +752,7 @@ exports.createUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
     const nextMembershipStatus = membershipStatus || "active";
     const nextSpecialization = cleanString(specialization);
     const nextMemberGrade = resolveMemberGrade(nextSpecialization, memberGrade);
+    const nextAccountStatus = accountStatus || "approved";
     if (!nextDisplayName) {
         throw new https_1.HttpsError("invalid-argument", "Display name is required.");
     }
@@ -762,6 +770,9 @@ exports.createUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
     }
     if (memberGrade && !["first", "second"].includes(memberGrade)) {
         throw new https_1.HttpsError("invalid-argument", "Invalid member grade.");
+    }
+    if (!["new", "approved", "rejected"].includes(nextAccountStatus)) {
+        throw new https_1.HttpsError("invalid-argument", "Invalid account status.");
     }
     try {
         const userRecord = await (0, auth_1.getAuth)().createUser({
@@ -781,6 +792,7 @@ exports.createUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
             studentId: cleanString(studentId),
             specialization: nextSpecialization,
             memberGrade: nextMemberGrade,
+            accountStatus: nextAccountStatus,
             company: "",
             photoURL: "",
             role: nextRole,

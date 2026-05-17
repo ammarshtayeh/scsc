@@ -16,6 +16,7 @@ const publicCallableOptions = { invoker: "public" as const };
 type MembershipStatus = "active" | "expired" | "pendingRenewal";
 type Role = "admin" | "moderator" | "user";
 type MemberGrade = "first" | "second";
+type AccountStatus = "new" | "approved" | "rejected";
 type OrderStatus = "pending" | "confirmed" | "processing" | "delivered";
 type ArticleCategory = "Skin Care" | "Makeup" | "Hair Care" | "Others";
 
@@ -962,6 +963,7 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
     studentId,
     specialization,
     memberGrade,
+    accountStatus,
     role,
     membershipStatus,
     membershipExpiresAt
@@ -973,6 +975,7 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
     studentId?: string;
     specialization?: string;
     memberGrade?: MemberGrade;
+    accountStatus?: AccountStatus;
     role?: Role;
     membershipStatus?: MembershipStatus;
     membershipExpiresAt?: string;
@@ -985,6 +988,7 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
   const allowedRoles: Role[] = ["admin", "moderator", "user"];
   const allowedStatuses: MembershipStatus[] = ["active", "expired", "pendingRenewal"];
   const allowedGrades: MemberGrade[] = ["first", "second"];
+  const allowedAccountStatuses: AccountStatus[] = ["new", "approved", "rejected"];
   const payload: Record<string, unknown> = {
     updatedAt: new Date().toISOString()
   };
@@ -1037,6 +1041,13 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
     );
   }
 
+  if (typeof accountStatus === "string") {
+    if (!allowedAccountStatuses.includes(accountStatus as AccountStatus)) {
+      throw new HttpsError("invalid-argument", "Invalid account status.");
+    }
+    payload.accountStatus = accountStatus;
+  }
+
   if (role) {
     if (!allowedRoles.includes(role)) {
       throw new HttpsError("invalid-argument", "Invalid role.");
@@ -1075,6 +1086,7 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
     studentId,
     specialization,
     memberGrade,
+    accountStatus,
     role,
     membershipStatus
   } = request.data as {
@@ -1085,6 +1097,7 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
     studentId?: string;
     specialization?: string;
     memberGrade?: MemberGrade;
+    accountStatus?: AccountStatus;
     role?: Role;
     membershipStatus?: MembershipStatus;
   };
@@ -1096,6 +1109,7 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
   const nextMembershipStatus = membershipStatus || "active";
   const nextSpecialization = cleanString(specialization);
   const nextMemberGrade = resolveMemberGrade(nextSpecialization, memberGrade);
+  const nextAccountStatus = accountStatus || "approved";
 
   if (!nextDisplayName) {
     throw new HttpsError("invalid-argument", "Display name is required.");
@@ -1121,6 +1135,10 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
     throw new HttpsError("invalid-argument", "Invalid member grade.");
   }
 
+  if (!["new", "approved", "rejected"].includes(nextAccountStatus)) {
+    throw new HttpsError("invalid-argument", "Invalid account status.");
+  }
+
   try {
     const userRecord = await getAuth().createUser({
       displayName: nextDisplayName,
@@ -1141,6 +1159,7 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
       studentId: cleanString(studentId),
       specialization: nextSpecialization,
       memberGrade: nextMemberGrade,
+      accountStatus: nextAccountStatus,
       company: "",
       photoURL: "",
       role: nextRole,

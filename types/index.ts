@@ -5,6 +5,7 @@ export type ProductCategory = "Skin Care" | "Body Care" | "Makeup" | "Masks";
 export type OrderStatus = "pending" | "confirmed" | "processing" | "delivered";
 export type MembershipStatus = "active" | "expired" | "pendingRenewal";
 export type MemberGrade = "first" | "second";
+export type AccountStatus = "new" | "approved" | "rejected";
 
 export interface ArticleReference {
   label: string;
@@ -170,6 +171,7 @@ export interface UserProfile {
   studentId?: string;
   specialization?: string;
   memberGrade?: MemberGrade;
+  accountStatus?: AccountStatus;
   company?: string;
   photoURL?: string;
   membershipStatus: MembershipStatus;

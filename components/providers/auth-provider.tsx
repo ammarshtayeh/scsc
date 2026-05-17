@@ -104,10 +104,11 @@ async function ensureFirebaseUserProfile(firebaseUser: FirebaseUser) {
       studentId: "",
       specialization: "",
       memberGrade: "second",
+      accountStatus: "new",
       company: "",
       photoURL: firebaseUser.photoURL || "",
       role: "user",
-      membershipStatus: "active",
+      membershipStatus: "pendingRenewal",
       membershipExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
       joinedAt: serverTimestamp(),
       qrToken: uuidv4(),
@@ -212,7 +213,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           {
             displayName,
             email,
-            company: company || ""
+            company: company || "",
+            accountStatus: "new",
+            membershipStatus: "pendingRenewal"
           },
           { merge: true }
         );

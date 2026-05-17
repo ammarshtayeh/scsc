@@ -110,6 +110,7 @@ const membershipStatuses: UserProfile["membershipStatus"][] = [
   "pendingRenewal"
 ];
 const memberGrades: NonNullable<UserProfile["memberGrade"]>[] = ["first", "second"];
+const accountStatuses: NonNullable<UserProfile["accountStatus"]>[] = ["new", "approved", "rejected"];
 const USERS_PER_PAGE = 20;
 
 function splitLines(value: string) {
@@ -245,6 +246,10 @@ function normalizeDashboardUser(id: string, data: Record<string, unknown>): User
       data.memberGrade === "first" || data.memberGrade === "second"
         ? (data.memberGrade as UserProfile["memberGrade"])
         : "second",
+    accountStatus:
+      data.accountStatus === "new" || data.accountStatus === "approved" || data.accountStatus === "rejected"
+        ? (data.accountStatus as UserProfile["accountStatus"])
+        : "approved",
     company: typeof data.company === "string" && data.company.trim() ? data.company.trim() : undefined,
     photoURL: typeof data.photoURL === "string" && data.photoURL.trim() ? data.photoURL.trim() : undefined,
     membershipStatus:
@@ -625,6 +630,8 @@ export function DashboardShell({
   const [productImageFiles, setProductImageFiles] = useState<File[]>([]);
   const [boardMemberImageFile, setBoardMemberImageFile] = useState<File | null>(null);
   const [userPage, setUserPage] = useState(1);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [userStatusView, setUserStatusView] = useState<"approved" | "new">("approved");
   const [createUserForm, setCreateUserForm] = useState({
     displayName: "",
     email: "",
@@ -633,6 +640,7 @@ export function DashboardShell({
     studentId: "",
     specialization: "",
     memberGrade: "second" as NonNullable<UserProfile["memberGrade"]>,
+    accountStatus: "approved" as NonNullable<UserProfile["accountStatus"]>,
     role: "user" as Role,
     membershipStatus: "active" as UserProfile["membershipStatus"]
   });
@@ -873,14 +881,42 @@ export function DashboardShell({
     [localUsers, selectedUserId]
   );
   const isUserDetailOpen = Boolean(selectedUserId);
+  const filteredUsersBySearch = useCallback(
+    (entries: UserProfile[]) => {
+      const query = userSearchQuery.trim().toLowerCase();
+
+      if (!query) {
+        return entries;
+      }
+
+      return entries.filter((entry) =>
+        [entry.displayName, entry.email, entry.studentId]
+          .map((value) => String(value || "").toLowerCase())
+          .some((value) => value.includes(query))
+      );
+    },
+    [userSearchQuery]
+  );
+  const approvedUsers = useMemo(
+    () => localUsers.filter((entry) => (entry.accountStatus || "approved") === "approved"),
+    [localUsers]
+  );
+  const newUsers = useMemo(
+    () => localUsers.filter((entry) => (entry.accountStatus || "approved") === "new"),
+    [localUsers]
+  );
+  const visibleUsers = useMemo(
+    () => filteredUsersBySearch(userStatusView === "approved" ? approvedUsers : newUsers),
+    [approvedUsers, filteredUsersBySearch, newUsers, userStatusView]
+  );
   const sortedUsers = useMemo(
     () =>
-      [...localUsers].sort((a, b) =>
+      [...visibleUsers].sort((a, b) =>
         a.displayName.localeCompare(b.displayName, locale === "ar" ? "ar" : "en", {
           sensitivity: "base"
         })
       ),
-    [localUsers, locale]
+    [visibleUsers, locale]
   );
   const totalUserPages = Math.max(1, Math.ceil(sortedUsers.length / USERS_PER_PAGE));
   const paginatedUsers = useMemo(
@@ -1144,6 +1180,10 @@ export function DashboardShell({
       setUserPage(totalUserPages);
     }
   }, [totalUserPages, userPage]);
+
+  useEffect(() => {
+    setUserPage(1);
+  }, [userSearchQuery, userStatusView]);
 
   useEffect(() => {
     if (activeSection === "overview") {
@@ -3039,34 +3079,67 @@ export function DashboardShell({
                 </h2>
                 <p className={`text-sm ${dashboardMutedTextClass}`}>
                   {locale === "ar"
-                    ? `عرض ${formatNumber(paginatedUsers.length, locale)} من كل صفحة، بإجمالي ${formatNumber(sortedUsers.length, locale)} مستخدم`
-                    : `Showing ${paginatedUsers.length} on this page, ${sortedUsers.length} users total`}
+                    ? `عرض ${formatNumber(paginatedUsers.length, locale)} من كل صفحة، بإجمالي ${formatNumber(sortedUsers.length, locale)} ${userStatusView === "approved" ? "منتسب" : "مسجل جديد"}`
+                    : `Showing ${paginatedUsers.length} on this page, ${sortedUsers.length} ${userStatusView === "approved" ? "members" : "new signups"} total`}
                 </p>
               </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() =>
-                  getCsvData(
-                    "users-export.csv",
-                    sortedUsers.map((user) => ({
-                      fullName: user.displayName,
-                      email: user.email,
-                      phone: user.phone || "",
-                      studentId: user.studentId || "",
-                      specialization: user.specialization || "",
-                      memberGrade: user.memberGrade || "second",
-                      role: user.role,
-                      membershipStatus: user.membershipStatus,
-                      membershipId: user.membershipId || user.id,
-                      joinedAt: user.joinedAt
-                    }))
-                  )
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={userStatusView === "approved" ? "primary" : "secondary"}
+                  size="sm"
+                  onClick={() => setUserStatusView("approved")}
+                >
+                  {locale === "ar"
+                    ? `المنتسبون (${formatNumber(approvedUsers.length, locale)})`
+                    : `Members (${approvedUsers.length})`}
+                </Button>
+                <Button
+                  variant={userStatusView === "new" ? "primary" : "secondary"}
+                  size="sm"
+                  onClick={() => setUserStatusView("new")}
+                >
+                  {locale === "ar"
+                    ? `المسجلون الجدد (${formatNumber(newUsers.length, locale)})`
+                    : `New signups (${newUsers.length})`}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    getCsvData(
+                      `users-${userStatusView}.csv`,
+                      sortedUsers.map((user) => ({
+                        fullName: user.displayName,
+                        email: user.email,
+                        phone: user.phone || "",
+                        studentId: user.studentId || "",
+                        specialization: user.specialization || "",
+                        memberGrade: user.memberGrade || "second",
+                        accountStatus: user.accountStatus || "approved",
+                        role: user.role,
+                        membershipStatus: user.membershipStatus,
+                        membershipId: user.membershipId || user.id,
+                        joinedAt: user.joinedAt
+                      }))
+                    )
+                  }
+                >
+                  <Download className="h-4 w-4" />
+                  {locale === "ar" ? "تنزيل Excel" : "Download Excel"}
+                </Button>
+              </div>
+            </div>
+            <div className={dashboardPanelClass}>
+              <input
+                value={userSearchQuery}
+                onChange={(event) => setUserSearchQuery(event.target.value)}
+                placeholder={
+                  locale === "ar"
+                    ? "ابحث بالاسم أو الرقم الجامعي أو البريد الإلكتروني"
+                    : "Search by name, student ID, or email"
                 }
-              >
-                <Download className="h-4 w-4" />
-                {locale === "ar" ? "تنزيل Excel" : "Download Excel"}
-              </Button>
+                className={dashboardFieldClass}
+              />
             </div>
             <form
               className={`${dashboardPanelClass} ${isUserDetailOpen ? "hidden" : "grid gap-3 md:grid-cols-2"}`}
@@ -3081,6 +3154,7 @@ export function DashboardShell({
                     studentId: createUserForm.studentId.trim(),
                     specialization: createUserForm.specialization.trim(),
                     memberGrade: createUserForm.memberGrade,
+                    accountStatus: createUserForm.accountStatus,
                     role: createUserForm.role,
                     membershipStatus: createUserForm.membershipStatus
                   });
@@ -3092,6 +3166,7 @@ export function DashboardShell({
                     studentId: "",
                     specialization: "",
                     memberGrade: "second",
+                    accountStatus: "approved",
                     role: "user",
                     membershipStatus: "active"
                   });
