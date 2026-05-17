@@ -109,6 +109,7 @@ const membershipStatuses: UserProfile["membershipStatus"][] = [
   "expired",
   "pendingRenewal"
 ];
+const USERS_PER_PAGE = 20;
 
 function splitLines(value: string) {
   return value
@@ -389,7 +390,9 @@ function normalizeDashboardDateValue(value: unknown) {
 function getCsvData(filename: string, rows: Record<string, unknown>[]) {
   const headers = Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
   const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
-  const csv = [headers.join(","), ...rows.map((row) => headers.map((header) => escape(row[header])).join(","))].join("\n");
+  const csv =
+    "\uFEFF" +
+    [headers.join(","), ...rows.map((row) => headers.map((header) => escape(row[header])).join(","))].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -612,6 +615,7 @@ export function DashboardShell({
   });
   const [productImageFiles, setProductImageFiles] = useState<File[]>([]);
   const [boardMemberImageFile, setBoardMemberImageFile] = useState<File | null>(null);
+  const [userPage, setUserPage] = useState(1);
   const [createUserForm, setCreateUserForm] = useState({
     displayName: "",
     email: "",
@@ -858,6 +862,20 @@ export function DashboardShell({
     [localUsers, selectedUserId]
   );
   const isUserDetailOpen = Boolean(selectedUserId);
+  const sortedUsers = useMemo(
+    () =>
+      [...localUsers].sort((a, b) =>
+        a.displayName.localeCompare(b.displayName, locale === "ar" ? "ar" : "en", {
+          sensitivity: "base"
+        })
+      ),
+    [localUsers, locale]
+  );
+  const totalUserPages = Math.max(1, Math.ceil(sortedUsers.length / USERS_PER_PAGE));
+  const paginatedUsers = useMemo(
+    () => sortedUsers.slice((userPage - 1) * USERS_PER_PAGE, userPage * USERS_PER_PAGE),
+    [sortedUsers, userPage]
+  );
   const currentBoardYear = String(new Date().getFullYear());
   const showManagementSections = mode === "admin";
   const showOverview = showManagementSections && activeSection === "overview";
@@ -1109,6 +1127,12 @@ export function DashboardShell({
 
     void refreshClientProducts().catch(() => undefined);
   }, [activeSection, refreshClientProducts]);
+
+  useEffect(() => {
+    if (userPage > totalUserPages) {
+      setUserPage(totalUserPages);
+    }
+  }, [totalUserPages, userPage]);
 
   useEffect(() => {
     if (activeSection === "overview") {
@@ -2811,9 +2835,40 @@ export function DashboardShell({
 
           {showAdminSection("users") ? (
           <Card id="users" className="space-y-4">
-            <h2 className="font-heading text-2xl font-semibold text-brand-primary">
-              {labels.userManagement}
-            </h2>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="font-heading text-2xl font-semibold text-brand-primary">
+                  {labels.userManagement}
+                </h2>
+                <p className={`text-sm ${dashboardMutedTextClass}`}>
+                  {locale === "ar"
+                    ? `عرض ${formatNumber(paginatedUsers.length, locale)} من كل صفحة، بإجمالي ${formatNumber(sortedUsers.length, locale)} مستخدم`
+                    : `Showing ${paginatedUsers.length} on this page, ${sortedUsers.length} users total`}
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  getCsvData(
+                    "users-export.csv",
+                    sortedUsers.map((user) => ({
+                      fullName: user.displayName,
+                      email: user.email,
+                      phone: user.phone || "",
+                      studentId: user.studentId || "",
+                      role: user.role,
+                      membershipStatus: user.membershipStatus,
+                      membershipId: user.membershipId || user.id,
+                      joinedAt: user.joinedAt
+                    }))
+                  )
+                }
+              >
+                <Download className="h-4 w-4" />
+                {locale === "ar" ? "تنزيل Excel" : "Download Excel"}
+              </Button>
+            </div>
             <form
               className={`${dashboardPanelClass} ${isUserDetailOpen ? "hidden" : "grid gap-3 md:grid-cols-2"}`}
               onSubmit={(event) => {
@@ -2931,7 +2986,7 @@ export function DashboardShell({
               </Button>
             </form>
             <div className="grid gap-4">
-              {localUsers.map((entry) => {
+              {(selectedUser ? [selectedUser] : paginatedUsers).map((entry) => {
                 const isSelectedUser = selectedUserId === entry.id;
 
                 return (
@@ -3077,6 +3132,31 @@ export function DashboardShell({
                   {locale === "ar"
                     ? "لا توجد بيانات مستخدمين محمّلة حاليًا. إذا كانت الحسابات موجودة في Firebase فسيتم جلبها تلقائيًا عند توفر القراءة."
                     : "No user records are currently loaded. Existing Firebase users will appear here once the dashboard can read them."}
+                </div>
+              ) : null}
+              {!isUserDetailOpen && totalUserPages > 1 ? (
+                <div className={`${dashboardPanelClass} flex flex-wrap items-center justify-between gap-3`}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setUserPage((current) => Math.max(1, current - 1))}
+                    disabled={userPage === 1}
+                  >
+                    {locale === "ar" ? "السابق" : "Previous"}
+                  </Button>
+                  <span className={`text-sm ${dashboardMutedTextClass}`}>
+                    {locale === "ar"
+                      ? `الصفحة ${formatNumber(userPage, locale)} من ${formatNumber(totalUserPages, locale)}`
+                      : `Page ${userPage} of ${totalUserPages}`}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setUserPage((current) => Math.min(totalUserPages, current + 1))}
+                    disabled={userPage === totalUserPages}
+                  >
+                    {locale === "ar" ? "التالي" : "Next"}
+                  </Button>
                 </div>
               ) : null}
             </div>
