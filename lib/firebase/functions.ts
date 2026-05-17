@@ -63,9 +63,34 @@ async function callAdminFunction<Input, Output = { success: boolean; id?: string
   name: string,
   payload: Input
 ) {
-  const callable = httpsCallable<Input, Output>(requireFunctions(), name);
-  const result = await callable(payload);
-  return result.data;
+  try {
+    const callable = httpsCallable<Input, Output>(requireFunctions(), name);
+    const result = await callable(payload);
+    return result.data;
+  } catch (error) {
+    const nextError = error as {
+      message?: string;
+      code?: string;
+      details?: unknown;
+    };
+
+    if (typeof nextError.details === "string" && nextError.details.trim()) {
+      throw new Error(nextError.details);
+    }
+
+    if (typeof nextError.message === "string" && nextError.message.trim()) {
+      const normalizedMessage = nextError.message.replace(/^functions\/[a-z-]+\s*/i, "").trim();
+      if (normalizedMessage && normalizedMessage.toLowerCase() !== "internal") {
+        throw new Error(normalizedMessage);
+      }
+    }
+
+    if (typeof nextError.code === "string" && nextError.code.includes("already-exists")) {
+      throw new Error("This email is already in use.");
+    }
+
+    throw error;
+  }
 }
 
 export async function sendContactEmail(payload: ContactMessagePayload) {
