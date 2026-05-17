@@ -78,11 +78,27 @@ async function callAdminFunction<Input, Output = { success: boolean; id?: string
       throw new Error(nextError.details);
     }
 
+    if (
+      typeof nextError.details === "object" &&
+      nextError.details !== null &&
+      "message" in nextError.details &&
+      typeof (nextError.details as { message?: unknown }).message === "string"
+    ) {
+      const detailsMessage = (nextError.details as { message: string }).message.trim();
+      if (detailsMessage) {
+        throw new Error(detailsMessage);
+      }
+    }
+
     if (typeof nextError.message === "string" && nextError.message.trim()) {
       const normalizedMessage = nextError.message.replace(/^functions\/[a-z-]+\s*/i, "").trim();
       if (normalizedMessage && normalizedMessage.toLowerCase() !== "internal") {
         throw new Error(normalizedMessage);
       }
+    }
+
+    if (typeof nextError.code === "string" && nextError.code.includes("permission-denied")) {
+      throw new Error("Your session does not currently have admin permissions. Sign out, sign back in, then try again.");
     }
 
     if (typeof nextError.code === "string" && nextError.code.includes("already-exists")) {
@@ -184,6 +200,8 @@ export async function updateUserAdmin(payload: {
   email?: string;
   phone?: string;
   studentId?: string;
+  specialization?: string;
+  memberGrade?: UserProfile["memberGrade"];
   role?: Role;
   membershipStatus?: UserProfile["membershipStatus"];
   membershipExpiresAt?: string;
@@ -197,6 +215,8 @@ export async function createUserAdmin(payload: {
   password: string;
   phone?: string;
   studentId?: string;
+  specialization?: string;
+  memberGrade?: UserProfile["memberGrade"];
   role?: Role;
   membershipStatus?: UserProfile["membershipStatus"];
 }) {
@@ -207,6 +227,8 @@ export async function createUserAdmin(payload: {
       password: string;
       phone?: string;
       studentId?: string;
+      specialization?: string;
+      memberGrade?: UserProfile["memberGrade"];
       role?: Role;
       membershipStatus?: UserProfile["membershipStatus"];
     },

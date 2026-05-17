@@ -94,6 +94,11 @@ function normalizeUserProfile(id: string, data: Record<string, unknown>): UserPr
     role: (data.role as UserProfile["role"]) || "user",
     phone: typeof data.phone === "string" ? data.phone : "",
     studentId: typeof data.studentId === "string" ? data.studentId : "",
+    specialization: typeof data.specialization === "string" ? data.specialization : "",
+    memberGrade:
+      data.memberGrade === "first" || data.memberGrade === "second"
+        ? (data.memberGrade as UserProfile["memberGrade"])
+        : "second",
     company: typeof data.company === "string" ? data.company : "",
     photoURL: typeof data.photoURL === "string" ? data.photoURL : undefined,
     membershipStatus: (data.membershipStatus as UserProfile["membershipStatus"]) || "active",

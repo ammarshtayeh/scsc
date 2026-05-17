@@ -63,7 +63,6 @@ async function buildFirebaseSessionUser(firebaseUser: FirebaseUser): Promise<App
     const profileSnap = await getDoc(doc(db, "users", firebaseUser.uid));
     if (profileSnap.exists()) {
       const profile = profileSnap.data() as unknown as UserProfile;
-      role = profile.role || role;
       displayName = profile.displayName || displayName;
       photoURL = profile.photoURL || photoURL;
     }
@@ -103,6 +102,8 @@ async function ensureFirebaseUserProfile(firebaseUser: FirebaseUser) {
       email: firebaseUser.email || "",
       phone: "",
       studentId: "",
+      specialization: "",
+      memberGrade: "second",
       company: "",
       photoURL: firebaseUser.photoURL || "",
       role: "user",
@@ -165,6 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const credential = await signInWithEmail(email, password);
+    await credential.user.getIdToken(true);
     const sessionUser = await buildFirebaseSessionUser(credential.user);
     await syncSessionCookie(await credential.user.getIdToken());
     setUser(sessionUser);
@@ -178,6 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const credential = await signInWithGoogle();
     await ensureFirebaseUserProfile(credential.user);
+    await credential.user.getIdToken(true);
     const sessionUser = await buildFirebaseSessionUser(credential.user);
     await syncSessionCookie(await credential.user.getIdToken());
     setUser(sessionUser);
@@ -201,6 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const credential = await signUpWithEmail(email, password, displayName);
+      await credential.user.getIdToken(true);
       if (db) {
         await ensureFirebaseUserProfile(credential.user);
         await setDoc(

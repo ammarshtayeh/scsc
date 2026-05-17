@@ -15,6 +15,7 @@ const publicCallableOptions = { invoker: "public" as const };
 
 type MembershipStatus = "active" | "expired" | "pendingRenewal";
 type Role = "admin" | "moderator" | "user";
+type MemberGrade = "first" | "second";
 type OrderStatus = "pending" | "confirmed" | "processing" | "delivered";
 type ArticleCategory = "Skin Care" | "Makeup" | "Hair Care" | "Others";
 
@@ -122,6 +123,14 @@ function normalizeMembershipStatus(data: {
 
 function cleanString(value: unknown, fallback = "") {
   return typeof value === "string" ? value.trim() || fallback : fallback;
+}
+
+function resolveMemberGrade(specialization?: string, preferredGrade?: string): MemberGrade {
+  if (preferredGrade === "first" || preferredGrade === "second") {
+    return preferredGrade;
+  }
+
+  return cleanString(specialization) === "مستحضرات تجميل والعناية بالبشرة" ? "first" : "second";
 }
 
 function getErrorCode(error: unknown) {
@@ -945,12 +954,25 @@ export const deleteBoardMember = onCall(publicCallableOptions, async (request) =
 export const updateUserAdmin = onCall(publicCallableOptions, async (request) => {
   requireAdmin(request);
 
-  const { uid, displayName, email, phone, studentId, role, membershipStatus, membershipExpiresAt } = request.data as {
+  const {
+    uid,
+    displayName,
+    email,
+    phone,
+    studentId,
+    specialization,
+    memberGrade,
+    role,
+    membershipStatus,
+    membershipExpiresAt
+  } = request.data as {
     uid?: string;
     displayName?: string;
     email?: string;
     phone?: string;
     studentId?: string;
+    specialization?: string;
+    memberGrade?: MemberGrade;
     role?: Role;
     membershipStatus?: MembershipStatus;
     membershipExpiresAt?: string;
@@ -962,6 +984,7 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
 
   const allowedRoles: Role[] = ["admin", "moderator", "user"];
   const allowedStatuses: MembershipStatus[] = ["active", "expired", "pendingRenewal"];
+  const allowedGrades: MemberGrade[] = ["first", "second"];
   const payload: Record<string, unknown> = {
     updatedAt: new Date().toISOString()
   };
@@ -994,6 +1017,24 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
 
   if (typeof studentId === "string") {
     payload.studentId = cleanString(studentId);
+  }
+
+  const hasSpecialization = typeof specialization === "string";
+  const hasMemberGrade = typeof memberGrade === "string";
+
+  if (hasSpecialization) {
+    payload.specialization = cleanString(specialization);
+  }
+
+  if (hasMemberGrade && !allowedGrades.includes(memberGrade as MemberGrade)) {
+    throw new HttpsError("invalid-argument", "Invalid member grade.");
+  }
+
+  if (hasSpecialization || hasMemberGrade) {
+    payload.memberGrade = resolveMemberGrade(
+      hasSpecialization ? specialization : undefined,
+      hasMemberGrade ? memberGrade : undefined
+    );
   }
 
   if (role) {
@@ -1032,6 +1073,8 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
     password,
     phone,
     studentId,
+    specialization,
+    memberGrade,
     role,
     membershipStatus
   } = request.data as {
@@ -1040,6 +1083,8 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
     password?: string;
     phone?: string;
     studentId?: string;
+    specialization?: string;
+    memberGrade?: MemberGrade;
     role?: Role;
     membershipStatus?: MembershipStatus;
   };
@@ -1049,6 +1094,8 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
   const nextPassword = typeof password === "string" ? password : "";
   const nextRole = role || "user";
   const nextMembershipStatus = membershipStatus || "active";
+  const nextSpecialization = cleanString(specialization);
+  const nextMemberGrade = resolveMemberGrade(nextSpecialization, memberGrade);
 
   if (!nextDisplayName) {
     throw new HttpsError("invalid-argument", "Display name is required.");
@@ -1070,6 +1117,10 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
     throw new HttpsError("invalid-argument", "Invalid membership status.");
   }
 
+  if (memberGrade && !["first", "second"].includes(memberGrade)) {
+    throw new HttpsError("invalid-argument", "Invalid member grade.");
+  }
+
   try {
     const userRecord = await getAuth().createUser({
       displayName: nextDisplayName,
@@ -1088,6 +1139,8 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
       email: nextEmail,
       phone: cleanString(phone),
       studentId: cleanString(studentId),
+      specialization: nextSpecialization,
+      memberGrade: nextMemberGrade,
       company: "",
       photoURL: "",
       role: nextRole,

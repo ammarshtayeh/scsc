@@ -4,6 +4,7 @@ export type ArticleCategory = "Skin Care" | "Makeup" | "Hair Care" | "Others";
 export type ProductCategory = "Skin Care" | "Body Care" | "Makeup" | "Masks";
 export type OrderStatus = "pending" | "confirmed" | "processing" | "delivered";
 export type MembershipStatus = "active" | "expired" | "pendingRenewal";
+export type MemberGrade = "first" | "second";
 
 export interface ArticleReference {
   label: string;
@@ -167,6 +168,8 @@ export interface UserProfile {
   role: Role;
   phone?: string;
   studentId?: string;
+  specialization?: string;
+  memberGrade?: MemberGrade;
   company?: string;
   photoURL?: string;
   membershipStatus: MembershipStatus;

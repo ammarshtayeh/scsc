@@ -109,6 +109,7 @@ const membershipStatuses: UserProfile["membershipStatus"][] = [
   "expired",
   "pendingRenewal"
 ];
+const memberGrades: NonNullable<UserProfile["memberGrade"]>[] = ["first", "second"];
 const USERS_PER_PAGE = 20;
 
 function splitLines(value: string) {
@@ -236,6 +237,14 @@ function normalizeDashboardUser(id: string, data: Record<string, unknown>): User
     phone: typeof data.phone === "string" && data.phone.trim() ? data.phone.trim() : undefined,
     studentId:
       typeof data.studentId === "string" && data.studentId.trim() ? data.studentId.trim() : undefined,
+    specialization:
+      typeof data.specialization === "string" && data.specialization.trim()
+        ? data.specialization.trim()
+        : undefined,
+    memberGrade:
+      data.memberGrade === "first" || data.memberGrade === "second"
+        ? (data.memberGrade as UserProfile["memberGrade"])
+        : "second",
     company: typeof data.company === "string" && data.company.trim() ? data.company.trim() : undefined,
     photoURL: typeof data.photoURL === "string" && data.photoURL.trim() ? data.photoURL.trim() : undefined,
     membershipStatus:
@@ -622,6 +631,8 @@ export function DashboardShell({
     password: "",
     phone: "",
     studentId: "",
+    specialization: "",
+    memberGrade: "second" as NonNullable<UserProfile["memberGrade"]>,
     role: "user" as Role,
     membershipStatus: "active" as UserProfile["membershipStatus"]
   });
@@ -2775,6 +2786,22 @@ export function DashboardShell({
                             : `Student ID: ${selectedUser.studentId}`}
                         </span>
                       ) : null}
+                      {selectedUser.specialization ? (
+                        <span className="rounded-full border border-brand-primary/10 px-3 py-1">
+                          {locale === "ar"
+                            ? `التخصص: ${selectedUser.specialization}`
+                            : `Specialization: ${selectedUser.specialization}`}
+                        </span>
+                      ) : null}
+                      <span className="rounded-full border border-brand-primary/10 px-3 py-1">
+                        {locale === "ar"
+                          ? selectedUser.memberGrade === "first"
+                            ? "درجة أولى"
+                            : "درجة ثانية"
+                          : selectedUser.memberGrade === "first"
+                            ? "First grade"
+                            : "Second grade"}
+                      </span>
                     </div>
                   </div>
                   <Button size="sm" variant="secondary" onClick={() => router.push("/admin/users")}>
@@ -2793,6 +2820,24 @@ export function DashboardShell({
                   </DashboardFieldLabel>
                   <DashboardFieldLabel label={locale === "ar" ? "الرقم الجامعي" : "Student ID"}>
                     <input defaultValue={selectedUser.studentId || ""} id={`detail-studentId-${selectedUser.id}`} className={dashboardEditFieldClass} />
+                  </DashboardFieldLabel>
+                  <DashboardFieldLabel label={locale === "ar" ? "التخصص" : "Specialization"}>
+                    <input defaultValue={selectedUser.specialization || ""} id={`detail-specialization-${selectedUser.id}`} className={dashboardEditFieldClass} />
+                  </DashboardFieldLabel>
+                  <DashboardFieldLabel label={locale === "ar" ? "الدرجة" : "Grade"}>
+                    <select defaultValue={selectedUser.memberGrade || "second"} id={`detail-grade-${selectedUser.id}`} className={dashboardEditFieldClass}>
+                      {memberGrades.map((grade) => (
+                        <option key={grade} value={grade}>
+                          {locale === "ar"
+                            ? grade === "first"
+                              ? "درجة أولى"
+                              : "درجة ثانية"
+                            : grade === "first"
+                              ? "First grade"
+                              : "Second grade"}
+                        </option>
+                      ))}
+                    </select>
                   </DashboardFieldLabel>
                   <DashboardFieldLabel label={locale === "ar" ? "الصلاحية" : "Role"}>
                     <select defaultValue={selectedUser.role} id={`detail-role-${selectedUser.id}`} className={dashboardEditFieldClass}>
@@ -2823,6 +2868,8 @@ export function DashboardShell({
                       const email = (document.getElementById(`detail-email-${selectedUser.id}`) as HTMLInputElement).value;
                       const phone = (document.getElementById(`detail-phone-${selectedUser.id}`) as HTMLInputElement).value;
                       const studentId = (document.getElementById(`detail-studentId-${selectedUser.id}`) as HTMLInputElement).value;
+                      const specialization = (document.getElementById(`detail-specialization-${selectedUser.id}`) as HTMLInputElement).value;
+                      const memberGrade = (document.getElementById(`detail-grade-${selectedUser.id}`) as HTMLSelectElement).value as NonNullable<UserProfile["memberGrade"]>;
                       const role = (document.getElementById(`detail-role-${selectedUser.id}`) as HTMLSelectElement).value as Role;
                       const membershipStatus = (document.getElementById(`detail-status-${selectedUser.id}`) as HTMLSelectElement).value as UserProfile["membershipStatus"];
                       void runAction(`detail-user-${selectedUser.id}`, async () => {
@@ -2832,6 +2879,8 @@ export function DashboardShell({
                           email,
                           phone,
                           studentId,
+                          specialization,
+                          memberGrade,
                           role,
                           membershipStatus
                         });
@@ -3005,6 +3054,8 @@ export function DashboardShell({
                       email: user.email,
                       phone: user.phone || "",
                       studentId: user.studentId || "",
+                      specialization: user.specialization || "",
+                      memberGrade: user.memberGrade || "second",
                       role: user.role,
                       membershipStatus: user.membershipStatus,
                       membershipId: user.membershipId || user.id,
@@ -3028,6 +3079,8 @@ export function DashboardShell({
                     password: createUserForm.password,
                     phone: createUserForm.phone.trim(),
                     studentId: createUserForm.studentId.trim(),
+                    specialization: createUserForm.specialization.trim(),
+                    memberGrade: createUserForm.memberGrade,
                     role: createUserForm.role,
                     membershipStatus: createUserForm.membershipStatus
                   });
@@ -3037,6 +3090,8 @@ export function DashboardShell({
                     password: "",
                     phone: "",
                     studentId: "",
+                    specialization: "",
+                    memberGrade: "second",
                     role: "user",
                     membershipStatus: "active"
                   });
@@ -3094,6 +3149,39 @@ export function DashboardShell({
                   }
                   className={dashboardFieldClass}
                 />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "التخصص" : "Specialization"}>
+                <input
+                  value={createUserForm.specialization}
+                  onChange={(event) =>
+                    setCreateUserForm((current) => ({ ...current, specialization: event.target.value }))
+                  }
+                  className={dashboardFieldClass}
+                />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "الدرجة" : "Grade"}>
+                <select
+                  value={createUserForm.memberGrade}
+                  onChange={(event) =>
+                    setCreateUserForm((current) => ({
+                      ...current,
+                      memberGrade: event.target.value as NonNullable<UserProfile["memberGrade"]>
+                    }))
+                  }
+                  className={dashboardFieldClass}
+                >
+                  {memberGrades.map((grade) => (
+                    <option key={grade} value={grade}>
+                      {locale === "ar"
+                        ? grade === "first"
+                          ? "درجة أولى"
+                          : "درجة ثانية"
+                        : grade === "first"
+                          ? "First grade"
+                          : "Second grade"}
+                    </option>
+                  ))}
+                </select>
               </DashboardFieldLabel>
               <DashboardFieldLabel label={locale === "ar" ? "الصلاحية" : "Role"}>
                 <select
@@ -3305,6 +3393,16 @@ export function DashboardShell({
                           {entry.membershipId || entry.id}
                           {entry.phone ? ` | ${entry.phone}` : ""}
                           {entry.studentId ? ` | ${entry.studentId}` : ""}
+                          {entry.specialization ? ` | ${entry.specialization}` : ""}
+                          {entry.memberGrade
+                            ? locale === "ar"
+                              ? entry.memberGrade === "first"
+                                ? " | درجة أولى"
+                                : " | درجة ثانية"
+                              : entry.memberGrade === "first"
+                                ? " | First grade"
+                                : " | Second grade"
+                            : ""}
                         </p>
                       </>
                     ) : null}
@@ -3313,6 +3411,20 @@ export function DashboardShell({
                   <input defaultValue={entry.email} id={`email-${entry.id}`} type="email" className={`${dashboardEditFieldClass} ${isSelectedUser ? "" : "hidden"}`} />
                   <input defaultValue={entry.phone || ""} id={`phone-${entry.id}`} className={`${dashboardEditFieldClass} ${isSelectedUser ? "" : "hidden"}`} />
                   <input defaultValue={entry.studentId || ""} id={`studentId-${entry.id}`} className={`${dashboardEditFieldClass} ${isSelectedUser ? "" : "hidden"}`} />
+                  <input defaultValue={entry.specialization || ""} id={`specialization-${entry.id}`} className={`${dashboardEditFieldClass} ${isSelectedUser ? "" : "hidden"}`} />
+                  <select defaultValue={entry.memberGrade || "second"} id={`grade-${entry.id}`} className={`${dashboardEditFieldClass} ${isSelectedUser ? "" : "hidden"}`}>
+                    {memberGrades.map((grade) => (
+                      <option key={grade} value={grade}>
+                        {locale === "ar"
+                          ? grade === "first"
+                            ? "درجة أولى"
+                            : "درجة ثانية"
+                          : grade === "first"
+                            ? "First grade"
+                            : "Second grade"}
+                      </option>
+                    ))}
+                  </select>
                   <select defaultValue={entry.role} id={`role-${entry.id}`} className={`${dashboardEditFieldClass} ${isSelectedUser ? "" : "hidden"}`}>
                     {roles.map((role) => (
                       <option key={role} value={role}>
@@ -3337,6 +3449,8 @@ export function DashboardShell({
                       const email = (document.getElementById(`email-${entry.id}`) as HTMLInputElement).value;
                       const phone = (document.getElementById(`phone-${entry.id}`) as HTMLInputElement).value;
                       const studentId = (document.getElementById(`studentId-${entry.id}`) as HTMLInputElement).value;
+                      const specialization = (document.getElementById(`specialization-${entry.id}`) as HTMLInputElement).value;
+                      const memberGrade = (document.getElementById(`grade-${entry.id}`) as HTMLSelectElement).value as NonNullable<UserProfile["memberGrade"]>;
                       const role = (document.getElementById(`role-${entry.id}`) as HTMLSelectElement).value as Role;
                       const membershipStatus = (document.getElementById(`status-${entry.id}`) as HTMLSelectElement).value as UserProfile["membershipStatus"];
                       void runAction(`user-${entry.id}`, async () => {
@@ -3346,6 +3460,8 @@ export function DashboardShell({
                           email,
                           phone,
                           studentId,
+                          specialization,
+                          memberGrade,
                           role,
                           membershipStatus
                         });

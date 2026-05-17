@@ -86,6 +86,12 @@ function normalizeMembershipStatus(data) {
 function cleanString(value, fallback = "") {
     return typeof value === "string" ? value.trim() || fallback : fallback;
 }
+function resolveMemberGrade(specialization, preferredGrade) {
+    if (preferredGrade === "first" || preferredGrade === "second") {
+        return preferredGrade;
+    }
+    return cleanString(specialization) === "مستحضرات تجميل والعناية بالبشرة" ? "first" : "second";
+}
 function getErrorCode(error) {
     return typeof error === "object" && error !== null && "code" in error
         ? String(error.code || "")
@@ -663,12 +669,13 @@ exports.deleteBoardMember = (0, https_1.onCall)(publicCallableOptions, async (re
 });
 exports.updateUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdmin(request);
-    const { uid, displayName, email, phone, studentId, role, membershipStatus, membershipExpiresAt } = request.data;
+    const { uid, displayName, email, phone, studentId, specialization, memberGrade, role, membershipStatus, membershipExpiresAt } = request.data;
     if (!uid) {
         throw new https_1.HttpsError("invalid-argument", "User ID is required.");
     }
     const allowedRoles = ["admin", "moderator", "user"];
     const allowedStatuses = ["active", "expired", "pendingRenewal"];
+    const allowedGrades = ["first", "second"];
     const payload = {
         updatedAt: new Date().toISOString()
     };
@@ -695,6 +702,17 @@ exports.updateUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
     if (typeof studentId === "string") {
         payload.studentId = cleanString(studentId);
     }
+    const hasSpecialization = typeof specialization === "string";
+    const hasMemberGrade = typeof memberGrade === "string";
+    if (hasSpecialization) {
+        payload.specialization = cleanString(specialization);
+    }
+    if (hasMemberGrade && !allowedGrades.includes(memberGrade)) {
+        throw new https_1.HttpsError("invalid-argument", "Invalid member grade.");
+    }
+    if (hasSpecialization || hasMemberGrade) {
+        payload.memberGrade = resolveMemberGrade(hasSpecialization ? specialization : undefined, hasMemberGrade ? memberGrade : undefined);
+    }
     if (role) {
         if (!allowedRoles.includes(role)) {
             throw new https_1.HttpsError("invalid-argument", "Invalid role.");
@@ -719,12 +737,14 @@ exports.updateUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
 });
 exports.createUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdmin(request);
-    const { displayName, email, password, phone, studentId, role, membershipStatus } = request.data;
+    const { displayName, email, password, phone, studentId, specialization, memberGrade, role, membershipStatus } = request.data;
     const nextDisplayName = cleanString(displayName);
     const nextEmail = cleanString(email).toLowerCase();
     const nextPassword = typeof password === "string" ? password : "";
     const nextRole = role || "user";
     const nextMembershipStatus = membershipStatus || "active";
+    const nextSpecialization = cleanString(specialization);
+    const nextMemberGrade = resolveMemberGrade(nextSpecialization, memberGrade);
     if (!nextDisplayName) {
         throw new https_1.HttpsError("invalid-argument", "Display name is required.");
     }
@@ -739,6 +759,9 @@ exports.createUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
     }
     if (!["active", "expired", "pendingRenewal"].includes(nextMembershipStatus)) {
         throw new https_1.HttpsError("invalid-argument", "Invalid membership status.");
+    }
+    if (memberGrade && !["first", "second"].includes(memberGrade)) {
+        throw new https_1.HttpsError("invalid-argument", "Invalid member grade.");
     }
     try {
         const userRecord = await (0, auth_1.getAuth)().createUser({
@@ -756,6 +779,8 @@ exports.createUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
             email: nextEmail,
             phone: cleanString(phone),
             studentId: cleanString(studentId),
+            specialization: nextSpecialization,
+            memberGrade: nextMemberGrade,
             company: "",
             photoURL: "",
             role: nextRole,

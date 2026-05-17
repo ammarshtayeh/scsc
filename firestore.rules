@@ -28,7 +28,31 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isSelf(userId) || isAdminOrModerator();
-      allow create: if isSelf(userId);
+      allow create: if isSelf(userId) &&
+        request.resource.data.role == "user" &&
+        request.resource.data.keys().hasOnly([
+          "membershipId",
+          "displayName",
+          "email",
+          "phone",
+          "studentId",
+          "specialization",
+          "memberGrade",
+          "company",
+          "photoURL",
+          "role",
+          "membershipStatus",
+          "membershipExpiresAt",
+          "joinedAt",
+          "qrToken",
+          "savedArticleIds",
+          "registeredEventIds",
+          "activeQrSessionId",
+          "activeQrSessionExpiresAt",
+          "lastQrIssuedAt",
+          "lastQrScanAt",
+          "discountRate"
+        ]);
       allow update: if isAdminOrModerator() || (
         isSelf(userId) &&
         request.resource.data.diff(resource.data).changedKeys().hasOnly([
