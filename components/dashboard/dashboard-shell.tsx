@@ -2881,6 +2881,9 @@ export function DashboardShell({
                       ))}
                     </select>
                   </DashboardFieldLabel>
+                  <DashboardFieldLabel label={locale === "ar" ? "التخصص" : "Specialization"}>
+                    <input defaultValue={selectedUser.specialization || ""} id={`detail-specialization-${selectedUser.id}`} className={dashboardEditFieldClass} />
+                  </DashboardFieldLabel>
                   <DashboardFieldLabel label={locale === "ar" ? "الصلاحية" : "Role"}>
                     <select defaultValue={selectedUser.role} id={`detail-role-${selectedUser.id}`} className={dashboardEditFieldClass}>
                       {roles.map((role) => (
@@ -3386,6 +3389,7 @@ export function DashboardShell({
                       const email = (document.getElementById(`detail-email-${selectedUser.id}`) as HTMLInputElement).value;
                       const phone = (document.getElementById(`detail-phone-${selectedUser.id}`) as HTMLInputElement).value;
                       const studentId = (document.getElementById(`detail-studentId-${selectedUser.id}`) as HTMLInputElement).value;
+                      const specialization = (document.getElementById(`detail-specialization-${selectedUser.id}`) as HTMLInputElement).value;
                       const role = (document.getElementById(`detail-role-${selectedUser.id}`) as HTMLSelectElement).value as Role;
                       const membershipStatus = (document.getElementById(`detail-status-${selectedUser.id}`) as HTMLSelectElement).value as UserProfile["membershipStatus"];
                       void runAction(`detail-user-${selectedUser.id}`, async () => {
@@ -3395,6 +3399,7 @@ export function DashboardShell({
                           email,
                           phone,
                           studentId,
+                          specialization,
                           role,
                           membershipStatus
                         });
