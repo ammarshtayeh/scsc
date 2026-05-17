@@ -2751,6 +2751,157 @@ export function DashboardShell({
                 {adminLabels.addBoardMember}
               </Button>
             </form>
+            {selectedUser ? (
+              <div className={`${dashboardPanelClass} space-y-6`}>
+                <div className="flex flex-col gap-4 rounded-2xl border border-brand-primary/10 bg-white/5 p-4 md:flex-row md:items-start md:justify-between">
+                  <div className="space-y-2">
+                    <p className="font-heading text-2xl font-semibold text-brand-primary">
+                      {selectedUser.displayName}
+                    </p>
+                    <p className={`text-sm ${dashboardMutedTextClass}`}>{selectedUser.email}</p>
+                    <div className={`flex flex-wrap gap-2 text-xs ${dashboardMutedTextClass}`}>
+                      <span className="rounded-full border border-brand-primary/10 px-3 py-1">
+                        {selectedUser.membershipId || selectedUser.id}
+                      </span>
+                      {selectedUser.phone ? (
+                        <span className="rounded-full border border-brand-primary/10 px-3 py-1">
+                          {selectedUser.phone}
+                        </span>
+                      ) : null}
+                      {selectedUser.studentId ? (
+                        <span className="rounded-full border border-brand-primary/10 px-3 py-1">
+                          {locale === "ar"
+                            ? `الرقم الجامعي: ${selectedUser.studentId}`
+                            : `Student ID: ${selectedUser.studentId}`}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <Button size="sm" variant="secondary" onClick={() => router.push("/admin/users")}>
+                    {locale === "ar" ? "رجوع" : "Back"}
+                  </Button>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <DashboardFieldLabel label={locale === "ar" ? "الاسم الرباعي" : "Full name"}>
+                    <input defaultValue={selectedUser.displayName} id={`detail-name-${selectedUser.id}`} className={dashboardEditFieldClass} />
+                  </DashboardFieldLabel>
+                  <DashboardFieldLabel label={locale === "ar" ? "البريد الإلكتروني" : "Email"}>
+                    <input defaultValue={selectedUser.email} id={`detail-email-${selectedUser.id}`} type="email" className={dashboardEditFieldClass} />
+                  </DashboardFieldLabel>
+                  <DashboardFieldLabel label={locale === "ar" ? "رقم الهاتف" : "Phone number"}>
+                    <input defaultValue={selectedUser.phone || ""} id={`detail-phone-${selectedUser.id}`} className={dashboardEditFieldClass} />
+                  </DashboardFieldLabel>
+                  <DashboardFieldLabel label={locale === "ar" ? "الرقم الجامعي" : "Student ID"}>
+                    <input defaultValue={selectedUser.studentId || ""} id={`detail-studentId-${selectedUser.id}`} className={dashboardEditFieldClass} />
+                  </DashboardFieldLabel>
+                  <DashboardFieldLabel label={locale === "ar" ? "الصلاحية" : "Role"}>
+                    <select defaultValue={selectedUser.role} id={`detail-role-${selectedUser.id}`} className={dashboardEditFieldClass}>
+                      {roles.map((role) => (
+                        <option key={role} value={role}>
+                          {translateRole(role, locale)}
+                        </option>
+                      ))}
+                    </select>
+                  </DashboardFieldLabel>
+                  <DashboardFieldLabel label={locale === "ar" ? "حالة العضوية" : "Membership status"}>
+                    <select defaultValue={selectedUser.membershipStatus} id={`detail-status-${selectedUser.id}`} className={dashboardEditFieldClass}>
+                      {membershipStatuses.map((status) => (
+                        <option key={status} value={status}>
+                          {translateMembershipStatus(status, locale)}
+                        </option>
+                      ))}
+                    </select>
+                  </DashboardFieldLabel>
+                </div>
+                <div className="flex flex-wrap gap-3 border-t border-brand-primary/10 pt-4">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={loadingAction === `detail-user-${selectedUser.id}`}
+                    onClick={() => {
+                      const displayName = (document.getElementById(`detail-name-${selectedUser.id}`) as HTMLInputElement).value;
+                      const email = (document.getElementById(`detail-email-${selectedUser.id}`) as HTMLInputElement).value;
+                      const phone = (document.getElementById(`detail-phone-${selectedUser.id}`) as HTMLInputElement).value;
+                      const studentId = (document.getElementById(`detail-studentId-${selectedUser.id}`) as HTMLInputElement).value;
+                      const role = (document.getElementById(`detail-role-${selectedUser.id}`) as HTMLSelectElement).value as Role;
+                      const membershipStatus = (document.getElementById(`detail-status-${selectedUser.id}`) as HTMLSelectElement).value as UserProfile["membershipStatus"];
+                      void runAction(`detail-user-${selectedUser.id}`, async () => {
+                        await updateUserAdmin({
+                          uid: selectedUser.id,
+                          displayName,
+                          email,
+                          phone,
+                          studentId,
+                          role,
+                          membershipStatus
+                        });
+                        await refreshClientUsers();
+                      });
+                    }}
+                  >
+                    <Save className="h-4 w-4" />
+                    {labels.save}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={loadingAction === `detail-reset-password-${selectedUser.id}`}
+                    onClick={() => {
+                      void runAction(`detail-reset-password-${selectedUser.id}`, async () => {
+                        const result = await sendUserPasswordResetAdmin({
+                          uid: selectedUser.id,
+                          email: selectedUser.email
+                        });
+
+                        if (result.emailed) {
+                          pushToast(
+                            locale === "ar"
+                              ? "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريد المستخدم."
+                              : "Password reset link sent to the user's email.",
+                            "success"
+                          );
+                          return;
+                        }
+
+                        if (result.resetLink) {
+                          if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+                            await navigator.clipboard.writeText(result.resetLink);
+                          }
+                          pushToast(
+                            locale === "ar"
+                              ? "تم نسخ رابط إعادة التعيين لأن البريد غير مفعّل على الخادم."
+                              : "Reset link copied because server email is not configured.",
+                            "success"
+                          );
+                        }
+                      });
+                    }}
+                  >
+                    <LinkIcon className="h-4 w-4" />
+                    {locale === "ar" ? "إعادة التعيين" : "Reset password"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={loadingAction === `detail-delete-user-${selectedUser.id}`}
+                    onClick={() => {
+                      if (!window.confirm("Delete this user account?")) {
+                        return;
+                      }
+
+                      void runAction(`detail-delete-user-${selectedUser.id}`, async () => {
+                        await deleteUserAdmin(selectedUser.id);
+                        await refreshClientUsers();
+                        router.push("/admin/users");
+                      });
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {labels.delete}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
             <div className="grid gap-4">
               {localBoardMembers.map((member) => (
                 <div key={member.id} className={dashboardPanelClass}>
@@ -2986,7 +3137,7 @@ export function DashboardShell({
               </Button>
             </form>
             <div className="grid gap-4">
-              {(selectedUser ? [selectedUser] : paginatedUsers).map((entry) => {
+              {(!selectedUser ? paginatedUsers : []).map((entry) => {
                 const isSelectedUser = selectedUserId === entry.id;
 
                 return (
