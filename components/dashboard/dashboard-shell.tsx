@@ -18,6 +18,7 @@ import {
   ShoppingBag,
   Trash2,
   UserCog,
+  UserPlus,
   Users
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -632,6 +633,7 @@ export function DashboardShell({
   const [userPage, setUserPage] = useState(1);
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [userStatusView, setUserStatusView] = useState<"approved" | "new">("approved");
+  const [isCreateUserFormOpen, setIsCreateUserFormOpen] = useState(false);
   const [createUserForm, setCreateUserForm] = useState({
     displayName: "",
     email: "",
@@ -898,11 +900,11 @@ export function DashboardShell({
     [userSearchQuery]
   );
   const approvedUsers = useMemo(
-    () => localUsers.filter((entry) => (entry.accountStatus || "approved") === "approved"),
+    () => localUsers.filter((entry) => entry.membershipStatus === "active"),
     [localUsers]
   );
   const newUsers = useMemo(
-    () => localUsers.filter((entry) => (entry.accountStatus || "approved") === "new"),
+    () => localUsers.filter((entry) => entry.membershipStatus !== "active"),
     [localUsers]
   );
   const visibleUsers = useMemo(
@@ -3127,6 +3129,21 @@ export function DashboardShell({
                   <Download className="h-4 w-4" />
                   {locale === "ar" ? "تنزيل Excel" : "Download Excel"}
                 </Button>
+                {!isUserDetailOpen ? (
+                  <Button
+                    size="sm"
+                    onClick={() => setIsCreateUserFormOpen((current) => !current)}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    {locale === "ar"
+                      ? isCreateUserFormOpen
+                        ? "إغلاق النموذج"
+                        : "إضافة مستخدم"
+                      : isCreateUserFormOpen
+                        ? "Close form"
+                        : "Add user"}
+                  </Button>
+                ) : null}
               </div>
             </div>
             <div className={dashboardPanelClass}>
@@ -3142,7 +3159,7 @@ export function DashboardShell({
               />
             </div>
             <form
-              className={`${dashboardPanelClass} ${isUserDetailOpen ? "hidden" : "grid gap-3 md:grid-cols-2"}`}
+              className={`${dashboardPanelClass} ${isUserDetailOpen || !isCreateUserFormOpen ? "hidden" : "grid gap-3 md:grid-cols-2"}`}
               onSubmit={(event) => {
                 event.preventDefault();
                 void runAction("create-user", async () => {
@@ -3170,6 +3187,7 @@ export function DashboardShell({
                     role: "user",
                     membershipStatus: "active"
                   });
+                  setIsCreateUserFormOpen(false);
                   await refreshClientUsers();
                 });
               }}

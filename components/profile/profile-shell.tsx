@@ -441,6 +441,15 @@ export function ProfileShell({
     () => (profile ? resolveMembershipStatus(profile) : "active"),
     [profile]
   );
+  const isMembershipActive = membershipStatus === "active";
+  const studentIdLabel = locale === "ar" ? "الرقم الجامعي" : "Student ID";
+  const specializationLabel = locale === "ar" ? "التخصص" : "Specialization";
+  const inactiveMembershipTitle =
+    locale === "ar" ? "تجديد العضوية مطلوب" : "Membership renewal required";
+  const inactiveMembershipDescription =
+    locale === "ar"
+      ? "يرجى تجديد العضوية أو التأكد من الانتساب للوصول إلى الحساب الشخصي وبطاقة العضوية."
+      : "Please renew your membership or confirm your enrollment to access your personal dashboard and membership card.";
 
   async function handlePasswordReset() {
     if (!profile?.email) {
@@ -533,6 +542,7 @@ export function ProfileShell({
             </Card>
           </div>
 
+          {isMembershipActive ? (
           <Card className="space-y-5">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
               <div>
@@ -618,11 +628,19 @@ export function ProfileShell({
               </>
             ) : (
               <EmptyState
-                title={dictionary.profile.qrUnavailableTitle}
-                description={dictionary.profile.qrUnavailableDescription}
+                title={inactiveMembershipTitle}
+                description={inactiveMembershipDescription}
               />
             )}
           </Card>
+          ) : (
+          <Card className="space-y-4">
+            <EmptyState
+              title={inactiveMembershipTitle}
+              description={inactiveMembershipDescription}
+            />
+          </Card>
+          )}
         </div>
       </section>
     );
@@ -705,11 +723,13 @@ export function ProfileShell({
                   </Button>
                 </Link>
               )}
-              <Link href={MEMBERSHIP_CARD_PATH}>
-                <Button className="w-full sm:w-auto">
-                  {dictionary.profile.viewMembershipCard}
-                </Button>
-              </Link>
+              {isMembershipActive ? (
+                <Link href={MEMBERSHIP_CARD_PATH}>
+                  <Button className="w-full sm:w-auto">
+                    {dictionary.profile.viewMembershipCard}
+                  </Button>
+                </Link>
+              ) : null}
             </div>
 
             <div className="grid gap-3 text-sm text-slate-600">
@@ -723,9 +743,9 @@ export function ProfileShell({
                 )}
               </p>
               <p>{dictionary.profile.joined}: {formatDateShort(profile.joinedAt, locale)}</p>
-              <p>{dictionary.profile.company}: {profile.company || dictionary.common.notProvided}</p>
               <p>{dictionary.profile.phone}: {profile.phone || dictionary.common.notProvided}</p>
-              <p>{locale === "ar" ? "الرقم الجامعي" : "Student ID"}: {profile.studentId || dictionary.common.notProvided}</p>
+              <p>{studentIdLabel}: {profile.studentId || dictionary.common.notProvided}</p>
+              <p>{specializationLabel}: {profile.specialization || dictionary.common.notProvided}</p>
             </div>
           </Card>
 
@@ -893,13 +913,27 @@ export function ProfileShell({
               </div>
               <div>
                 <label className="mb-2 block text-sm font-medium text-brand-primary">
-                  {dictionary.profile.company}
+                  {studentIdLabel}
                 </label>
                 <input
-                  value={profile.company || ""}
+                  value={profile.studentId || ""}
                   onChange={(event) =>
                     setProfile((current) =>
-                      current ? { ...current, company: event.target.value } : current
+                      current ? { ...current, studentId: event.target.value } : current
+                    )
+                  }
+                  className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-brand-primary">
+                  {specializationLabel}
+                </label>
+                <input
+                  value={profile.specialization || ""}
+                  onChange={(event) =>
+                    setProfile((current) =>
+                      current ? { ...current, specialization: event.target.value } : current
                     )
                   }
                   className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
@@ -924,6 +958,7 @@ export function ProfileShell({
             </form>
           </Card>
 
+          {isMembershipActive ? (
           <Card className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-heading text-2xl font-semibold text-brand-primary">
@@ -960,7 +995,9 @@ export function ProfileShell({
               <p className="text-sm text-slate-500">{dictionary.profile.noOrders}</p>
             )}
           </Card>
+          ) : null}
 
+          {isMembershipActive ? (
           <Card className="space-y-4">
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">
               {dictionary.profile.registeredEvents}
@@ -981,7 +1018,9 @@ export function ProfileShell({
               <p className="text-sm text-slate-500">{dictionary.profile.noRegisteredEvents}</p>
             )}
           </Card>
+          ) : null}
 
+          {isMembershipActive ? (
           <Card className="space-y-4">
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">
               {dictionary.profile.savedArticles}
@@ -1002,6 +1041,7 @@ export function ProfileShell({
               <p className="text-sm text-slate-500">{dictionary.profile.noSavedArticles}</p>
             )}
           </Card>
+          ) : null}
         </div>
       </div>
     </section>

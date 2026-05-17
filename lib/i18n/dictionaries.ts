@@ -293,8 +293,6 @@ export const dictionaries = {
         "Register as a member to access the store, event registration, profile tools, and membership benefits.",
       fullName: "Full Name",
       fullNamePlaceholder: "Your full name",
-      companyLabel: "Association / Company",
-      companyPlaceholder: "Optional",
       passwordShort: "Password must be at least 8 characters and include a number.",
       createAccount: "Create Account",
       createSuccess: "Membership account created.",

@@ -23,7 +23,9 @@ interface AuthContextValue {
     displayName: string;
     email: string;
     password: string;
-    company?: string;
+    phone?: string;
+    studentId?: string;
+    specialization?: string;
   }) => Promise<string>;
   loginWithGoogle: () => Promise<string>;
   logout: () => Promise<void>;
@@ -193,12 +195,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       displayName,
       email,
       password,
-      company
+      phone,
+      studentId,
+      specialization
     }: {
       displayName: string;
       email: string;
       password: string;
-      company?: string;
+      phone?: string;
+      studentId?: string;
+      specialization?: string;
     }) => {
       if (!isFirebaseClientConfigured || !auth) {
         throw new Error("Firebase Auth is not configured.");
@@ -213,7 +219,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           {
             displayName,
             email,
-            company: company || "",
+            phone: phone || "",
+            studentId: studentId || "",
+            specialization: specialization || "",
             accountStatus: "new",
             membershipStatus: "pendingRenewal"
           },

@@ -1061,6 +1061,10 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
       throw new HttpsError("invalid-argument", "Invalid membership status.");
     }
     payload.membershipStatus = membershipStatus;
+
+    if (membershipStatus === "active") {
+      payload.accountStatus = "approved";
+    }
   }
 
   if (membershipExpiresAt) {
@@ -1109,7 +1113,8 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
   const nextMembershipStatus = membershipStatus || "active";
   const nextSpecialization = cleanString(specialization);
   const nextMemberGrade = resolveMemberGrade(nextSpecialization, memberGrade);
-  const nextAccountStatus = accountStatus || "approved";
+  const nextAccountStatus =
+    nextMembershipStatus === "active" ? "approved" : accountStatus || "new";
 
   if (!nextDisplayName) {
     throw new HttpsError("invalid-argument", "Display name is required.");

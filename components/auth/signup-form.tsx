@@ -19,14 +19,22 @@ export function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading, signup, loginWithGoogle } = useAuth();
-  const { dictionary } = useLocale();
+  const { dictionary, locale } = useLocale();
   const { pushToast } = useToast();
+  const phoneLabel = locale === "ar" ? "رقم الهاتف" : "Phone Number";
+  const phonePlaceholder = locale === "ar" ? "رقم هاتفك" : "Your phone number";
+  const studentIdLabel = locale === "ar" ? "الرقم الجامعي" : "Student ID";
+  const studentIdPlaceholder = locale === "ar" ? "رقمك الجامعي" : "Your university ID";
+  const specializationLabel = locale === "ar" ? "التخصص" : "Specialization";
+  const specializationPlaceholder = locale === "ar" ? "التخصص" : "Your specialization";
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     displayName: "",
     email: "",
     password: "",
-    company: ""
+    phone: "",
+    studentId: "",
+    specialization: ""
   });
 
   useEffect(() => {
@@ -138,13 +146,39 @@ export function SignupForm() {
         </div>
         <div>
           <label className="mb-2 block text-sm font-medium text-brand-primary">
-            {dictionary.auth.companyLabel}
+            {phoneLabel}
           </label>
           <input
-            value={form.company}
-            onChange={(event) => setForm((current) => ({ ...current, company: event.target.value }))}
+            value={form.phone}
+            onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
             className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
-            placeholder={dictionary.auth.companyPlaceholder}
+            placeholder={phonePlaceholder}
+          />
+        </div>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-brand-primary">
+            {studentIdLabel}
+          </label>
+          <input
+            value={form.studentId}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, studentId: event.target.value }))
+            }
+            className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
+            placeholder={studentIdPlaceholder}
+          />
+        </div>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-brand-primary">
+            {specializationLabel}
+          </label>
+          <input
+            value={form.specialization}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, specialization: event.target.value }))
+            }
+            className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
+            placeholder={specializationPlaceholder}
           />
         </div>
         <div className="md:col-span-2">
