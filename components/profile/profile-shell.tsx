@@ -197,6 +197,12 @@ function getDashboardHref(role?: UserProfile["role"]) {
   return "/profile";
 }
 
+function withoutUndefinedValues<T extends Record<string, unknown>>(value: T) {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, entryValue]) => typeof entryValue !== "undefined")
+  ) as Partial<T>;
+}
+
 export function ProfileShell({
   view = "dashboard"
 }: {
@@ -501,7 +507,7 @@ export function ProfileShell({
         throw new Error("Firebase Firestore is not configured.");
       }
 
-      await setDoc(doc(db, "users", user.id), nextProfile, { merge: true });
+      await setDoc(doc(db, "users", user.id), withoutUndefinedValues(nextProfile), { merge: true });
       setProfile(nextProfile);
       pushToast(dictionary.profile.profileUpdated, "success");
     } catch (error) {
