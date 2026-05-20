@@ -26,6 +26,7 @@ interface AuthContextValue {
     phone?: string;
     studentId?: string;
     specialization?: string;
+    memberGrade?: UserProfile["memberGrade"];
   }) => Promise<string>;
   loginWithGoogle: () => Promise<string>;
   logout: () => Promise<void>;
@@ -197,7 +198,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       phone,
       studentId,
-      specialization
+      specialization,
+      memberGrade
     }: {
       displayName: string;
       email: string;
@@ -205,6 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       phone?: string;
       studentId?: string;
       specialization?: string;
+      memberGrade?: UserProfile["memberGrade"];
     }) => {
       if (!isFirebaseClientConfigured || !auth) {
         throw new Error("Firebase Auth is not configured.");
@@ -213,17 +216,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const credential = await signUpWithEmail(email, password, displayName);
       await credential.user.getIdToken(true);
       if (db) {
-        await ensureFirebaseUserProfile(credential.user);
+        const nextMemberGrade = memberGrade === "first" || memberGrade === "second" ? memberGrade : "second";
         await setDoc(
           doc(db, "users", credential.user.uid),
           {
+            membershipId: buildMembershipId(credential.user.uid),
             displayName,
             email,
             phone: phone || "",
             studentId: studentId || "",
             specialization: specialization || "",
+            degree: "",
+            memberGrade: nextMemberGrade,
             accountStatus: "new",
-            membershipStatus: "pendingRenewal"
+            company: "",
+            photoURL: credential.user.photoURL || "",
+            role: "user",
+            membershipStatus: "pendingRenewal",
+            membershipExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
+            joinedAt: serverTimestamp(),
+            qrToken: uuidv4(),
+            savedArticleIds: [],
+            registeredEventIds: [],
+            activeQrSessionId: null,
+            activeQrSessionExpiresAt: null,
+            lastQrIssuedAt: null,
+            lastQrScanAt: null,
+            discountRate: 0.12
           },
           { merge: true }
         );

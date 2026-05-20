@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/toast";
 import { useLocale } from "@/hooks/useLocale";
 import { useAuth } from "@/hooks/useAuth";
 import { getPostAuthRedirect } from "@/lib/auth-redirect";
+import type { UserProfile } from "@/types";
 
 function isValidSignupPassword(password: string) {
   return password.length >= 8 && /\d/.test(password);
@@ -27,6 +28,27 @@ export function SignupForm() {
   const studentIdPlaceholder = locale === "ar" ? "رقمك الجامعي" : "Your university ID";
   const specializationLabel = locale === "ar" ? "التخصص" : "Specialization";
   const specializationPlaceholder = locale === "ar" ? "التخصص" : "Your specialization";
+  const memberGradeLabel = locale === "ar" ? "درجة الانتساب المطلوبة" : "Requested membership grade";
+  const memberGradeHelp =
+    locale === "ar"
+      ? "انتساب الدرجة الأولى 20 شيقل، وانتساب الدرجة الثانية 15 شيقل. اختيار الدرجة يؤثر على خصومات وعروض الشركات للمنتسبين."
+      : "First-degree membership is 20 NIS and second-degree membership is 15 NIS. Your grade can affect company discounts and member offers.";
+  const memberGradeOptions: Array<{
+    label: string;
+    value: NonNullable<UserProfile["memberGrade"]>;
+    description: string;
+  }> = [
+    {
+      value: "first",
+      label: locale === "ar" ? "درجة أولى" : "First degree",
+      description: locale === "ar" ? "20 شيقل" : "20 NIS"
+    },
+    {
+      value: "second",
+      label: locale === "ar" ? "درجة ثانية" : "Second degree",
+      description: locale === "ar" ? "15 شيقل" : "15 NIS"
+    }
+  ];
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     displayName: "",
@@ -34,7 +56,8 @@ export function SignupForm() {
     password: "",
     phone: "",
     studentId: "",
-    specialization: ""
+    specialization: "",
+    memberGrade: "second" as NonNullable<UserProfile["memberGrade"]>
   });
 
   useEffect(() => {
@@ -180,6 +203,30 @@ export function SignupForm() {
             className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
             placeholder={specializationPlaceholder}
           />
+        </div>
+        <div className="md:col-span-2">
+          <div className="mb-3 rounded-2xl border border-brand-primary/10 bg-brand-sky/60 px-4 py-3 text-sm leading-7 text-slate-700">
+            {memberGradeHelp}
+          </div>
+          <label className="mb-2 block text-sm font-medium text-brand-primary">
+            {memberGradeLabel}
+          </label>
+          <select
+            value={form.memberGrade}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                memberGrade: event.target.value as NonNullable<UserProfile["memberGrade"]>
+              }))
+            }
+            className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
+          >
+            {memberGradeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label} - {option.description}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="md:col-span-2">
           <label className="mb-2 block text-sm font-medium text-brand-primary">
