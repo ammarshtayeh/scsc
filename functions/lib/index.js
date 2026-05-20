@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.deleteOrder = exports.updateOrderStatus = exports.deleteUserAdmin = exports.sendUserPasswordResetAdmin = exports.createUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.upsertHomeSettings = exports.deleteArchivedEvent = exports.upsertArchivedEvent = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
+exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.deleteOrder = exports.updateOrderStatus = exports.deleteUserAdmin = exports.sendUserPasswordResetAdmin = exports.createUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.updateFinanceSettings = exports.upsertHomeSettings = exports.deleteArchivedEvent = exports.upsertArchivedEvent = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
 const crypto_1 = require("crypto");
 const app_1 = require("firebase-admin/app");
 const auth_1 = require("firebase-admin/auth");
@@ -144,6 +144,9 @@ function cleanStringArray(value) {
 function cleanNumber(value, fallback = 0) {
     const next = Number(value);
     return Number.isFinite(next) ? next : fallback;
+}
+function cleanPositiveNumber(value, fallback = 0) {
+    return Math.max(0, cleanNumber(value, fallback));
 }
 function cleanDiscountPercent(value) {
     return Math.min(100, Math.max(0, cleanNumber(value)));
@@ -603,6 +606,59 @@ exports.upsertHomeSettings = (0, https_1.onCall)(publicCallableOptions, async (r
     }
     await db.collection("siteSettings").doc("home").set(payload, { merge: true });
     return { success: true };
+});
+exports.updateFinanceSettings = (0, https_1.onCall)(publicCallableOptions, async (request) => {
+    var _a;
+    requireAdmin(request);
+    const data = request.data;
+    const financeRef = db.collection("siteSettings").doc("finance");
+    const now = new Date().toISOString();
+    const updatedBy = ((_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid) || "unknown";
+    const nextFinance = await db.runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(financeRef);
+        const current = snapshot.exists ? snapshot.data() || {} : {};
+        const currentBalance = cleanNumber(current.balance);
+        const currentTransactions = Array.isArray(current.transactions)
+            ? current.transactions.filter((entry) => entry && typeof entry === "object").slice(0, 99)
+            : [];
+        if (typeof data.balance !== "undefined") {
+            const balance = cleanNumber(data.balance);
+            const payload = {
+                balance,
+                transactions: currentTransactions,
+                updatedAt: now,
+                updatedBy
+            };
+            transaction.set(financeRef, payload, { merge: true });
+            return payload;
+        }
+        const transactionType = data.transactionType === "expense" ? "expense" : "income";
+        const amount = cleanPositiveNumber(data.amount);
+        const description = cleanString(data.description);
+        const eventName = cleanString(data.eventName);
+        if (amount <= 0 || !description) {
+            throw new https_1.HttpsError("invalid-argument", "Amount and description are required.");
+        }
+        const balance = transactionType === "expense" ? currentBalance - amount : currentBalance + amount;
+        const financeTransaction = {
+            id: db.collection("siteSettings").doc().id,
+            type: transactionType,
+            amount,
+            description,
+            eventName,
+            createdAt: now,
+            createdBy: updatedBy
+        };
+        const payload = {
+            balance,
+            transactions: [financeTransaction, ...currentTransactions].slice(0, 100),
+            updatedAt: now,
+            updatedBy
+        };
+        transaction.set(financeRef, payload, { merge: true });
+        return payload;
+    });
+    return { success: true, finance: nextFinance };
 });
 exports.upsertProduct = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdminOrModerator(request);

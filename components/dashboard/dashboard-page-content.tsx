@@ -9,6 +9,7 @@ import {
   getArticlesForModeration,
   getDashboardStats,
   getEventRegistrationsForDashboard,
+  getFinanceSettings,
   getHomePageSettings,
   getUpcomingEvents
 } from "@/lib/firebase/queries";
@@ -29,6 +30,7 @@ const dashboardSections: DashboardSection[] = [
   "board-members",
   "users",
   "orders",
+  "finance",
   "moderation"
 ];
 
@@ -57,6 +59,7 @@ export async function DashboardPageContent({ mode = "admin", section }: Dashboar
     articles,
     boardMembers,
     eventRegistrations,
+    financeSettings,
     homeSettings
   ] = await Promise.all([
     getDashboardStats(),
@@ -68,6 +71,7 @@ export async function DashboardPageContent({ mode = "admin", section }: Dashboar
     getArticlesForModeration(),
     getAllBoardMembers(),
     getEventRegistrationsForDashboard(),
+    getFinanceSettings(),
     getHomePageSettings()
   ]);
 
@@ -88,6 +92,7 @@ export async function DashboardPageContent({ mode = "admin", section }: Dashboar
         articles={articles}
         boardMembers={boardMembers}
         eventRegistrations={eventRegistrations}
+        financeSettings={financeSettings}
         homeSettings={homeSettings}
         locale={locale}
         labels={dictionary.dashboard}

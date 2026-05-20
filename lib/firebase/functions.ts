@@ -10,6 +10,8 @@ import type {
   ContactMessagePayload,
   EventItem,
   EventRegistration,
+  FinanceSettings,
+  FinanceTransactionType,
   HomePageSettings,
   MembershipQrSession,
   MembershipStatus,
@@ -50,6 +52,14 @@ type AdminHomeSettingsInput = Partial<
     | "storePerks"
   >
 >;
+type AdminFinanceInput =
+  | { balance: number }
+  | {
+      transactionType: FinanceTransactionType;
+      amount: number;
+      description: string;
+      eventName?: string;
+    };
 
 function requireFunctions() {
   if (!functions) {
@@ -176,6 +186,13 @@ export async function upsertBoardMemberAdmin(payload: AdminBoardMemberInput) {
 
 export async function upsertHomeSettingsAdmin(payload: AdminHomeSettingsInput) {
   return callAdminFunction<AdminHomeSettingsInput>("upsertHomeSettings", payload);
+}
+
+export async function updateFinanceSettingsAdmin(payload: AdminFinanceInput) {
+  return callAdminFunction<AdminFinanceInput, { success: boolean; finance: FinanceSettings }>(
+    "updateFinanceSettings",
+    payload
+  );
 }
 
 export async function deleteBoardMemberAdmin(id: string) {

@@ -11,6 +11,8 @@ import type {
   DashboardStats,
   EventRegistration,
   EventItem,
+  FinanceSettings,
+  FinanceTransaction,
   HomePageSettings,
   PartnerHighlight,
   Order,
@@ -37,6 +39,18 @@ function cleanNumber(value: unknown, fallback = 0) {
 
 function cleanDiscountPercent(value: unknown) {
   return Math.min(100, Math.max(0, cleanNumber(value)));
+}
+
+function normalizeFinanceTransaction(data: Record<string, unknown>): FinanceTransaction {
+  return {
+    id: cleanString(data.id),
+    type: data.type === "expense" ? "expense" : "income",
+    amount: Math.max(0, cleanNumber(data.amount)),
+    description: cleanString(data.description),
+    eventName: cleanString(data.eventName) || undefined,
+    createdAt: normalizeDateValue(data.createdAt, new Date().toISOString()),
+    createdBy: cleanString(data.createdBy) || undefined
+  };
 }
 
 function normalizeDateValue(value: unknown, fallback = "") {
@@ -261,6 +275,26 @@ export async function getHomePageSettings(): Promise<HomePageSettings | null> {
 
   const doc = await adminDb.collection("siteSettings").doc("home").get();
   return doc.exists ? normalizeHomeSettings(doc.data() || {}) : null;
+}
+
+export async function getFinanceSettings(): Promise<FinanceSettings> {
+  if (!isFirebaseAdminConfigured || !adminDb) {
+    return { balance: 0, transactions: [] };
+  }
+
+  const doc = await adminDb.collection("siteSettings").doc("finance").get();
+  const data = doc.exists ? doc.data() || {} : {};
+
+  return {
+    balance: cleanNumber(data.balance),
+    transactions: Array.isArray(data.transactions)
+      ? data.transactions
+          .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
+          .map(normalizeFinanceTransaction)
+      : [],
+    updatedAt: normalizeDateValue(data.updatedAt) || undefined,
+    updatedBy: cleanString(data.updatedBy) || undefined
+  };
 }
 
 export async function getAllArticles(category?: string): Promise<Article[]> {

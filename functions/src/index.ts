@@ -201,6 +201,10 @@ function cleanNumber(value: unknown, fallback = 0) {
   return Number.isFinite(next) ? next : fallback;
 }
 
+function cleanPositiveNumber(value: unknown, fallback = 0) {
+  return Math.max(0, cleanNumber(value, fallback));
+}
+
 function cleanDiscountPercent(value: unknown) {
   return Math.min(100, Math.max(0, cleanNumber(value)));
 }
@@ -869,6 +873,67 @@ export const upsertHomeSettings = onCall(publicCallableOptions, async (request) 
   );
 
   return { success: true };
+});
+
+export const updateFinanceSettings = onCall(publicCallableOptions, async (request) => {
+  requireAdmin(request);
+
+  const data = request.data as Record<string, unknown>;
+  const financeRef = db.collection("siteSettings").doc("finance");
+  const now = new Date().toISOString();
+  const updatedBy = request.auth?.uid || "unknown";
+
+  const nextFinance = await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(financeRef);
+    const current = snapshot.exists ? snapshot.data() || {} : {};
+    const currentBalance = cleanNumber(current.balance);
+    const currentTransactions = Array.isArray(current.transactions)
+      ? current.transactions.filter((entry) => entry && typeof entry === "object").slice(0, 99)
+      : [];
+
+    if (typeof data.balance !== "undefined") {
+      const balance = cleanNumber(data.balance);
+      const payload = {
+        balance,
+        transactions: currentTransactions,
+        updatedAt: now,
+        updatedBy
+      };
+      transaction.set(financeRef, payload, { merge: true });
+      return payload;
+    }
+
+    const transactionType = data.transactionType === "expense" ? "expense" : "income";
+    const amount = cleanPositiveNumber(data.amount);
+    const description = cleanString(data.description);
+    const eventName = cleanString(data.eventName);
+
+    if (amount <= 0 || !description) {
+      throw new HttpsError("invalid-argument", "Amount and description are required.");
+    }
+
+    const balance =
+      transactionType === "expense" ? currentBalance - amount : currentBalance + amount;
+    const financeTransaction = {
+      id: db.collection("siteSettings").doc().id,
+      type: transactionType,
+      amount,
+      description,
+      eventName,
+      createdAt: now,
+      createdBy: updatedBy
+    };
+    const payload = {
+      balance,
+      transactions: [financeTransaction, ...currentTransactions].slice(0, 100),
+      updatedAt: now,
+      updatedBy
+    };
+    transaction.set(financeRef, payload, { merge: true });
+    return payload;
+  });
+
+  return { success: true, finance: nextFinance };
 });
 
 export const upsertProduct = onCall(publicCallableOptions, async (request) => {

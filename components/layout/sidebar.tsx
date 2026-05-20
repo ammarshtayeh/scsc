@@ -37,6 +37,7 @@ export function Sidebar() {
         { href: `${basePath}/board-members#board-members`, label: dictionary.dashboard.boardMembers || "Board" },
         { href: `${basePath}/users#users`, label: dictionary.dashboard.userManagement },
         { href: `${basePath}/orders#orders`, label: dictionary.dashboard.orders },
+        { href: `${basePath}/finance#finance`, label: dictionary.localeName === "العربية" ? "الحسابات" : "Finance" },
         { href: `${basePath}/moderation#moderation`, label: dictionary.dashboard.moderation }
       ];
 

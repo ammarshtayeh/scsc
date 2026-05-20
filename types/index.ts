@@ -105,6 +105,25 @@ export interface HomePageSettings {
   updatedAt?: string;
 }
 
+export type FinanceTransactionType = "income" | "expense";
+
+export interface FinanceTransaction {
+  id: string;
+  type: FinanceTransactionType;
+  amount: number;
+  description: string;
+  eventName?: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
+export interface FinanceSettings {
+  balance: number;
+  transactions: FinanceTransaction[];
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
 export interface Product {
   id: string;
   slug: string;

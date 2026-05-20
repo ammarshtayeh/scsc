@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardList,
+  DollarSign,
   Download,
   ExternalLink,
   Home,
@@ -46,6 +47,7 @@ import {
   setEventRegistrationCheckInAdmin,
   updateOrderStatusAdmin,
   updateUserAdmin,
+  updateFinanceSettingsAdmin,
   upsertArchivedEventAdmin,
   upsertArticleAdmin,
   upsertBoardMemberAdmin,
@@ -79,6 +81,8 @@ import type {
   DashboardStats,
   EventRegistration,
   EventItem,
+  FinanceSettings,
+  FinanceTransactionType,
   HomePageSettings,
   Order,
   OrderStatus,
@@ -99,6 +103,7 @@ export type DashboardSection =
   | "board-members"
   | "users"
   | "orders"
+  | "finance"
   | "moderation";
 
 const productCategories: ProductCategory[] = ["Skin Care", "Body Care", "Makeup", "Masks"];
@@ -534,6 +539,7 @@ export function DashboardShell({
   articles,
   boardMembers,
   eventRegistrations,
+  financeSettings,
   homeSettings,
   locale,
   labels,
@@ -549,6 +555,7 @@ export function DashboardShell({
   articles: Article[];
   boardMembers: BoardMember[];
   eventRegistrations: EventRegistration[];
+  financeSettings: FinanceSettings;
   homeSettings: HomePageSettings | null;
   locale: Locale;
   mode?: "admin" | "moderator";
@@ -608,6 +615,14 @@ export function DashboardShell({
   const [localProducts, setLocalProducts] = useState(products);
   const [localBoardMembers, setLocalBoardMembers] = useState(boardMembers);
   const [localUsers, setLocalUsers] = useState(users);
+  const [localFinanceSettings, setLocalFinanceSettings] = useState(financeSettings);
+  const [financeBalanceInput, setFinanceBalanceInput] = useState(String(financeSettings.balance));
+  const [financeTransactionForm, setFinanceTransactionForm] = useState({
+    transactionType: "expense" as FinanceTransactionType,
+    amount: "",
+    description: "",
+    eventName: ""
+  });
   const [resolvedHomeSettings, setResolvedHomeSettings] = useState(homeSettings);
   const [eventForm, setEventForm] = useState({
     title: "",
@@ -1036,6 +1051,35 @@ export function DashboardShell({
           confirmDeleteProduct: "Delete this product from the member store?",
           confirmDeleteBoardMember: "Delete this board member?"
         };
+  const financeLabels =
+    locale === "ar"
+      ? {
+          finance: "الحسابات",
+          currentBalance: "الرصيد الحالي للجمعية",
+          setBalance: "تعديل الرصيد الحالي",
+          addFinanceTransaction: "إضافة حركة مالية",
+          income: "إضافة مبلغ",
+          expense: "خصم مبلغ",
+          amount: "المبلغ",
+          description: "الوصف",
+          eventCost: "اسم الفعالية أو التكلفة",
+          transactionHistory: "سجل الحركات المالية",
+          noTransactions: "لا توجد حركات مالية بعد."
+        }
+      : {
+          finance: "Finance",
+          currentBalance: "Current association balance",
+          setBalance: "Update current balance",
+          addFinanceTransaction: "Add finance transaction",
+          income: "Add money",
+          expense: "Deduct money",
+          amount: "Amount",
+          description: "Description",
+          eventCost: "Event or cost name",
+          transactionHistory: "Finance history",
+          noTransactions: "No finance transactions yet."
+        };
+
   const refreshClientProducts = useCallback(async () => {
     if (!db) {
       setLocalProducts(products);
@@ -1182,8 +1226,10 @@ export function DashboardShell({
     setLocalProducts(products);
     setLocalBoardMembers(boardMembers);
     setLocalUsers(users);
+    setLocalFinanceSettings(financeSettings);
+    setFinanceBalanceInput(String(financeSettings.balance));
     setResolvedHomeSettings(homeSettings);
-  }, [archivedEvents, articles, boardMembers, events, homeSettings, orders, products, stats, users]);
+  }, [archivedEvents, articles, boardMembers, events, financeSettings, homeSettings, orders, products, stats, users]);
 
   useEffect(() => {
     if (activeSection !== "products") {
@@ -1298,6 +1344,12 @@ export function DashboardShell({
         icon: ClipboardList
       },
       {
+        href: "/admin/finance",
+        title: financeLabels.finance,
+        metric: localFinanceSettings.balance,
+        icon: DollarSign
+      },
+      {
         href: "/admin/board-members",
         title: adminLabels.boardMembers,
         metric: localCounts.boardMembers,
@@ -1315,7 +1367,9 @@ export function DashboardShell({
       adminLabels.eventArchive,
       adminLabels.homeSettings,
       editableHomeSlides.length,
+      financeLabels.finance,
       labels,
+      localFinanceSettings.balance,
       localCounts
     ]
   );
@@ -3749,6 +3803,175 @@ export function DashboardShell({
                   </Button>
                 </div>
               ) : null}
+            </div>
+          </Card>
+          ) : null}
+
+          {showAdminSection("finance") ? (
+          <Card id="finance" className="space-y-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h2 className="font-heading text-2xl font-semibold text-brand-primary">
+                  {financeLabels.finance}
+                </h2>
+                <p className={`mt-2 text-sm leading-7 ${dashboardMutedTextClass}`}>
+                  {locale === "ar"
+                    ? "تابعوا رصيد الجمعية الحالي وسجلوا الإضافات أو التكاليف المرتبطة بالفعاليات."
+                    : "Track the association balance and record additions or event-related costs."}
+                </p>
+              </div>
+              <Badge>{formatCurrency(localFinanceSettings.balance, STORE_CURRENCY, locale)}</Badge>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+              <form
+                className={dashboardPanelClass}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void runAction("finance-balance", async () => {
+                    const result = await updateFinanceSettingsAdmin({
+                      balance: Number(financeBalanceInput)
+                    });
+                    setLocalFinanceSettings(result.finance);
+                    setFinanceBalanceInput(String(result.finance.balance));
+                  });
+                }}
+              >
+                <p className="font-heading text-xl font-semibold text-brand-primary">
+                  {financeLabels.currentBalance}
+                </p>
+                <p className="mt-2 text-3xl font-bold text-brand-primary">
+                  {formatCurrency(localFinanceSettings.balance, STORE_CURRENCY, locale)}
+                </p>
+                <DashboardFieldLabel label={financeLabels.setBalance} className="mt-4">
+                  <input
+                    required
+                    type="number"
+                    step="0.01"
+                    value={financeBalanceInput}
+                    onChange={(event) => setFinanceBalanceInput(event.target.value)}
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
+                <Button className="mt-4" loading={loadingAction === "finance-balance"} type="submit">
+                  <Save className="h-4 w-4" />
+                  {labels.save}
+                </Button>
+              </form>
+
+              <form
+                className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void runAction("finance-transaction", async () => {
+                    const result = await updateFinanceSettingsAdmin({
+                      transactionType: financeTransactionForm.transactionType,
+                      amount: Number(financeTransactionForm.amount),
+                      description: financeTransactionForm.description,
+                      eventName: financeTransactionForm.eventName
+                    });
+                    setLocalFinanceSettings(result.finance);
+                    setFinanceBalanceInput(String(result.finance.balance));
+                    setFinanceTransactionForm({
+                      transactionType: "expense",
+                      amount: "",
+                      description: "",
+                      eventName: ""
+                    });
+                  });
+                }}
+              >
+                <h3 className="font-heading text-xl font-semibold text-brand-primary md:col-span-2">
+                  {financeLabels.addFinanceTransaction}
+                </h3>
+                <DashboardFieldLabel label={locale === "ar" ? "نوع الحركة" : "Transaction type"}>
+                  <select
+                    value={financeTransactionForm.transactionType}
+                    onChange={(event) =>
+                      setFinanceTransactionForm((current) => ({
+                        ...current,
+                        transactionType: event.target.value as FinanceTransactionType
+                      }))
+                    }
+                    className={dashboardFieldClass}
+                  >
+                    <option value="income">{financeLabels.income}</option>
+                    <option value="expense">{financeLabels.expense}</option>
+                  </select>
+                </DashboardFieldLabel>
+                <DashboardFieldLabel label={financeLabels.amount}>
+                  <input
+                    required
+                    type="number"
+                    min={0.01}
+                    step="0.01"
+                    value={financeTransactionForm.amount}
+                    onChange={(event) =>
+                      setFinanceTransactionForm((current) => ({
+                        ...current,
+                        amount: event.target.value
+                      }))
+                    }
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
+                <DashboardFieldLabel label={financeLabels.description} className="md:col-span-2">
+                  <input
+                    required
+                    value={financeTransactionForm.description}
+                    onChange={(event) =>
+                      setFinanceTransactionForm((current) => ({
+                        ...current,
+                        description: event.target.value
+                      }))
+                    }
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
+                <DashboardFieldLabel label={financeLabels.eventCost} className="md:col-span-2">
+                  <input
+                    value={financeTransactionForm.eventName}
+                    onChange={(event) =>
+                      setFinanceTransactionForm((current) => ({
+                        ...current,
+                        eventName: event.target.value
+                      }))
+                    }
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
+                <Button className="md:col-span-2" loading={loadingAction === "finance-transaction"} type="submit">
+                  <Save className="h-4 w-4" />
+                  {labels.save}
+                </Button>
+              </form>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="font-heading text-xl font-semibold text-brand-primary">
+                {financeLabels.transactionHistory}
+              </h3>
+              {localFinanceSettings.transactions.length ? (
+                localFinanceSettings.transactions.map((entry) => (
+                  <div key={entry.id} className={`${dashboardPanelClass} grid gap-3 md:grid-cols-[1fr_auto] md:items-center`}>
+                    <div>
+                      <p className="font-medium text-brand-primary">{entry.description}</p>
+                      <p className={`text-sm ${dashboardMutedTextClass}`}>
+                        {formatDateTime(entry.createdAt, locale)}
+                        {entry.eventName ? ` - ${entry.eventName}` : ""}
+                      </p>
+                    </div>
+                    <Badge>
+                      {entry.type === "expense" ? "-" : "+"}
+                      {formatCurrency(entry.amount, STORE_CURRENCY, locale)}
+                    </Badge>
+                  </div>
+                ))
+              ) : (
+                <p className={`${dashboardPanelClass} text-sm ${dashboardMutedTextClass}`}>
+                  {financeLabels.noTransactions}
+                </p>
+              )}
             </div>
           </Card>
           ) : null}
