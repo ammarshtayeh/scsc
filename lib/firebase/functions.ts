@@ -201,6 +201,7 @@ export async function updateUserAdmin(payload: {
   phone?: string;
   studentId?: string;
   specialization?: string;
+  degree?: string;
   memberGrade?: UserProfile["memberGrade"];
   accountStatus?: UserProfile["accountStatus"];
   role?: Role;
@@ -217,6 +218,7 @@ export async function createUserAdmin(payload: {
   phone?: string;
   studentId?: string;
   specialization?: string;
+  degree?: string;
   memberGrade?: UserProfile["memberGrade"];
   accountStatus?: UserProfile["accountStatus"];
   role?: Role;
@@ -230,6 +232,7 @@ export async function createUserAdmin(payload: {
       phone?: string;
       studentId?: string;
       specialization?: string;
+      degree?: string;
       memberGrade?: UserProfile["memberGrade"];
       accountStatus?: UserProfile["accountStatus"];
       role?: Role;

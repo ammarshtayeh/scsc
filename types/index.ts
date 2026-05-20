@@ -170,6 +170,7 @@ export interface UserProfile {
   phone?: string;
   studentId?: string;
   specialization?: string;
+  degree?: string;
   memberGrade?: MemberGrade;
   accountStatus?: AccountStatus;
   company?: string;

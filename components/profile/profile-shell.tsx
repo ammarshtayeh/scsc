@@ -95,6 +95,7 @@ function normalizeUserProfile(id: string, data: Record<string, unknown>): UserPr
     phone: typeof data.phone === "string" ? data.phone : "",
     studentId: typeof data.studentId === "string" ? data.studentId : "",
     specialization: typeof data.specialization === "string" ? data.specialization : "",
+    degree: typeof data.degree === "string" ? data.degree : "",
     memberGrade:
       data.memberGrade === "first" || data.memberGrade === "second"
         ? (data.memberGrade as UserProfile["memberGrade"])
@@ -444,6 +445,7 @@ export function ProfileShell({
   const isMembershipActive = membershipStatus === "active";
   const studentIdLabel = locale === "ar" ? "الرقم الجامعي" : "Student ID";
   const specializationLabel = locale === "ar" ? "التخصص" : "Specialization";
+  const degreeLabel = locale === "ar" ? "الدرجة" : "Degree";
   const inactiveMembershipTitle =
     locale === "ar" ? "تجديد العضوية مطلوب" : "Membership renewal required";
   const inactiveMembershipDescription =
@@ -603,6 +605,7 @@ export function ProfileShell({
                     {qrSession?.memberId || profile.membershipId || profile.id}
                   </p>
                   <p>{dictionary.profile.qrName}: {qrSession?.fullName || profile.displayName}</p>
+                  <p>{degreeLabel}: {profile.degree || dictionary.common.notProvided}</p>
                   <p>
                     {dictionary.profile.qrExpiryDate}:{" "}
                     {formatDateTime(
@@ -770,6 +773,7 @@ export function ProfileShell({
               <p>{dictionary.profile.phone}: {profile.phone || dictionary.common.notProvided}</p>
               <p>{studentIdLabel}: {profile.studentId || dictionary.common.notProvided}</p>
               <p>{specializationLabel}: {profile.specialization || dictionary.common.notProvided}</p>
+              <p>{degreeLabel}: {profile.degree || dictionary.common.notProvided}</p>
             </div>
           </Card>
 
@@ -792,6 +796,7 @@ export function ProfileShell({
                 {dictionary.profile.membershipStatus}:{" "}
                 {getMembershipStatusLabel(membershipStatus, locale)}
               </p>
+              <p>{degreeLabel}: {profile.degree || dictionary.common.notProvided}</p>
               <p>
                 {dictionary.profile.membershipExpiry}:{" "}
                 {formatDateTime(
@@ -839,6 +844,7 @@ export function ProfileShell({
                     {qrSession?.memberId || profile.membershipId || profile.id}
                   </p>
                   <p>{dictionary.profile.qrName}: {qrSession?.fullName || profile.displayName}</p>
+                  <p>{degreeLabel}: {profile.degree || dictionary.common.notProvided}</p>
                   <p>
                     {dictionary.profile.qrExpiryDate}:{" "}
                     {formatDateTime(
@@ -958,6 +964,20 @@ export function ProfileShell({
                   onChange={(event) =>
                     setProfile((current) =>
                       current ? { ...current, specialization: event.target.value } : current
+                    )
+                  }
+                  className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-brand-primary">
+                  {degreeLabel}
+                </label>
+                <input
+                  value={profile.degree || ""}
+                  onChange={(event) =>
+                    setProfile((current) =>
+                      current ? { ...current, degree: event.target.value } : current
                     )
                   }
                   className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"

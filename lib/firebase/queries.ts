@@ -143,6 +143,7 @@ function normalizeUserProfile(id: string, data: Record<string, unknown>) {
     phone: cleanString(data.phone) || undefined,
     studentId: cleanString(data.studentId) || undefined,
     specialization: cleanString(data.specialization) || undefined,
+    degree: cleanString(data.degree) || undefined,
     memberGrade: cleanString(data.memberGrade) as UserProfile["memberGrade"] | undefined,
     accountStatus: cleanString(data.accountStatus, "approved") as UserProfile["accountStatus"],
     company: cleanString(data.company) || undefined,

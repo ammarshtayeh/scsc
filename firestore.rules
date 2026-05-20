@@ -37,6 +37,7 @@ service cloud.firestore {
           "phone",
           "studentId",
           "specialization",
+          "degree",
           "memberGrade",
           "accountStatus",
           "company",
@@ -59,6 +60,7 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).changedKeys().hasOnly([
           "displayName",
           "phone",
+          "degree",
           "company",
           "photoURL",
           "registeredEventIds",

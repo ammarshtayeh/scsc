@@ -962,6 +962,7 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
     phone,
     studentId,
     specialization,
+    degree,
     memberGrade,
     accountStatus,
     role,
@@ -974,6 +975,7 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
     phone?: string;
     studentId?: string;
     specialization?: string;
+    degree?: string;
     memberGrade?: MemberGrade;
     accountStatus?: AccountStatus;
     role?: Role;
@@ -1028,6 +1030,10 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
 
   if (hasSpecialization) {
     payload.specialization = cleanString(specialization);
+  }
+
+  if (typeof degree === "string") {
+    payload.degree = cleanString(degree);
   }
 
   if (hasMemberGrade && !allowedGrades.includes(memberGrade as MemberGrade)) {
@@ -1089,6 +1095,7 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
     phone,
     studentId,
     specialization,
+    degree,
     memberGrade,
     accountStatus,
     role,
@@ -1100,6 +1107,7 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
     phone?: string;
     studentId?: string;
     specialization?: string;
+    degree?: string;
     memberGrade?: MemberGrade;
     accountStatus?: AccountStatus;
     role?: Role;
@@ -1112,6 +1120,7 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
   const nextRole = role || "user";
   const nextMembershipStatus = membershipStatus || "active";
   const nextSpecialization = cleanString(specialization);
+  const nextDegree = cleanString(degree);
   const nextMemberGrade = resolveMemberGrade(nextSpecialization, memberGrade);
   const nextAccountStatus =
     nextMembershipStatus === "active" ? "approved" : accountStatus || "new";
@@ -1163,6 +1172,7 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
       phone: cleanString(phone),
       studentId: cleanString(studentId),
       specialization: nextSpecialization,
+      degree: nextDegree,
       memberGrade: nextMemberGrade,
       accountStatus: nextAccountStatus,
       company: "",
