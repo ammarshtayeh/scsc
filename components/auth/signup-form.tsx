@@ -35,8 +35,8 @@ export function SignupForm() {
     locale === "ar" ? "اكتب تخصصك" : "Write your specialization";
   const memberGradeHelp =
     locale === "ar"
-      ? "انتساب الدرجة الأولى 20 شيقل، وانتساب الدرجة الثانية 15 شيقل. اختيار الدرجة يؤثر على خصومات وعروض الشركات للمنتسبين."
-      : "First-degree membership is 20 NIS and second-degree membership is 15 NIS. Your grade can affect company discounts and member offers.";
+      ? "انتساب الدرجة الأولى 20 شيقل، وانتساب الدرجة الثانية 15 شيقل. استمتع بعروض وخصومات مميزة من الشركات الشريكة كونك منتسبًا."
+      : "First-degree membership is 20 NIS and second-degree membership is 15 NIS. Enjoy exclusive offers and discounts from partner companies as a member.";
   const memberGradeOptions: Array<{
     label: string;
     value: NonNullable<UserProfile["memberGrade"]>;
