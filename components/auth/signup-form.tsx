@@ -61,7 +61,7 @@ export function SignupForm() {
     phone: "",
     studentId: "",
     specialization: "",
-    memberGrade: "second" as NonNullable<UserProfile["memberGrade"]>
+    memberGrade: "first" as NonNullable<UserProfile["memberGrade"]>
   });
   const [specializationChoice, setSpecializationChoice] = useState<"beauty" | "other">("beauty");
 
@@ -98,7 +98,8 @@ export function SignupForm() {
       setLoading(true);
       const specialization =
         specializationChoice === "beauty" ? specializationBeautyLabel : form.specialization;
-      const authRedirect = await signup({ ...form, specialization });
+      const memberGrade = specializationChoice === "beauty" ? "first" : form.memberGrade;
+      const authRedirect = await signup({ ...form, specialization, memberGrade });
       pushToast(dictionary.auth.createSuccess, "success");
       const redirect = getPostAuthRedirect(null, searchParams.get("redirect"));
       const finalRedirect = searchParams.get("redirect") ? redirect : authRedirect;
@@ -209,7 +210,8 @@ export function SignupForm() {
               setSpecializationChoice(nextChoice);
               setForm((current) => ({
                 ...current,
-                specialization: nextChoice === "beauty" ? "" : current.specialization
+                specialization: nextChoice === "beauty" ? "" : current.specialization,
+                memberGrade: nextChoice === "beauty" ? "first" : current.memberGrade
               }));
             }}
             className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
@@ -244,7 +246,8 @@ export function SignupForm() {
                 memberGrade: event.target.value as NonNullable<UserProfile["memberGrade"]>
               }))
             }
-            className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
+            disabled={specializationChoice === "beauty"}
+            className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
           >
             {memberGradeOptions.map((option) => (
               <option key={option.value} value={option.value}>
