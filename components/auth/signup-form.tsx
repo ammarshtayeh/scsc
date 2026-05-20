@@ -29,6 +29,10 @@ export function SignupForm() {
   const specializationLabel = locale === "ar" ? "التخصص" : "Specialization";
   const specializationPlaceholder = locale === "ar" ? "التخصص" : "Your specialization";
   const memberGradeLabel = locale === "ar" ? "درجة الانتساب المطلوبة" : "Requested membership grade";
+  const specializationBeautyLabel = locale === "ar" ? "تجميل" : "Cosmetology";
+  const specializationOtherLabel = locale === "ar" ? "أخرى" : "Other";
+  const specializationOtherPlaceholder =
+    locale === "ar" ? "اكتب تخصصك" : "Write your specialization";
   const memberGradeHelp =
     locale === "ar"
       ? "انتساب الدرجة الأولى 20 شيقل، وانتساب الدرجة الثانية 15 شيقل. اختيار الدرجة يؤثر على خصومات وعروض الشركات للمنتسبين."
@@ -59,6 +63,7 @@ export function SignupForm() {
     specialization: "",
     memberGrade: "second" as NonNullable<UserProfile["memberGrade"]>
   });
+  const [specializationChoice, setSpecializationChoice] = useState<"beauty" | "other">("beauty");
 
   useEffect(() => {
     if (authLoading || !user) {
@@ -91,7 +96,9 @@ export function SignupForm() {
 
     try {
       setLoading(true);
-      const authRedirect = await signup(form);
+      const specialization =
+        specializationChoice === "beauty" ? specializationBeautyLabel : form.specialization;
+      const authRedirect = await signup({ ...form, specialization });
       pushToast(dictionary.auth.createSuccess, "success");
       const redirect = getPostAuthRedirect(null, searchParams.get("redirect"));
       const finalRedirect = searchParams.get("redirect") ? redirect : authRedirect;
@@ -195,14 +202,32 @@ export function SignupForm() {
           <label className="mb-2 block text-sm font-medium text-brand-primary">
             {specializationLabel}
           </label>
-          <input
-            value={form.specialization}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, specialization: event.target.value }))
-            }
+          <select
+            value={specializationChoice}
+            onChange={(event) => {
+              const nextChoice = event.target.value as "beauty" | "other";
+              setSpecializationChoice(nextChoice);
+              setForm((current) => ({
+                ...current,
+                specialization: nextChoice === "beauty" ? "" : current.specialization
+              }));
+            }}
             className="w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
-            placeholder={specializationPlaceholder}
-          />
+          >
+            <option value="beauty">{specializationBeautyLabel}</option>
+            <option value="other">{specializationOtherLabel}</option>
+          </select>
+          {specializationChoice === "other" ? (
+            <input
+              required
+              value={form.specialization}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, specialization: event.target.value }))
+              }
+              className="mt-3 w-full rounded-2xl border border-brand-primary/10 bg-white px-4 py-3 outline-none transition focus:border-brand-accent"
+              placeholder={specializationOtherPlaceholder || specializationPlaceholder}
+            />
+          ) : null}
         </div>
         <div className="md:col-span-2">
           <div className="mb-3 rounded-2xl border border-brand-primary/10 bg-brand-sky/60 px-4 py-3 text-sm leading-7 text-slate-700">

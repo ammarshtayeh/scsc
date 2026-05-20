@@ -58,6 +58,11 @@ export function ProductDetailClient({
               className="object-cover"
               sizes="(max-width: 1024px) 100vw, 60vw"
             />
+            {product.discountPercent ? (
+              <span className="absolute right-4 top-4 rounded-full bg-rose-600 px-4 py-2 text-sm font-bold text-white shadow-lg">
+                {formatNumber(product.discountPercent, locale)}%
+              </span>
+            ) : null}
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {productImages.map((image, index) => (

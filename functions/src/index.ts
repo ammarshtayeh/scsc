@@ -201,6 +201,10 @@ function cleanNumber(value: unknown, fallback = 0) {
   return Number.isFinite(next) ? next : fallback;
 }
 
+function cleanDiscountPercent(value: unknown) {
+  return Math.min(100, Math.max(0, cleanNumber(value)));
+}
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -887,6 +891,7 @@ export const upsertProduct = onCall(publicCallableOptions, async (request) => {
     longDescription: cleanStringArray(data.longDescription),
     price,
     memberPrice: cleanNumber(data.memberPrice, price),
+    discountPercent: cleanDiscountPercent(data.discountPercent),
     category: cleanString(data.category, "Skin Care"),
     company: cleanString(data.company, "SCSC Partner"),
     stock,

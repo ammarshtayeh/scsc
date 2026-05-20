@@ -145,6 +145,9 @@ function cleanNumber(value, fallback = 0) {
     const next = Number(value);
     return Number.isFinite(next) ? next : fallback;
 }
+function cleanDiscountPercent(value) {
+    return Math.min(100, Math.max(0, cleanNumber(value)));
+}
 function slugify(value) {
     return value
         .toLowerCase()
@@ -618,6 +621,7 @@ exports.upsertProduct = (0, https_1.onCall)(publicCallableOptions, async (reques
         longDescription: cleanStringArray(data.longDescription),
         price,
         memberPrice: cleanNumber(data.memberPrice, price),
+        discountPercent: cleanDiscountPercent(data.discountPercent),
         category: cleanString(data.category, "Skin Care"),
         company: cleanString(data.company, "SCSC Partner"),
         stock,

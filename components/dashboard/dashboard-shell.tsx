@@ -157,6 +157,15 @@ function getNumber(formData: FormData, key: string, fallback = 0) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+function normalizeDiscountPercent(value: unknown) {
+  const discountPercent = Number(value);
+  if (!Number.isFinite(discountPercent)) {
+    return 0;
+  }
+
+  return Math.min(100, Math.max(0, discountPercent));
+}
+
 function normalizeDashboardProduct(id: string, data: Record<string, unknown>): Product {
   const price = Number(data.price);
   const memberPrice = Number(data.memberPrice);
@@ -171,6 +180,7 @@ function normalizeDashboardProduct(id: string, data: Record<string, unknown>): P
       : [],
     price: Number.isFinite(price) ? price : 0,
     memberPrice: Number.isFinite(memberPrice) ? memberPrice : undefined,
+    discountPercent: normalizeDiscountPercent(data.discountPercent),
     category: (typeof data.category === "string" ? data.category : "Skin Care") as ProductCategory,
     company: typeof data.company === "string" && data.company.trim() ? data.company.trim() : "SCSC Partner",
     stock: Math.max(0, Number(data.stock) || 0),
@@ -624,6 +634,7 @@ export function DashboardShell({
     name: "",
     price: "10",
     memberPrice: "9",
+    discountPercent: "0",
     stock: "10",
     category: "Skin Care" as ProductCategory,
     company: "",
@@ -2100,6 +2111,7 @@ export function DashboardShell({
                     name: productForm.name,
                     price: Number(productForm.price),
                     memberPrice: Number(productForm.memberPrice),
+                    discountPercent: normalizeDiscountPercent(productForm.discountPercent),
                     stock: Number(productForm.stock),
                     category: productForm.category,
                     company: productForm.company,
@@ -2111,6 +2123,7 @@ export function DashboardShell({
                     name: "",
                     price: "10",
                     memberPrice: "9",
+                    discountPercent: "0",
                     stock: "10",
                     category: "Skin Care",
                     company: "",
@@ -2152,6 +2165,9 @@ export function DashboardShell({
               </DashboardFieldLabel>
               <DashboardFieldLabel label={locale === "ar" ? "سعر الأعضاء بالشيكل" : "Member price (ILS)"}>
                 <input type="number" min={0.01} step="0.01" value={productForm.memberPrice} onChange={(event) => setProductForm((current) => ({ ...current, memberPrice: event.target.value }))} className={dashboardFieldClass} />
+              </DashboardFieldLabel>
+              <DashboardFieldLabel label={locale === "ar" ? "نسبة الخصم %" : "Discount percent"}>
+                <input type="number" min={0} max={100} step="1" value={productForm.discountPercent} onChange={(event) => setProductForm((current) => ({ ...current, discountPercent: event.target.value }))} className={dashboardFieldClass} />
               </DashboardFieldLabel>
               <div className="grid gap-3 md:col-span-2 md:grid-cols-2">
                 <label className="space-y-2">
@@ -2206,6 +2222,11 @@ export function DashboardShell({
                     <Badge>
                       {formatNumber(product.stock, locale)}
                     </Badge>
+                    {product.discountPercent ? (
+                      <Badge>
+                        {formatNumber(product.discountPercent, locale)}%
+                      </Badge>
+                    ) : null}
                     <span className="text-sm font-medium text-brand-primary">
                       {formatCurrency(product.memberPrice ?? product.price, STORE_CURRENCY, locale)}
                     </span>
@@ -2259,6 +2280,7 @@ export function DashboardShell({
                             name: getText(formData, "name"),
                             price: getNumber(formData, "price", product.price),
                             memberPrice: getNumber(formData, "memberPrice", product.memberPrice ?? product.price),
+                            discountPercent: normalizeDiscountPercent(getNumber(formData, "discountPercent", product.discountPercent ?? 0)),
                             stock: getNumber(formData, "stock", product.stock),
                             category: getText(formData, "category") as ProductCategory,
                             company: getText(formData, "company"),
@@ -2294,6 +2316,9 @@ export function DashboardShell({
                       </DashboardFieldLabel>
                       <DashboardFieldLabel label={locale === "ar" ? "سعر الأعضاء" : "Member price"}>
                         <input name="memberPrice" type="number" min={0.01} step="0.01" defaultValue={product.memberPrice ?? product.price} className={`${dashboardEditFieldClass} w-full`} />
+                      </DashboardFieldLabel>
+                      <DashboardFieldLabel label={locale === "ar" ? "نسبة الخصم %" : "Discount percent"}>
+                        <input name="discountPercent" type="number" min={0} max={100} step="1" defaultValue={product.discountPercent ?? 0} className={`${dashboardEditFieldClass} w-full`} />
                       </DashboardFieldLabel>
                       <div className="space-y-3 md:col-span-2">
                         <p className="text-sm font-semibold text-brand-primary dark:text-brand-ink">

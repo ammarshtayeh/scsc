@@ -14,6 +14,7 @@ import type { Product } from "@/types";
 function normalizeProduct(id: string, data: Record<string, unknown>): Product {
   const price = Number(data.price);
   const memberPrice = Number(data.memberPrice);
+  const discountPercent = Number(data.discountPercent);
 
   return {
     id,
@@ -25,6 +26,9 @@ function normalizeProduct(id: string, data: Record<string, unknown>): Product {
       : [],
     price: Number.isFinite(price) ? price : 0,
     memberPrice: Number.isFinite(memberPrice) ? memberPrice : undefined,
+    discountPercent: Number.isFinite(discountPercent)
+      ? Math.min(100, Math.max(0, discountPercent))
+      : 0,
     category: (typeof data.category === "string" ? data.category : "Skin Care") as Product["category"],
     company: typeof data.company === "string" && data.company.trim() ? data.company.trim() : "SCSC Partner",
     stock: Math.max(0, Number(data.stock) || 0),

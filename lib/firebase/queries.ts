@@ -35,6 +35,10 @@ function cleanNumber(value: unknown, fallback = 0) {
   return Number.isFinite(next) ? next : fallback;
 }
 
+function cleanDiscountPercent(value: unknown) {
+  return Math.min(100, Math.max(0, cleanNumber(value)));
+}
+
 function normalizeDateValue(value: unknown, fallback = "") {
   if (!value) {
     return fallback;
@@ -89,6 +93,7 @@ function normalizeProduct(id: string, data: Record<string, unknown>) {
     price,
     memberPrice:
       typeof data.memberPrice === "undefined" ? undefined : cleanNumber(data.memberPrice, price),
+    discountPercent: cleanDiscountPercent(data.discountPercent),
     category: cleanString(data.category, "Skin Care") as Product["category"],
     company: cleanString(data.company, "SCSC Partner"),
     stock: Math.max(0, cleanNumber(data.stock)),

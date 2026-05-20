@@ -113,6 +113,7 @@ export interface Product {
   longDescription: string[];
   price: number;
   memberPrice?: number;
+  discountPercent?: number;
   category: ProductCategory;
   company: string;
   stock: number;
