@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/firebase/session";
+import {
+  SESSION_COOKIE_NAME,
+  SESSION_ROLE_COOKIE_NAME,
+  verifySessionToken
+} from "@/lib/firebase/session";
 
 function buildLoginRedirect(request: NextRequest) {
   const url = new URL("/auth/login", request.url);
@@ -14,7 +18,10 @@ function buildRoleRedirect(request: NextRequest) {
 }
 
 export async function middleware(request: NextRequest) {
-  const session = await verifySessionToken(request.cookies.get(SESSION_COOKIE_NAME)?.value);
+  const session = await verifySessionToken(
+    request.cookies.get(SESSION_COOKIE_NAME)?.value,
+    request.cookies.get(SESSION_ROLE_COOKIE_NAME)?.value
+  );
   const pathname = request.nextUrl.pathname;
 
   if (pathname.startsWith("/profile")) {

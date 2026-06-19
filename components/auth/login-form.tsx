@@ -74,9 +74,10 @@ export function LoginForm() {
       const authRedirect = await login(email, password);
       clearFailedLogins(email);
       pushToast(dictionary.auth.welcomeBack, "success");
-      const redirect = getPostAuthRedirect(null, searchParams.get("redirect")) || authRedirect;
-      const finalRedirect = searchParams.get("redirect") ? redirect : authRedirect;
-      router.replace(finalRedirect);
+      const redirectParam = searchParams.get("redirect");
+      router.replace(
+        redirectParam ? getPostAuthRedirect(null, redirectParam) : authRedirect
+      );
     } catch (error) {
       const attempt = recordFailedLogin(email);
       if (attempt.lockedUntil) {
@@ -118,9 +119,10 @@ export function LoginForm() {
       setLoading(true);
       const authRedirect = await loginWithGoogle();
       pushToast(dictionary.auth.welcomeBack, "success");
-      const redirect = getPostAuthRedirect(null, searchParams.get("redirect")) || authRedirect;
-      const finalRedirect = searchParams.get("redirect") ? redirect : authRedirect;
-      router.replace(finalRedirect);
+      const redirectParam = searchParams.get("redirect");
+      router.replace(
+        redirectParam ? getPostAuthRedirect(null, redirectParam) : authRedirect
+      );
     } catch (error) {
       pushToast(getErrorMessage(error), "error");
     } finally {

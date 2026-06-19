@@ -66,6 +66,7 @@ async function buildFirebaseSessionUser(firebaseUser: FirebaseUser): Promise<App
     const profileSnap = await getDoc(doc(db, "users", firebaseUser.uid));
     if (profileSnap.exists()) {
       const profile = profileSnap.data() as unknown as UserProfile;
+      role = profile.role || role;
       displayName = profile.displayName || displayName;
       photoURL = profile.photoURL || photoURL;
     }

@@ -1,9 +1,28 @@
 import { NextResponse } from "next/server";
 
-import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/firebase/session";
+import { resolveUserRoleFromToken } from "@/lib/firebase/resolve-user-role";
+import {
+  SESSION_COOKIE_NAME,
+  SESSION_ROLE_COOKIE_NAME,
+  verifySessionToken
+} from "@/lib/firebase/session";
 
 function shouldUseSecureCookie(request: Request) {
   return process.env.NODE_ENV === "production" && new URL(request.url).protocol === "https:";
+}
+
+function setSessionCookies(response: NextResponse, request: Request, token: string, role: string) {
+  const secure = shouldUseSecureCookie(request);
+  const cookieOptions = {
+    httpOnly: true,
+    secure,
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7
+  };
+
+  response.cookies.set(SESSION_COOKIE_NAME, token, cookieOptions);
+  response.cookies.set(SESSION_ROLE_COOKIE_NAME, role, cookieOptions);
 }
 
 export async function POST(request: Request) {
@@ -19,20 +38,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing token." }, { status: 400 });
   }
 
-  const session = await verifySessionToken(body.token);
+  const role = await resolveUserRoleFromToken(body.token);
+  const session = await verifySessionToken(body.token, role);
 
   if (!session) {
     return NextResponse.json({ error: "Invalid token." }, { status: 401 });
   }
 
-  const response = NextResponse.json({ ok: true });
-  response.cookies.set(SESSION_COOKIE_NAME, body.token, {
-    httpOnly: true,
-    secure: shouldUseSecureCookie(request),
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7
-  });
-
+  const response = NextResponse.json({ ok: true, role: session.role });
+  setSessionCookies(response, request, body.token, session.role);
   return response;
 }

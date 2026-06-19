@@ -1,6 +1,7 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
 export const SESSION_COOKIE_NAME = "scsc_token";
+export const SESSION_ROLE_COOKIE_NAME = "scsc_role";
 
 export type SessionRole = "admin" | "moderator" | "user";
 
@@ -18,7 +19,10 @@ function normalizeRole(role: unknown): SessionRole {
   return role === "admin" || role === "moderator" ? role : "user";
 }
 
-export async function verifySessionToken(token?: string): Promise<SessionData | null> {
+export async function verifySessionToken(
+  token?: string,
+  roleOverride?: string | null
+): Promise<SessionData | null> {
   if (!token || !projectId) {
     return null;
   }
@@ -29,9 +33,11 @@ export async function verifySessionToken(token?: string): Promise<SessionData | 
       audience: projectId
     });
 
+    const claimRole = normalizeRole(payload.role);
+
     return {
       uid: String(payload.user_id || payload.sub),
-      role: normalizeRole(payload.role)
+      role: roleOverride ? normalizeRole(roleOverride) : claimRole
     };
   } catch {
     return null;

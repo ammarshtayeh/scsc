@@ -101,9 +101,8 @@ export function SignupForm() {
       const memberGrade = specializationChoice === "beauty" ? "first" : form.memberGrade;
       const authRedirect = await signup({ ...form, specialization, memberGrade });
       pushToast(dictionary.auth.createSuccess, "success");
-      const redirect = getPostAuthRedirect(null, searchParams.get("redirect"));
-      const finalRedirect = searchParams.get("redirect") ? redirect : authRedirect;
-      router.replace(finalRedirect);
+      const redirectParam = searchParams.get("redirect");
+      router.replace(redirectParam ? getPostAuthRedirect(null, redirectParam) : authRedirect);
     } catch (error) {
       pushToast(getErrorMessage(error), "error");
     } finally {
@@ -116,9 +115,8 @@ export function SignupForm() {
       setLoading(true);
       const authRedirect = await loginWithGoogle();
       pushToast(dictionary.auth.createSuccess, "success");
-      const redirect = getPostAuthRedirect(null, searchParams.get("redirect"));
-      const finalRedirect = searchParams.get("redirect") ? redirect : authRedirect;
-      router.replace(finalRedirect);
+      const redirectParam = searchParams.get("redirect");
+      router.replace(redirectParam ? getPostAuthRedirect(null, redirectParam) : authRedirect);
     } catch (error) {
       pushToast(getErrorMessage(error), "error");
     } finally {
