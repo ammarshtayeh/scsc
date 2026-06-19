@@ -6,6 +6,7 @@ export type OrderStatus = "pending" | "confirmed" | "processing" | "delivered";
 export type MembershipStatus = "active" | "expired" | "pendingRenewal";
 export type MemberGrade = "first" | "second";
 export type AccountStatus = "new" | "approved" | "rejected";
+export type MembershipPaymentStatus = "pending" | "paid" | "waived";
 
 export interface ArticleReference {
   label: string;
@@ -193,6 +194,10 @@ export interface UserProfile {
   degree?: string;
   memberGrade?: MemberGrade;
   accountStatus?: AccountStatus;
+  membershipPaymentStatus?: MembershipPaymentStatus;
+  membershipPaidAt?: string;
+  membershipFeeAmount?: number;
+  membershipReceiptId?: string;
   company?: string;
   photoURL?: string;
   membershipStatus: MembershipStatus;

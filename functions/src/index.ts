@@ -1,15 +1,28 @@
 import { createHash, createCipheriv, createDecipheriv, randomBytes } from "crypto";
 
-import { initializeApp } from "firebase-admin/app";
+import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import nodemailer from "nodemailer";
 import { v4 as uuidv4 } from "uuid";
 
-initializeApp();
+function ensureFirebaseApp() {
+  if (!getApps().length) {
+    initializeApp();
+  }
+}
 
-const db = getFirestore();
+function getDb() {
+  ensureFirebaseApp();
+  return getFirestore();
+}
+
+function getAuthClient() {
+  ensureFirebaseApp();
+  return getAuth();
+}
+
 const QR_LIFETIME_SECONDS = 45;
 const publicCallableOptions = { invoker: "public" as const };
 
@@ -134,6 +147,45 @@ function resolveMemberGrade(specialization?: string, preferredGrade?: string): M
   return cleanString(specialization) === "مستحضرات تجميل والعناية بالبشرة" ? "first" : "second";
 }
 
+function getMembershipFeeAmount(memberGrade?: MemberGrade) {
+  return memberGrade === "first" ? 20 : 15;
+}
+
+function buildMembershipReceiptId() {
+  return `SCSC-RCP-${Date.now().toString(36).toUpperCase()}`;
+}
+
+function applyActiveMembershipFields(
+  payload: Record<string, unknown>,
+  existingData: Record<string, unknown>,
+  membershipExpiresAt?: string
+) {
+  payload.accountStatus = "approved";
+
+  const memberGrade =
+    payload.memberGrade === "first" || payload.memberGrade === "second"
+      ? (payload.memberGrade as MemberGrade)
+      : existingData.memberGrade === "first" || existingData.memberGrade === "second"
+        ? (existingData.memberGrade as MemberGrade)
+        : "second";
+
+  if (!existingData.membershipReceiptId) {
+    payload.membershipPaymentStatus = "paid";
+    payload.membershipPaidAt = new Date().toISOString();
+    payload.membershipFeeAmount = getMembershipFeeAmount(memberGrade);
+    payload.membershipReceiptId = buildMembershipReceiptId();
+  }
+
+  if (membershipExpiresAt) {
+    payload.membershipExpiresAt = membershipExpiresAt;
+  } else if (
+    typeof existingData.membershipExpiresAt !== "string" ||
+    !existingData.membershipExpiresAt.trim()
+  ) {
+    payload.membershipExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+  }
+}
+
 function getErrorCode(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error
     ? String((error as { code?: unknown }).code || "")
@@ -224,7 +276,7 @@ async function deleteQueryBatch(query: FirebaseFirestore.Query, batchSize = 300)
     return 0;
   }
 
-  const batch = db.batch();
+  const batch = getDb().batch();
   snapshot.docs.forEach((doc) => batch.delete(doc.ref));
   await batch.commit();
 
@@ -238,14 +290,14 @@ async function sendOrderStatusEmail(orderId: string, status: OrderStatus) {
     return;
   }
 
-  const orderSnap = await db.collection("orders").doc(orderId).get();
+  const orderSnap = await getDb().collection("orders").doc(orderId).get();
   const orderData = orderSnap.data() as { userId?: string; total?: number } | undefined;
 
   if (!orderData?.userId) {
     return;
   }
 
-  const userSnap = await db.collection("users").doc(orderData.userId).get();
+  const userSnap = await getDb().collection("users").doc(orderData.userId).get();
   const userData = userSnap.data() as { email?: string; displayName?: string } | undefined;
 
   if (!userData?.email) {
@@ -271,7 +323,7 @@ export const sendContactEmail = onCall(publicCallableOptions, async (request) =>
     throw new HttpsError("invalid-argument", "Name, email, and message are required.");
   }
 
-  await db.collection("contacts").add({
+  await getDb().collection("contacts").add({
     name,
     email,
     message,
@@ -300,7 +352,7 @@ export const issueMembershipQrPass = onCall(publicCallableOptions, async (reques
     throw new HttpsError("unauthenticated", "You must be signed in to issue a QR pass.");
   }
 
-  const userRef = db.collection("users").doc(userId);
+  const userRef = getDb().collection("users").doc(userId);
   const userSnap = await userRef.get();
 
   if (!userSnap.exists) {
@@ -343,7 +395,7 @@ export const issueMembershipQrPass = onCall(publicCallableOptions, async (reques
 
   const nextSessionRef = userRef.collection("membershipPasses").doc(sessionId);
 
-  await db.runTransaction(async (transaction) => {
+  await getDb().runTransaction(async (transaction) => {
     const freshUserSnap = await transaction.get(userRef);
     const freshUserData = freshUserSnap.data() as {
       activeQrSessionId?: string | null;
@@ -410,11 +462,11 @@ export const verifyMembership = onCall(publicCallableOptions, async (request) =>
     return { valid: false, reason: "invalid" };
   }
 
-  const userRef = db.collection("users").doc(payload.userId);
+  const userRef = getDb().collection("users").doc(payload.userId);
   const sessionRef = userRef.collection("membershipPasses").doc(payload.sessionId);
   const scannedAt = new Date().toISOString();
 
-  const result = await db.runTransaction(async (transaction) => {
+  const result = await getDb().runTransaction(async (transaction) => {
     const [userSnap, sessionSnap] = await Promise.all([
       transaction.get(userRef),
       transaction.get(sessionRef)
@@ -574,8 +626,8 @@ export const setUserRole = onCall(publicCallableOptions, async (request) => {
     throw new HttpsError("invalid-argument", "User ID and role are required.");
   }
 
-  await getAuth().setCustomUserClaims(uid, { role });
-  await db.collection("users").doc(uid).set({ role }, { merge: true });
+  await getAuthClient().setCustomUserClaims(uid, { role });
+  await getDb().collection("users").doc(uid).set({ role }, { merge: true });
 
   return { success: true };
 });
@@ -584,7 +636,7 @@ export const upsertEvent = onCall(publicCallableOptions, async (request) => {
   requireAdminOrModerator(request);
 
   const data = request.data as Record<string, unknown>;
-  const id = cleanString(data.id) || db.collection("events").doc().id;
+  const id = cleanString(data.id) || getDb().collection("events").doc().id;
   const title = cleanString(data.title);
   const startsAt = cleanString(data.startsAt);
   const capacity = cleanNumber(data.capacity);
@@ -608,7 +660,7 @@ export const upsertEvent = onCall(publicCallableOptions, async (request) => {
     updatedAt: new Date().toISOString()
   };
 
-  await db.collection("events").doc(id).set(payload, { merge: true });
+  await getDb().collection("events").doc(id).set(payload, { merge: true });
   return { success: true, id };
 });
 
@@ -623,7 +675,7 @@ export const deleteEvent = onCall(publicCallableOptions, async (request) => {
     throw new HttpsError("invalid-argument", "Event ID is required.");
   }
 
-  const registrationsSnap = await db
+  const registrationsSnap = await getDb()
     .collection("events")
     .doc(id)
     .collection("registrations")
@@ -638,13 +690,13 @@ export const deleteEvent = onCall(publicCallableOptions, async (request) => {
   }
 
   if (cleanupRegistrations) {
-    const allRegistrationsSnap = await db.collection("events").doc(id).collection("registrations").get();
-    const batch = db.batch();
+    const allRegistrationsSnap = await getDb().collection("events").doc(id).collection("registrations").get();
+    const batch = getDb().batch();
 
     allRegistrationsSnap.docs.forEach((registrationDoc) => {
       batch.delete(registrationDoc.ref);
       batch.set(
-        db.collection("users").doc(registrationDoc.id),
+        getDb().collection("users").doc(registrationDoc.id),
         {
           registeredEventIds: FieldValue.arrayRemove(id),
           lastEventCancellationAt: new Date().toISOString()
@@ -656,7 +708,7 @@ export const deleteEvent = onCall(publicCallableOptions, async (request) => {
     await batch.commit();
   }
 
-  await db.collection("events").doc(id).delete();
+  await getDb().collection("events").doc(id).delete();
   return { success: true };
 });
 
@@ -665,7 +717,7 @@ export const upsertArchivedEvent = onCall(publicCallableOptions, async (request)
 
   const data = request.data as Record<string, unknown>;
   const requestedId = cleanString(data.id);
-  const id = requestedId || db.collection("archivedEvents").doc().id;
+  const id = requestedId || getDb().collection("archivedEvents").doc().id;
   const title = cleanString(data.title);
   const eventDate = cleanString(data.eventDate);
   const isNewRecord = !requestedId;
@@ -693,7 +745,7 @@ export const upsertArchivedEvent = onCall(publicCallableOptions, async (request)
     payload.createdByRole = request.auth?.token?.role || "unknown";
   }
 
-  await db.collection("archivedEvents").doc(id).set(payload, { merge: true });
+  await getDb().collection("archivedEvents").doc(id).set(payload, { merge: true });
   return { success: true, id };
 });
 
@@ -705,7 +757,7 @@ export const deleteArchivedEvent = onCall(publicCallableOptions, async (request)
     throw new HttpsError("invalid-argument", "Archived event ID is required.");
   }
 
-  await db.collection("archivedEvents").doc(id).delete();
+  await getDb().collection("archivedEvents").doc(id).delete();
   return { success: true };
 });
 
@@ -867,7 +919,7 @@ export const upsertHomeSettings = onCall(publicCallableOptions, async (request) 
     payload.storePerks = cleanStringArray(storePerks).slice(0, 6);
   }
 
-  await db.collection("siteSettings").doc("home").set(
+  await getDb().collection("siteSettings").doc("home").set(
     payload,
     { merge: true }
   );
@@ -879,11 +931,11 @@ export const updateFinanceSettings = onCall(publicCallableOptions, async (reques
   requireAdmin(request);
 
   const data = request.data as Record<string, unknown>;
-  const financeRef = db.collection("siteSettings").doc("finance");
+  const financeRef = getDb().collection("siteSettings").doc("finance");
   const now = new Date().toISOString();
   const updatedBy = request.auth?.uid || "unknown";
 
-  const nextFinance = await db.runTransaction(async (transaction) => {
+  const nextFinance = await getDb().runTransaction(async (transaction) => {
     const snapshot = await transaction.get(financeRef);
     const current = snapshot.exists ? snapshot.data() || {} : {};
     const currentBalance = cleanNumber(current.balance);
@@ -915,7 +967,7 @@ export const updateFinanceSettings = onCall(publicCallableOptions, async (reques
     const balance =
       transactionType === "expense" ? currentBalance - amount : currentBalance + amount;
     const financeTransaction = {
-      id: db.collection("siteSettings").doc().id,
+      id: getDb().collection("siteSettings").doc().id,
       type: transactionType,
       amount,
       description,
@@ -940,7 +992,7 @@ export const upsertProduct = onCall(publicCallableOptions, async (request) => {
   requireAdminOrModerator(request);
 
   const data = request.data as Record<string, unknown>;
-  const id = cleanString(data.id) || db.collection("products").doc().id;
+  const id = cleanString(data.id) || getDb().collection("products").doc().id;
   const name = cleanString(data.name);
   const price = cleanNumber(data.price);
   const stock = cleanNumber(data.stock);
@@ -965,7 +1017,7 @@ export const upsertProduct = onCall(publicCallableOptions, async (request) => {
     updatedAt: new Date().toISOString()
   };
 
-  await db.collection("products").doc(id).set(payload, { merge: true });
+  await getDb().collection("products").doc(id).set(payload, { merge: true });
   return { success: true, id };
 });
 
@@ -977,7 +1029,7 @@ export const deleteProduct = onCall(publicCallableOptions, async (request) => {
     throw new HttpsError("invalid-argument", "Product ID is required.");
   }
 
-  await db.collection("products").doc(id).delete();
+  await getDb().collection("products").doc(id).delete();
   return { success: true };
 });
 
@@ -985,7 +1037,7 @@ export const upsertBoardMember = onCall(publicCallableOptions, async (request) =
   requireAdmin(request);
 
   const data = request.data as Record<string, unknown>;
-  const id = cleanString(data.id) || db.collection("boardMembers").doc().id;
+  const id = cleanString(data.id) || getDb().collection("boardMembers").doc().id;
   const name = cleanString(data.name);
   const role = cleanString(data.role);
   const year = cleanString(data.year);
@@ -994,7 +1046,7 @@ export const upsertBoardMember = onCall(publicCallableOptions, async (request) =
     throw new HttpsError("invalid-argument", "Board member name, role, and year are required.");
   }
 
-  await db.collection("boardMembers").doc(id).set(
+  await getDb().collection("boardMembers").doc(id).set(
     {
       name,
       role,
@@ -1018,7 +1070,7 @@ export const deleteBoardMember = onCall(publicCallableOptions, async (request) =
     throw new HttpsError("invalid-argument", "Board member ID is required.");
   }
 
-  await db.collection("boardMembers").doc(id).delete();
+  await getDb().collection("boardMembers").doc(id).delete();
   return { success: true };
 });
 
@@ -1128,7 +1180,7 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
     if (!allowedRoles.includes(role)) {
       throw new HttpsError("invalid-argument", "Invalid role.");
     }
-    await getAuth().setCustomUserClaims(uid, { role });
+    await getAuthClient().setCustomUserClaims(uid, { role });
     payload.role = role;
   }
 
@@ -1137,21 +1189,24 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
       throw new HttpsError("invalid-argument", "Invalid membership status.");
     }
     payload.membershipStatus = membershipStatus;
-
-    if (membershipStatus === "active") {
-      payload.accountStatus = "approved";
-    }
   }
 
   if (membershipExpiresAt) {
     payload.membershipExpiresAt = membershipExpiresAt;
   }
 
-  if (Object.keys(authUpdates).length) {
-    await getAuth().updateUser(uid, authUpdates);
+  const existingSnap = await getDb().collection("users").doc(uid).get();
+  const existingData = (existingSnap.data() || {}) as Record<string, unknown>;
+
+  if (membershipStatus === "active") {
+    applyActiveMembershipFields(payload, existingData, membershipExpiresAt);
   }
 
-  await db.collection("users").doc(uid).set(payload, { merge: true });
+  if (Object.keys(authUpdates).length) {
+    await getAuthClient().updateUser(uid, authUpdates);
+  }
+
+  await getDb().collection("users").doc(uid).set(payload, { merge: true });
   return { success: true };
 });
 
@@ -1224,18 +1279,18 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
   }
 
   try {
-    const userRecord = await getAuth().createUser({
+    const userRecord = await getAuthClient().createUser({
       displayName: nextDisplayName,
       email: nextEmail,
       password: nextPassword
     });
 
     if (nextRole !== "user") {
-      await getAuth().setCustomUserClaims(userRecord.uid, { role: nextRole });
+      await getAuthClient().setCustomUserClaims(userRecord.uid, { role: nextRole });
     }
 
     const joinedAt = new Date().toISOString();
-    await db.collection("users").doc(userRecord.uid).set({
+    const userPayload: Record<string, unknown> = {
       membershipId: `SCSC-${userRecord.uid.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10).toUpperCase()}`,
       displayName: nextDisplayName,
       email: nextEmail,
@@ -1260,7 +1315,13 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
       lastQrScanAt: null,
       discountRate: 0.12,
       updatedAt: joinedAt
-    });
+    };
+
+    if (nextMembershipStatus === "active") {
+      applyActiveMembershipFields(userPayload, { memberGrade: nextMemberGrade });
+    }
+
+    await getDb().collection("users").doc(userRecord.uid).set(userPayload);
 
     return { success: true, uid: userRecord.uid };
   } catch (error) {
@@ -1294,7 +1355,7 @@ export const sendUserPasswordResetAdmin = onCall(publicCallableOptions, async (r
     throw new HttpsError("invalid-argument", "User ID or email is required.");
   }
 
-  const auth = getAuth();
+  const auth = getAuthClient();
   const userRecord = uid
     ? await auth.getUser(uid)
     : await auth.getUserByEmail(cleanString(email).toLowerCase());
@@ -1337,8 +1398,8 @@ export const deleteUserAdmin = onCall(publicCallableOptions, async (request) => 
     throw new HttpsError("failed-precondition", "Cannot delete your own admin account.");
   }
 
-  await getAuth().deleteUser(uid);
-  await db.collection("users").doc(uid).delete();
+  await getAuthClient().deleteUser(uid);
+  await getDb().collection("users").doc(uid).delete();
   return { success: true };
 });
 
@@ -1355,7 +1416,7 @@ export const updateOrderStatus = onCall(publicCallableOptions, async (request) =
     throw new HttpsError("invalid-argument", "Order ID and a valid status are required.");
   }
 
-  await db.collection("orders").doc(id).set(
+  await getDb().collection("orders").doc(id).set(
     {
       status,
       updatedAt: new Date().toISOString()
@@ -1376,7 +1437,7 @@ export const deleteOrder = onCall(publicCallableOptions, async (request) => {
     throw new HttpsError("invalid-argument", "Order ID is required.");
   }
 
-  await db.collection("orders").doc(id).delete();
+  await getDb().collection("orders").doc(id).delete();
   return { success: true };
 });
 
@@ -1384,7 +1445,7 @@ export const upsertArticle = onCall(publicCallableOptions, async (request) => {
   requireAdminOrModerator(request);
 
   const data = request.data as Record<string, unknown>;
-  const id = cleanString(data.id) || db.collection("articles").doc().id;
+  const id = cleanString(data.id) || getDb().collection("articles").doc().id;
   const title = cleanString(data.title);
   const excerpt = cleanString(data.excerpt);
   const category = cleanString(data.category, "Others") as ArticleCategory;
@@ -1406,7 +1467,7 @@ export const upsertArticle = onCall(publicCallableOptions, async (request) => {
         .filter((entry) => entry.label && entry.url)
     : [];
 
-  await db.collection("articles").doc(id).set(
+  await getDb().collection("articles").doc(id).set(
     {
       slug: cleanString(data.slug) || slugify(title) || id,
       title,
@@ -1434,8 +1495,8 @@ export const deleteArticle = onCall(publicCallableOptions, async (request) => {
     throw new HttpsError("invalid-argument", "Article ID is required.");
   }
 
-  await db.collection("articles").doc(id).delete();
-  await deleteQueryBatch(db.collection("moderationLogs").where("targetId", "==", id));
+  await getDb().collection("articles").doc(id).delete();
+  await deleteQueryBatch(getDb().collection("moderationLogs").where("targetId", "==", id));
   return { success: true };
 });
 
@@ -1452,7 +1513,7 @@ export const setEventRegistrationCheckIn = onCall(publicCallableOptions, async (
     throw new HttpsError("invalid-argument", "Event ID, user ID, and check-in status are required.");
   }
 
-  await db
+  await getDb()
     .collection("events")
     .doc(eventId)
     .collection("registrations")
@@ -1480,11 +1541,11 @@ export const removeEventRegistration = onCall(publicCallableOptions, async (requ
     throw new HttpsError("invalid-argument", "Event ID and user ID are required.");
   }
 
-  const eventRef = db.collection("events").doc(eventId);
+  const eventRef = getDb().collection("events").doc(eventId);
   const registrationRef = eventRef.collection("registrations").doc(userId);
-  const userRef = db.collection("users").doc(userId);
+  const userRef = getDb().collection("users").doc(userId);
 
-  await db.runTransaction(async (transaction) => {
+  await getDb().runTransaction(async (transaction) => {
     const [eventSnap, registrationSnap] = await Promise.all([
       transaction.get(eventRef),
       transaction.get(registrationRef)
@@ -1527,9 +1588,9 @@ export const moderateArticle = onCall(publicCallableOptions, async (request) => 
   const moderatedAt = new Date().toISOString();
   const moderatorId = request.auth?.uid || "unknown";
 
-  await db.runTransaction(async (transaction) => {
+  await getDb().runTransaction(async (transaction) => {
     transaction.set(
-      db.collection("articles").doc(id),
+      getDb().collection("articles").doc(id),
       {
         approved,
         moderatedAt,
@@ -1537,7 +1598,7 @@ export const moderateArticle = onCall(publicCallableOptions, async (request) => 
       },
       { merge: true }
     );
-    transaction.set(db.collection("moderationLogs").doc(), {
+    transaction.set(getDb().collection("moderationLogs").doc(), {
       targetType: "article",
       targetId: id,
       action: approved ? "approved" : "rejected",

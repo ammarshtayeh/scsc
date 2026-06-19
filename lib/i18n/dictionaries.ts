@@ -365,6 +365,10 @@ export const dictionaries = {
       membershipCardOnlyHint:
         "The live QR is available only on the membership card page for better security.",
       viewMembershipCard: "View Membership QR",
+      membershipCardLabel: "Official Member ID",
+      membershipCardAssociationLine: "Cosmetics & Skin Care",
+      membershipCardValidUntil: "Valid until",
+      membershipCardMemberSince: "Member since",
       backToDashboard: "Back to Personal Dashboard",
       memberId: "Member ID",
       role: "Role",
@@ -406,7 +410,20 @@ export const dictionaries = {
       orderHistory: "Order History",
       noOrders: "No orders recorded yet.",
       noRegisteredEvents: "No registered events yet.",
-      noSavedArticles: "No saved articles yet."
+      noSavedArticles: "No saved articles yet.",
+      membershipReceiptEyebrow: "Payment Receipt",
+      membershipReceiptTitle: "Membership payment confirmed",
+      membershipReceiptDescription:
+        "Your membership fee has been recorded. Keep this receipt number for your records.",
+      membershipReceiptId: "Receipt number",
+      membershipPaidAt: "Payment date",
+      membershipFeeAmount: "Amount paid",
+      membershipPaymentPending: "Payment pending",
+      membershipPaymentPendingDescription:
+        "Your membership payment will appear here after admin approval.",
+      qrRetry: "Try again",
+      profileLoadError: "Unable to load your profile.",
+      profileRetry: "Retry"
     },
     dashboard: {
       eyebrow: "Admin Dashboard",
@@ -892,6 +909,10 @@ export const dictionaries = {
       membershipCardOnlyHint:
         "رمز الاستجابة السريعة الحي متاح فقط من خلال صفحة بطاقة العضوية لمزيد من الأمان.",
       viewMembershipCard: "عرض رمز العضوية",
+      membershipCardLabel: "بطاقة منتسب رسمية",
+      membershipCardAssociationLine: "مستحضرات التجميل والعناية بالبشرة",
+      membershipCardValidUntil: "صالحة حتى",
+      membershipCardMemberSince: "عضو منذ",
       backToDashboard: "العودة إلى اللوحة الشخصية",
       memberId: "رقم العضوية",
       role: "الصلاحية",
@@ -932,7 +953,20 @@ export const dictionaries = {
       orderHistory: "سجل الطلبات",
       noOrders: "لا توجد طلبات بعد.",
       noRegisteredEvents: "لا توجد فعاليات مسجلة بعد.",
-      noSavedArticles: "لا توجد مقالات محفوظة بعد."
+      noSavedArticles: "لا توجد مقالات محفوظة بعد.",
+      membershipReceiptEyebrow: "وصل الدفع",
+      membershipReceiptTitle: "تم تأكيد دفع العضوية",
+      membershipReceiptDescription:
+        "تم تسجيل رسوم عضويتك. احتفظ برقم الوصل للمراجعة.",
+      membershipReceiptId: "رقم الوصل",
+      membershipPaidAt: "تاريخ الدفع",
+      membershipFeeAmount: "المبلغ المدفوع",
+      membershipPaymentPending: "الدفع قيد الانتظار",
+      membershipPaymentPendingDescription:
+        "سيظهر وصل الدفع هنا بعد موافقة الإدارة على عضويتك.",
+      qrRetry: "إعادة المحاولة",
+      profileLoadError: "تعذر تحميل الملف الشخصي.",
+      profileRetry: "إعادة المحاولة"
     },
     dashboard: {
       eyebrow: "لوحة تحكم الإدارة",

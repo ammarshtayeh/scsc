@@ -14,12 +14,11 @@ import {
   Bookmark,
   CalendarRange,
   Clock3,
-  RefreshCcw,
+  Receipt,
   ShieldCheck,
   ShoppingBag,
   UserCircle2
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -28,6 +27,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
+import { MembershipIdCard } from "@/components/profile/membership-id-card";
 import { SmartImage } from "@/components/ui/smart-image";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -104,6 +105,22 @@ function normalizeUserProfile(id: string, data: Record<string, unknown>): UserPr
       data.accountStatus === "new" || data.accountStatus === "approved" || data.accountStatus === "rejected"
         ? (data.accountStatus as UserProfile["accountStatus"])
         : "approved",
+    membershipPaymentStatus:
+      data.membershipPaymentStatus === "pending" ||
+      data.membershipPaymentStatus === "paid" ||
+      data.membershipPaymentStatus === "waived"
+        ? (data.membershipPaymentStatus as UserProfile["membershipPaymentStatus"])
+        : undefined,
+    membershipPaidAt:
+      typeof data.membershipPaidAt === "string" && data.membershipPaidAt.trim()
+        ? data.membershipPaidAt.trim()
+        : undefined,
+    membershipFeeAmount:
+      typeof data.membershipFeeAmount === "number" ? data.membershipFeeAmount : undefined,
+    membershipReceiptId:
+      typeof data.membershipReceiptId === "string" && data.membershipReceiptId.trim()
+        ? data.membershipReceiptId.trim()
+        : undefined,
     company: typeof data.company === "string" ? data.company : "",
     photoURL: typeof data.photoURL === "string" ? data.photoURL : undefined,
     membershipStatus: (data.membershipStatus as UserProfile["membershipStatus"]) || "active",
@@ -212,11 +229,15 @@ export function ProfileShell({
   const { dictionary, locale } = useLocale();
   const { pushToast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileReloadKey, setProfileReloadKey] = useState(0);
   const [orders, setOrders] = useState<Order[]>([]);
   const [savedArticles, setSavedArticles] = useState<Article[]>([]);
   const [registeredEvents, setRegisteredEvents] = useState<EventItem[]>([]);
   const [qrSession, setQrSession] = useState<MembershipQrSession | null>(null);
   const [qrCode, setQrCode] = useState("");
+  const [qrError, setQrError] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [issuingQr, setIssuingQr] = useState(false);
@@ -230,6 +251,7 @@ export function ProfileShell({
     if (resolvedStatus !== "active") {
       setQrSession(null);
       setQrCode("");
+      setQrError(null);
       setSecondsLeft(0);
       return;
     }
@@ -240,6 +262,7 @@ export function ProfileShell({
 
     qrRefreshInFlightRef.current = true;
     setIssuingQr(true);
+    setQrError(null);
 
     try {
       const session = await issueMembershipQrPass({
@@ -262,6 +285,7 @@ export function ProfileShell({
       setQrSession({ ...session, qrValue });
       setQrCode(generatedQr);
       setSecondsLeft(getSecondsUntilExpiry(session.expiresAt));
+      setQrError(null);
 
       if (!silent) {
         pushToast(dictionary.profile.qrRefreshed, "success");
@@ -270,12 +294,12 @@ export function ProfileShell({
       setQrSession(null);
       setQrCode("");
       setSecondsLeft(0);
+      const message =
+        error instanceof Error ? error.message : dictionary.profile.qrIssueError;
+      setQrError(message);
 
       if (!silent) {
-        pushToast(
-          error instanceof Error ? error.message : dictionary.profile.qrIssueError,
-          "error"
-        );
+        pushToast(message, "error");
       }
     } finally {
       setIssuingQr(false);
@@ -286,62 +310,110 @@ export function ProfileShell({
   useEffect(() => {
     async function loadDashboard() {
       if (!user) {
+        setProfileLoading(false);
         return;
       }
 
       if (!db) {
+        setProfileLoading(false);
+        setProfileError(dictionary.profile.profileLoadError);
         return;
       }
 
-      const database = db;
-      const profileSnap = await getDoc(doc(database, "users", user.id));
-      if (!profileSnap.exists()) {
-        return;
+      setProfileLoading(true);
+      setProfileError(null);
+
+      try {
+        const database = db;
+        const profileRef = doc(database, "users", user.id);
+        let profileSnap = await getDoc(profileRef);
+
+        if (!profileSnap.exists()) {
+          const bootstrap = {
+            membershipId: `SCSC-${user.id.slice(0, 8).toUpperCase()}`,
+            displayName:
+              user.displayName ||
+              (user.email ? user.email.split("@")[0] : "Association Member"),
+            email: user.email || "",
+            role: user.role || "user",
+            phone: "",
+            studentId: "",
+            specialization: "",
+            degree: "",
+            memberGrade: "second",
+            accountStatus: "new",
+            membershipStatus: "pendingRenewal",
+            membershipExpiresAt: new Date(Date.now() + 31536000000).toISOString(),
+            joinedAt: new Date().toISOString(),
+            savedArticleIds: [],
+            registeredEventIds: [],
+            discountRate: 0.12
+          };
+
+          await setDoc(profileRef, bootstrap, { merge: true });
+          profileSnap = await getDoc(profileRef);
+        }
+
+        if (!profileSnap.exists()) {
+          setProfile(null);
+          setProfileError(dictionary.profile.profileLoadError);
+          return;
+        }
+
+        const nextProfile = normalizeUserProfile(
+          profileSnap.id,
+          profileSnap.data() as Record<string, unknown>
+        );
+        lastObservedScanAtRef.current = nextProfile.lastQrScanAt || null;
+        setProfile(nextProfile);
+
+        const ordersQuery = query(
+          collection(database, "orders"),
+          where("userId", "==", user.id),
+          orderBy("createdAt", "desc")
+        );
+        const ordersSnap = await getDocs(ordersQuery);
+        setOrders(
+          ordersSnap.docs.map((entry) =>
+            normalizeOrder(entry.id, entry.data() as Record<string, unknown>)
+          )
+        );
+
+        const [articleDocs, eventDocs] = await Promise.all([
+          Promise.all(
+            (nextProfile.savedArticleIds || []).map((articleId) =>
+              getDoc(doc(database, "articles", articleId))
+            )
+          ),
+          Promise.all(
+            (nextProfile.registeredEventIds || []).map((eventId) =>
+              getDoc(doc(database, "events", eventId))
+            )
+          )
+        ]);
+
+        setSavedArticles(
+          articleDocs
+            .filter((entry) => entry.exists())
+            .map((entry) => normalizeArticle(entry.id, entry.data() as Record<string, unknown>))
+        );
+        setRegisteredEvents(
+          eventDocs
+            .filter((entry) => entry.exists())
+            .map((entry) => normalizeEvent(entry.id, entry.data() as Record<string, unknown>))
+        );
+      } catch (error) {
+        setProfile(null);
+        setProfileError(
+          error instanceof Error ? error.message : dictionary.profile.profileLoadError
+        );
+      } finally {
+        setProfileLoading(false);
       }
-
-      const nextProfile = normalizeUserProfile(profileSnap.id, profileSnap.data() as Record<string, unknown>);
-      lastObservedScanAtRef.current = nextProfile.lastQrScanAt || null;
-      setProfile(nextProfile);
-
-      const ordersQuery = query(
-        collection(database, "orders"),
-        where("userId", "==", user.id),
-        orderBy("createdAt", "desc")
-      );
-      const ordersSnap = await getDocs(ordersQuery);
-      setOrders(
-        ordersSnap.docs.map((entry) =>
-          normalizeOrder(entry.id, entry.data() as Record<string, unknown>)
-        )
-      );
-
-      const [articleDocs, eventDocs] = await Promise.all([
-        Promise.all(
-          (nextProfile.savedArticleIds || []).map((articleId) =>
-            getDoc(doc(database, "articles", articleId))
-          )
-        ),
-        Promise.all(
-          (nextProfile.registeredEventIds || []).map((eventId) =>
-            getDoc(doc(database, "events", eventId))
-          )
-        )
-      ]);
-
-      setSavedArticles(
-        articleDocs
-          .filter((entry) => entry.exists())
-          .map((entry) => normalizeArticle(entry.id, entry.data() as Record<string, unknown>))
-      );
-      setRegisteredEvents(
-        eventDocs
-          .filter((entry) => entry.exists())
-          .map((entry) => normalizeEvent(entry.id, entry.data() as Record<string, unknown>))
-      );
     }
 
-    loadDashboard();
-  }, [user]);
+    void loadDashboard();
+  }, [dictionary.profile.profileLoadError, profileReloadKey, user]);
 
   useEffect(() => {
     if (view !== "membership-card") {
@@ -520,98 +592,167 @@ export function ProfileShell({
     }
   }
 
-  if (!profile) {
+  if (profileLoading) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <Card>{dictionary.profile.loadingProfile}</Card>
+        <div className="grid gap-6">
+          <Skeleton className="h-40 w-full" />
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Skeleton className="h-28" />
+            <Skeleton className="h-28" />
+            <Skeleton className="h-28" />
+            <Skeleton className="h-28" />
+          </div>
+          <Skeleton className="h-64 w-full" />
+        </div>
       </div>
     );
   }
 
-  if (view === "membership-card") {
+  if (profileError || !profile) {
     return (
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr]">
-          <div className="space-y-6">
-            <Card className="space-y-4">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-brand-accent" />
-                <h2 className="font-heading text-2xl font-semibold text-brand-primary">
-                  {dictionary.profile.securityTitle}
-                </h2>
-              </div>
-              <div className="grid gap-3 text-sm leading-7 text-slate-600">
-                <p>{dictionary.profile.securityOne}</p>
-                <p>{dictionary.profile.securityTwo}</p>
-                <p>{dictionary.profile.securityThree}</p>
-                <p>{dictionary.profile.securityFour}</p>
-                <p>{dictionary.profile.securityFive}</p>
-              </div>
-            </Card>
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <Card className="space-y-4 text-center">
+          <p className="text-sm text-red-600">
+            {profileError || dictionary.profile.profileLoadError}
+          </p>
+          <Button variant="secondary" onClick={() => setProfileReloadKey((current) => current + 1)}>
+            {dictionary.profile.profileRetry}
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  const hasMembershipReceipt = profile.membershipPaymentStatus === "paid" && profile.membershipReceiptId;
+
+  const membershipReceiptCard = (
+    <Card className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Receipt className="h-5 w-5 text-brand-accent" />
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent">
+            {dictionary.profile.membershipReceiptEyebrow}
+          </p>
+          <h2 className="mt-1 font-heading text-2xl font-semibold text-brand-primary">
+            {dictionary.profile.membershipReceiptTitle}
+          </h2>
+        </div>
+      </div>
+      {hasMembershipReceipt ? (
+        <>
+          <p className="text-sm leading-7 text-slate-600">
+            {dictionary.profile.membershipReceiptDescription}
+          </p>
+          <div className="grid gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+            <p>
+              {dictionary.profile.membershipReceiptId}:{" "}
+              <span className="font-semibold">{profile.membershipReceiptId}</span>
+            </p>
+            <p>
+              {dictionary.profile.membershipPaidAt}:{" "}
+              {formatDateTime(profile.membershipPaidAt || profile.joinedAt, locale)}
+            </p>
+            <p>
+              {dictionary.profile.membershipFeeAmount}:{" "}
+              {formatCurrency(profile.membershipFeeAmount || 0, STORE_CURRENCY, locale)}
+            </p>
           </div>
+        </>
+      ) : (
+        <EmptyState
+          title={dictionary.profile.membershipPaymentPending}
+          description={dictionary.profile.membershipPaymentPendingDescription}
+        />
+      )}
+    </Card>
+  );
 
-          {isMembershipActive ? (
-          <Card className="space-y-5">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent">
-                  {dictionary.profile.qrEyebrow}
-                </p>
-                <h2 className="mt-2 font-heading text-2xl font-semibold text-brand-primary">
-                  {dictionary.profile.qrTitle}
-                </h2>
-                <p className="mt-2 text-sm text-slate-600">
-                  {dictionary.profile.membershipCardDescription}
-                </p>
-              </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                loading={issuingQr}
-                onClick={() => refreshQrSession(profile, false)}
-                disabled={membershipStatus !== "active"}
-              >
-                <RefreshCcw className="h-4 w-4" />
-                {dictionary.common.refresh}
-              </Button>
-            </div>
+  if (view === "membership-card") {
+    const membershipCardLabels = {
+      membershipCardLabel: dictionary.profile.membershipCardLabel,
+      membershipCardAssociationLine: dictionary.profile.membershipCardAssociationLine,
+      membershipCardValidUntil: dictionary.profile.membershipCardValidUntil,
+      membershipCardMemberSince: dictionary.profile.membershipCardMemberSince,
+      memberId: dictionary.profile.memberId,
+      membershipStatus: dictionary.profile.membershipStatus,
+      qrTitle: dictionary.profile.qrTitle,
+      qrGenerating: dictionary.profile.qrGenerating,
+      qrRetry: dictionary.profile.qrRetry,
+      qrExpiresIn: dictionary.profile.qrExpiresIn,
+      secondsLabel: dictionary.profile.secondsLabel,
+      qrScreenshotWarning: dictionary.profile.qrScreenshotWarning,
+      refresh: dictionary.common.refresh,
+      notProvided: dictionary.common.notProvided
+    };
 
-            {membershipStatus === "active" ? (
-              <>
-                {qrCode ? (
-                  <div
-                    className="relative w-fit max-w-full select-none overflow-hidden rounded-[2rem] border border-brand-primary/10 bg-white p-4 shadow-soft"
-                    onContextMenu={(event) => event.preventDefault()}
-                  >
-                    <Image
-                      src={qrCode}
-                      alt={dictionary.profile.qrTitle}
-                      width={300}
-                      height={300}
-                      unoptimized
-                      draggable={false}
-                      className="rounded-3xl bg-white"
-                    />
-                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center">
-                      <div className="rotate-[-18deg] text-[11px] font-semibold uppercase tracking-[0.36em] text-brand-primary/12">
-                        {profile.displayName} | {profile.membershipId || profile.id}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-slate-500">{dictionary.profile.qrGenerating}</p>
-                )}
-                <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-                  {dictionary.profile.qrScreenshotWarning}
-                </p>
+    return (
+      <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+        <Link
+          href="/profile"
+          className="mb-8 inline-flex text-sm font-medium text-brand-primary underline decoration-brand-accent underline-offset-4"
+        >
+          {dictionary.profile.backToDashboard}
+        </Link>
 
-                <div className="grid gap-3 text-sm text-slate-600">
+        {!isMembershipActive ? (
+          <Card className="space-y-4">
+            <EmptyState
+              title={inactiveMembershipTitle}
+              description={inactiveMembershipDescription}
+            />
+          </Card>
+        ) : (
+          <div className="space-y-8">
+            <MembershipIdCard
+              profile={profile}
+              locale={locale}
+              labels={membershipCardLabels}
+              degreeLabel={degreeLabel}
+              studentIdLabel={studentIdLabel}
+              specializationLabel={specializationLabel}
+              qrCode={qrCode}
+              qrSession={qrSession}
+              qrError={qrError}
+              issuingQr={issuingQr}
+              secondsLeft={secondsLeft}
+              onRefresh={() => refreshQrSession(profile, false)}
+              onRetry={() => {
+                setQrError(null);
+                void refreshQrSession(profile, false);
+              }}
+            />
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-brand-accent" />
+                  <h2 className="font-heading text-xl font-semibold text-brand-primary">
+                    {dictionary.profile.securityTitle}
+                  </h2>
+                </div>
+                <div className="grid gap-2 text-sm leading-7 text-slate-600">
+                  <p>{dictionary.profile.securityOne}</p>
+                  <p>{dictionary.profile.securityTwo}</p>
+                  <p>{dictionary.profile.securityThree}</p>
+                </div>
+              </Card>
+              <Card className="space-y-3 bg-brand-sky/50">
+                <div className="flex items-center gap-2 text-brand-primary">
+                  <Clock3 className="h-5 w-5 text-brand-accent" />
+                  <h2 className="font-heading text-xl font-semibold">
+                    {dictionary.profile.qrTitle}
+                  </h2>
+                </div>
+                <p className="text-sm leading-7 text-slate-600">{dictionary.profile.qrHelp}</p>
+                <div className="grid gap-2 rounded-2xl border border-brand-primary/10 bg-white/70 p-4 text-sm text-slate-700 dark:bg-[#16253b] dark:text-[#dfe8f6]">
                   <p>
                     {dictionary.profile.qrMemberId}:{" "}
                     {qrSession?.memberId || profile.membershipId || profile.id}
                   </p>
-                  <p>{dictionary.profile.qrName}: {qrSession?.fullName || profile.displayName}</p>
-                  <p>{degreeLabel}: {profile.degree || dictionary.common.notProvided}</p>
+                  <p>
+                    {dictionary.profile.qrName}: {qrSession?.fullName || profile.displayName}
+                  </p>
                   <p>
                     {dictionary.profile.qrExpiryDate}:{" "}
                     {formatDateTime(
@@ -622,35 +763,10 @@ export function ProfileShell({
                     )}
                   </p>
                 </div>
-
-                <div className="rounded-2xl bg-brand-sky p-4">
-                  <div className="flex items-center gap-2 text-brand-primary">
-                    <Clock3 className="h-4 w-4" />
-                    <p className="text-sm font-medium">
-                      {dictionary.profile.qrExpiresIn} {formatNumber(secondsLeft, locale)} {dictionary.profile.secondsLabel}
-                    </p>
-                  </div>
-                  <p className="mt-2 text-xs leading-6 text-slate-600">
-                    {dictionary.profile.qrHelp}
-                  </p>
-                </div>
-              </>
-            ) : (
-              <EmptyState
-                title={inactiveMembershipTitle}
-                description={inactiveMembershipDescription}
-              />
-            )}
-          </Card>
-          ) : (
-          <Card className="space-y-4">
-            <EmptyState
-              title={inactiveMembershipTitle}
-              description={inactiveMembershipDescription}
-            />
-          </Card>
-          )}
-        </div>
+              </Card>
+            </div>
+          </div>
+        )}
       </section>
     );
   }
@@ -658,23 +774,26 @@ export function ProfileShell({
   if (!isMembershipActive) {
     return (
       <section className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        <Card className="space-y-5 text-center">
-          <span
-            className={`mx-auto inline-flex rounded-full border px-3 py-1 text-sm font-medium ${getMembershipStatusClasses(membershipStatus)}`}
-          >
-            {getMembershipStatusLabel(membershipStatus, locale)}
-          </span>
-          <div className="space-y-3">
-            <h1 className="font-heading text-3xl font-bold text-brand-primary">
-              {inactiveMembershipTitle}
-            </h1>
-            <p className="text-base leading-8 text-slate-600">
-              {locale === "ar"
-                ? "يرجى التاكد من الانتساب او تجديد العضوية والموافقة على عضويتك."
-                : "Please confirm your enrollment, renew your membership, and wait for membership approval."}
-            </p>
-          </div>
-        </Card>
+        <div className="space-y-6">
+          <Card className="space-y-5 text-center">
+            <span
+              className={`mx-auto inline-flex rounded-full border px-3 py-1 text-sm font-medium ${getMembershipStatusClasses(membershipStatus)}`}
+            >
+              {getMembershipStatusLabel(membershipStatus, locale)}
+            </span>
+            <div className="space-y-3">
+              <h1 className="font-heading text-3xl font-bold text-brand-primary">
+                {inactiveMembershipTitle}
+              </h1>
+              <p className="text-base leading-8 text-slate-600">
+                {locale === "ar"
+                  ? "يرجى التاكد من الانتساب او تجديد العضوية والموافقة على عضويتك."
+                  : "Please confirm your enrollment, renew your membership, and wait for membership approval."}
+              </p>
+            </div>
+          </Card>
+          {membershipReceiptCard}
+        </div>
       </section>
     );
   }
@@ -783,103 +902,76 @@ export function ProfileShell({
             </div>
           </Card>
 
-          <Card className="space-y-5">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent">
-                {dictionary.profile.membershipCardEyebrow}
-              </p>
-              <h2 className="mt-2 font-heading text-2xl font-semibold text-brand-primary">
-                {dictionary.profile.membershipCardTitle}
-              </h2>
-              <p className="mt-3 text-sm leading-7 text-slate-600">
-                {dictionary.profile.membershipCardInfoDescription}
-              </p>
-            </div>
-
-            <div className="grid gap-3 rounded-2xl border border-brand-primary/10 bg-brand-sky/70 p-4 text-sm font-medium text-slate-700 dark:border-white/12 dark:bg-[#16253b] dark:text-[#dfe8f6]">
-              <p>{dictionary.profile.memberId}: {profile.membershipId || profile.id}</p>
-              <p>
-                {dictionary.profile.membershipStatus}:{" "}
-                {getMembershipStatusLabel(membershipStatus, locale)}
-              </p>
-              <p>{degreeLabel}: {profile.degree || dictionary.common.notProvided}</p>
-              <p>
-                {dictionary.profile.membershipExpiry}:{" "}
-                {formatDateTime(
-                  profile.membershipExpiresAt || new Date().toISOString(),
-                  locale
-                )}
-              </p>
-              <p>{dictionary.profile.joined}: {formatDateShort(profile.joinedAt, locale)}</p>
-            </div>
-
-            <p className="text-xs leading-6 text-slate-500">
-              {dictionary.profile.membershipCardOnlyHint}
-            </p>
-
-            <div className="hidden">
-            {membershipStatus === "active" ? (
-              <>
-                {qrCode ? (
-                  <div
-                    className="relative w-fit max-w-full select-none overflow-hidden rounded-[2rem] border border-brand-primary/10 bg-white p-4 shadow-soft"
-                    onContextMenu={(event) => event.preventDefault()}
-                  >
-                    <Image
-                      src={qrCode}
-                      alt={dictionary.profile.qrTitle}
-                      width={300}
-                      height={300}
-                      unoptimized
-                      draggable={false}
-                      className="rounded-3xl bg-white"
-                    />
-                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center">
-                      <div className="rotate-[-18deg] text-[11px] font-semibold uppercase tracking-[0.36em] text-brand-primary/12">
-                        {profile.displayName} • {profile.membershipId || profile.id}
+          <Card className="overflow-hidden border-0 p-0 shadow-elevated">
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#0B3B78] via-[#11488d] to-[#062347] p-6 text-white sm:p-7">
+              <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-brand-accent/15 blur-3xl" />
+              <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-brand-accent to-transparent" />
+              <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 border-white/25 ring-2 ring-brand-accent/30">
+                    {profile.photoURL ? (
+                      <SmartImage
+                        src={profile.photoURL}
+                        alt={profile.displayName}
+                        fill
+                        sizes="80px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-white/10 text-xl font-bold text-brand-accent">
+                        {profile.displayName
+                          .split(/\s+/)
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .map((part) => part[0]?.toUpperCase() || "")
+                          .join("") || "SC"}
                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-slate-500">{dictionary.profile.qrGenerating}</p>
-                )}
-
-                <div className="grid gap-3 text-sm text-slate-600">
-                  <p>
-                    {dictionary.profile.qrMemberId}:{" "}
-                    {qrSession?.memberId || profile.membershipId || profile.id}
-                  </p>
-                  <p>{dictionary.profile.qrName}: {qrSession?.fullName || profile.displayName}</p>
-                  <p>{degreeLabel}: {profile.degree || dictionary.common.notProvided}</p>
-                  <p>
-                    {dictionary.profile.qrExpiryDate}:{" "}
-                    {formatDateTime(
-                      qrSession?.membershipExpiryDate ||
-                        profile.membershipExpiresAt ||
-                        new Date().toISOString(),
-                      locale
                     )}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl bg-brand-sky p-4">
-                  <div className="flex items-center gap-2 text-brand-primary">
-                    <Clock3 className="h-4 w-4" />
-                    <p className="text-sm font-medium">
-                      {dictionary.profile.qrExpiresIn} {formatNumber(secondsLeft, locale)} {dictionary.profile.secondsLabel}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-brand-accent">
+                      {dictionary.profile.membershipCardLabel}
+                    </p>
+                    <h2 className="mt-1 font-heading text-2xl font-bold leading-tight">
+                      {profile.displayName}
+                    </h2>
+                    <p className="mt-1 font-mono text-sm text-white/80">
+                      {profile.membershipId || profile.id}
                     </p>
                   </div>
-                  <p className="mt-2 text-xs leading-6 text-slate-600">
-                    {dictionary.profile.qrHelp}
-                  </p>
                 </div>
-              </>
-            ) : (
-              <EmptyState
-                title={dictionary.profile.qrUnavailableTitle}
-                description={dictionary.profile.qrUnavailableDescription}
-              />
-            )}
+                <Link href={MEMBERSHIP_CARD_PATH} className="shrink-0">
+                  <Button variant="accent" size="lg" className="w-full font-semibold lg:w-auto">
+                    {dictionary.profile.viewMembershipCard}
+                  </Button>
+                </Link>
+              </div>
+              <div className="relative mt-5 grid gap-3 border-t border-white/15 pt-4 text-sm text-white/75 sm:grid-cols-2 lg:grid-cols-4">
+                <p>
+                  <span className="block text-[0.65rem] uppercase tracking-[0.2em] text-white/50">
+                    {dictionary.profile.membershipStatus}
+                  </span>
+                  {getMembershipStatusLabel(membershipStatus, locale)}
+                </p>
+                <p>
+                  <span className="block text-[0.65rem] uppercase tracking-[0.2em] text-white/50">
+                    {degreeLabel}
+                  </span>
+                  {profile.degree || dictionary.common.notProvided}
+                </p>
+                <p>
+                  <span className="block text-[0.65rem] uppercase tracking-[0.2em] text-white/50">
+                    {dictionary.profile.membershipExpiry}
+                  </span>
+                  {formatDateShort(profile.membershipExpiresAt || profile.joinedAt, locale)}
+                </p>
+                <p>
+                  <span className="block text-[0.65rem] uppercase tracking-[0.2em] text-white/50">
+                    {dictionary.profile.joined}
+                  </span>
+                  {formatDateShort(profile.joinedAt, locale)}
+                </p>
+              </div>
             </div>
           </Card>
 
@@ -901,6 +993,7 @@ export function ProfileShell({
         </div>
 
         <div className="space-y-6">
+          {membershipReceiptCard}
           <Card>
             <h2 className="font-heading text-2xl font-semibold text-brand-primary">
               {dictionary.profile.editProfile}

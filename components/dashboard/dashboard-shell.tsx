@@ -270,6 +270,22 @@ function normalizeDashboardUser(id: string, data: Record<string, unknown>): User
       data.accountStatus === "new" || data.accountStatus === "approved" || data.accountStatus === "rejected"
         ? (data.accountStatus as UserProfile["accountStatus"])
         : "approved",
+    membershipPaymentStatus:
+      data.membershipPaymentStatus === "pending" ||
+      data.membershipPaymentStatus === "paid" ||
+      data.membershipPaymentStatus === "waived"
+        ? (data.membershipPaymentStatus as UserProfile["membershipPaymentStatus"])
+        : undefined,
+    membershipPaidAt:
+      typeof data.membershipPaidAt === "string" && data.membershipPaidAt.trim()
+        ? data.membershipPaidAt.trim()
+        : undefined,
+    membershipFeeAmount:
+      typeof data.membershipFeeAmount === "number" ? data.membershipFeeAmount : undefined,
+    membershipReceiptId:
+      typeof data.membershipReceiptId === "string" && data.membershipReceiptId.trim()
+        ? data.membershipReceiptId.trim()
+        : undefined,
     company: typeof data.company === "string" && data.company.trim() ? data.company.trim() : undefined,
     photoURL: typeof data.photoURL === "string" && data.photoURL.trim() ? data.photoURL.trim() : undefined,
     membershipStatus:
@@ -1374,12 +1390,18 @@ export function DashboardShell({
     ]
   );
 
-  async function runAction(name: string, action: () => Promise<unknown>) {
+  async function runAction(
+    name: string,
+    action: () => Promise<unknown>,
+    options?: { skipRouteRefresh?: boolean }
+  ) {
     try {
       setLoadingAction(name);
       await action();
       pushToast(labels.actionSaved, "success");
-      router.refresh();
+      if (!options?.skipRouteRefresh) {
+        router.refresh();
+      }
     } catch (error) {
       pushToast(error instanceof Error ? error.message : labels.actionFailed, "error");
     } finally {
@@ -3023,7 +3045,7 @@ export function DashboardShell({
                           membershipStatus
                         });
                         await refreshClientUsers();
-                      });
+                      }, { skipRouteRefresh: true });
                     }}
                   >
                     <Save className="h-4 w-4" />
@@ -3077,7 +3099,7 @@ export function DashboardShell({
                         await deleteUserAdmin(selectedUser.id);
                         await refreshClientUsers();
                         router.push("/admin/users");
-                      });
+                      }, { skipRouteRefresh: true });
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -3288,7 +3310,7 @@ export function DashboardShell({
                   });
                   setIsCreateUserFormOpen(false);
                   await refreshClientUsers();
-                });
+                }, { skipRouteRefresh: true });
               }}
             >
               <DashboardFieldLabel label={locale === "ar" ? "الاسم الرباعي" : "Full name"}>
@@ -3534,7 +3556,7 @@ export function DashboardShell({
                           membershipStatus
                         });
                         await refreshClientUsers();
-                      });
+                      }, { skipRouteRefresh: true });
                     }}
                   >
                     <Save className="h-4 w-4" />
@@ -3588,7 +3610,7 @@ export function DashboardShell({
                         await deleteUserAdmin(selectedUser.id);
                         await refreshClientUsers();
                         router.push("/admin/users");
-                      });
+                      }, { skipRouteRefresh: true });
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -3607,6 +3629,7 @@ export function DashboardShell({
                   className={`${dashboardPanelClass} ${isUserDetailOpen && !isSelectedUser ? "hidden" : "grid gap-3 md:grid-cols-2"} ${isSelectedUser ? "xl:grid-cols-[minmax(0,1.2fr)_repeat(7,minmax(0,1fr))_auto_auto_auto]" : ""} xl:items-center`}
                 >
                   <div className={isSelectedUser ? "" : "md:col-span-2"}>
+                    {isSelectedUser ? (
                     <button
                       type="button"
                       onClick={() => router.push(`/admin/users?user=${encodeURIComponent(entry.id)}`)}
@@ -3614,6 +3637,58 @@ export function DashboardShell({
                     >
                       <p className="font-medium text-brand-primary">{entry.displayName}</p>
                     </button>
+                    ) : (
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/admin/users?user=${encodeURIComponent(entry.id)}`)}
+                        className="text-start"
+                      >
+                        <p className="font-medium text-brand-primary">{entry.displayName}</p>
+                        <p className={`text-sm ${dashboardMutedTextClass}`}>{entry.email}</p>
+                        <p className={`text-xs ${dashboardMutedTextClass}`}>
+                          {entry.membershipId || entry.id}
+                          {entry.studentId ? ` | ${entry.studentId}` : ""}
+                        </p>
+                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge>{translateMembershipStatus(entry.membershipStatus, locale)}</Badge>
+                        {entry.membershipStatus !== "active" ? (
+                          <Button
+                            size="sm"
+                            loading={loadingAction === `approve-${entry.id}`}
+                            onClick={() => {
+                              void runAction(
+                                `approve-${entry.id}`,
+                                async () => {
+                                  await updateUserAdmin({
+                                    uid: entry.id,
+                                    membershipStatus: "active"
+                                  });
+                                  await refreshClientUsers();
+                                },
+                                { skipRouteRefresh: true }
+                              );
+                            }}
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                            {locale === "ar" ? "اعتماد وإصدار وصل" : "Approve & receipt"}
+                          </Button>
+                        ) : entry.membershipPaymentStatus === "paid" && entry.membershipReceiptId ? (
+                          <Badge className="border-emerald-200 bg-emerald-50 text-emerald-800 normal-case tracking-normal">
+                            {locale === "ar" ? "تم الدفع" : "Paid"}
+                          </Badge>
+                        ) : null}
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => router.push(`/admin/users?user=${encodeURIComponent(entry.id)}`)}
+                        >
+                          {adminLabels.edit}
+                        </Button>
+                      </div>
+                    </div>
+                    )}
                     {isSelectedUser ? (
                       <>
                         <p className={`text-sm ${dashboardMutedTextClass}`}>{entry.email}</p>
@@ -3698,7 +3773,7 @@ export function DashboardShell({
                           membershipStatus
                         });
                         await refreshClientUsers();
-                      });
+                      }, { skipRouteRefresh: true });
                     }}
                   >
                     <Save className="h-4 w-4" />
@@ -3757,7 +3832,7 @@ export function DashboardShell({
                         await deleteUserAdmin(entry.id);
                         await refreshClientUsers();
                         router.push("/admin/users");
-                      });
+                      }, { skipRouteRefresh: true });
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
