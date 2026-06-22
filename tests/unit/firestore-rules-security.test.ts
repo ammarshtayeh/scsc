@@ -39,12 +39,15 @@ describe("Firestore security rules coverage", () => {
   });
 
   it("prevents normal users from changing role and QR security fields", () => {
-    const userUpdateBlock = rules.slice(rules.indexOf("match /users/{userId}"), rules.indexOf("match /events/{eventId}"));
+    const userBlock = rules.slice(rules.indexOf("match /users/{userId}"), rules.indexOf("match /events/{eventId}"));
+    const userUpdateBlock = userBlock.slice(userBlock.indexOf("allow update"));
 
     expect(userUpdateBlock).toContain("changedKeys().hasOnly");
     expect(userUpdateBlock).not.toContain('"role"');
     expect(userUpdateBlock).not.toContain('"qrToken"');
     expect(userUpdateBlock).not.toContain('"activeQrSessionId"');
+    expect(userUpdateBlock).not.toContain('"membershipPaymentStatus"');
+    expect(userUpdateBlock).not.toContain('"membershipReceiptId"');
   });
 
   it("limits carts and orders to their owner or elevated roles", () => {

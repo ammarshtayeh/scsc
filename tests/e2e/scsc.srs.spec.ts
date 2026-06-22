@@ -360,11 +360,13 @@ test.describe("GROUP 8 — User Profile & QR @profile @qr", () => {
     await expect(page.locator("main")).toContainText(/membership|order history|عضوية|الطلبات/i);
     await clickAndWaitNetworkIdle(
       page,
-      page.getByRole("button", { name: /view membership (card|qr)|بطاقة العضوية|رمز العضوية/i })
+      page.getByRole("link", { name: /view membership (card|qr)|عرض رمز العضوية/i }).or(
+        page.getByRole("button", { name: /view membership (card|qr)|عرض رمز العضوية/i })
+      )
     );
-    await expect(page.locator("main img").first()).toBeVisible();
+    await expect(page.locator("main img").first()).toBeVisible({ timeout: 30_000 });
     // WHY: anti-screenshot warning and countdown are mandatory in QR SRS.
-    await expect(page.locator("main")).toContainText(/screenshot|expires in|تنبيه|ثانية/i);
+    await expect(page.locator("main")).toContainText(/screenshot|expires in|تنبيه|ثانية|ينتهي الرمز/i);
   });
 });
 

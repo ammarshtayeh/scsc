@@ -7,6 +7,7 @@ import { NextRequest } from "next/server";
 
 jest.mock("@/lib/firebase/session", () => ({
   SESSION_COOKIE_NAME: "scsc_token",
+  SESSION_ROLE_COOKIE_NAME: "scsc_role",
   verifySessionToken: jest.fn()
 }));
 
@@ -16,12 +17,12 @@ const { verifySessionToken } = jest.requireMock("@/lib/firebase/session") as {
 };
 
 const mockedVerifySessionToken = verifySessionToken as unknown as jest.MockedFunction<
-  (token?: string) => Promise<{ uid: string; role: "admin" | "moderator" | "user" } | null>
+  (token?: string, roleCookie?: string) => Promise<{ uid: string; role: "admin" | "moderator" | "user" } | null>
 >;
 
-function nextRequest(path: string, cookieValue = "token") {
+function nextRequest(path: string, cookieValue = "token", role = "user") {
   return new NextRequest(`https://scsc.example${path}`, {
-    headers: { cookie: `scsc_token=${cookieValue}` }
+    headers: { cookie: `scsc_token=${cookieValue}; scsc_role=${role}` }
   });
 }
 
@@ -44,7 +45,7 @@ describe("role middleware guards", () => {
   it("allows admins to enter admin without another login", async () => {
     mockedVerifySessionToken.mockResolvedValue({ uid: "admin-1", role: "admin" });
 
-    const response = await middleware(nextRequest("/admin"));
+    const response = await middleware(nextRequest("/admin", "token", "admin"));
 
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();

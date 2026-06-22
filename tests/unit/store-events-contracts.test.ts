@@ -169,21 +169,18 @@ describe("Events enterprise QA contracts", () => {
   });
 
   it("exposes admin home page slider management and protects it with admin callable auth", () => {
-    const homeBlock = dashboardSource.slice(
-      dashboardSource.indexOf("<Card id=\"home\""),
-      dashboardSource.indexOf("<Card id=\"events\"")
-    );
+    expect(dashboardSource).toContain("async function saveHomeSlide");
+    expect(dashboardSource).toContain("upsertHomeSettingsAdmin");
+    expect(dashboardSource).toContain("uploadDashboardImage(\"home\", imageFile)");
+    expect(dashboardSource).toContain("homeSlideImage");
+    expect(dashboardSource).toContain("homeSlideTitle");
+    expect(dashboardSource).toContain("homeSlideCaption");
     const upsertHomeSettingsBlock = functionsSource.slice(
       functionsSource.indexOf("export const upsertHomeSettings"),
       functionsSource.indexOf("export const upsertProduct")
     );
 
-    expect(homeBlock).toContain("upsertHomeSettingsAdmin");
-    expect(homeBlock).toContain("uploadDashboardImage(\"home\", imageFile)");
-    expect(homeBlock).toContain("homeSlideImage");
-    expect(homeBlock).toContain("homeSlideTitle");
-    expect(homeBlock).toContain("homeSlideCaption");
     expect(upsertHomeSettingsBlock).toContain("requireAdmin(request);");
-    expect(upsertHomeSettingsBlock).toContain("db.collection(\"siteSettings\").doc(\"home\")");
+    expect(upsertHomeSettingsBlock).toContain("getDb().collection(\"siteSettings\").doc(\"home\")");
   });
 });

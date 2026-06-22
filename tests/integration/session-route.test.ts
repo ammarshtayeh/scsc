@@ -4,8 +4,13 @@
 
 import { describe, expect, it, jest, beforeEach } from "@jest/globals";
 
+jest.mock("@/lib/firebase/resolve-user-role", () => ({
+  resolveUserRoleFromToken: jest.fn()
+}));
+
 jest.mock("@/lib/firebase/session", () => ({
   SESSION_COOKIE_NAME: "scsc_token",
+  SESSION_ROLE_COOKIE_NAME: "scsc_role",
   verifySessionToken: jest.fn()
 }));
 
@@ -13,9 +18,15 @@ const { POST } = require("@/app/api/session/route") as typeof import("@/app/api/
 const { verifySessionToken } = jest.requireMock("@/lib/firebase/session") as {
   verifySessionToken: jest.Mock;
 };
+const { resolveUserRoleFromToken } = jest.requireMock("@/lib/firebase/resolve-user-role") as {
+  resolveUserRoleFromToken: jest.Mock;
+};
 
 const mockedVerifySessionToken = verifySessionToken as unknown as jest.MockedFunction<
-  (token?: string) => Promise<{ uid: string; role: "admin" | "moderator" | "user" } | null>
+  (token?: string, roleCookie?: string) => Promise<{ uid: string; role: "admin" | "moderator" | "user" } | null>
+>;
+const mockedResolveUserRoleFromToken = resolveUserRoleFromToken as unknown as jest.MockedFunction<
+  (token: string) => Promise<"admin" | "moderator" | "user">
 >;
 
 function requestWithBody(body: unknown, url = "https://scsc.example/api/session") {
@@ -29,6 +40,7 @@ function requestWithBody(body: unknown, url = "https://scsc.example/api/session"
 describe("session API token validation", () => {
   beforeEach(() => {
     mockedVerifySessionToken.mockReset();
+    mockedResolveUserRoleFromToken.mockReset();
   });
 
   it("returns 400 when token is missing", async () => {
@@ -47,6 +59,7 @@ describe("session API token validation", () => {
   });
 
   it("returns 401 and no cookie when Firebase token verification fails", async () => {
+    mockedResolveUserRoleFromToken.mockResolvedValue("user");
     mockedVerifySessionToken.mockResolvedValue(null);
 
     const response = await POST(requestWithBody({ token: "not-a-real-firebase-token" }));
@@ -56,15 +69,17 @@ describe("session API token validation", () => {
     expect(await response.json()).toEqual({ error: "Invalid token." });
   });
 
-  it("sets an httpOnly session cookie after valid Firebase token verification", async () => {
+  it("sets session cookies after valid Firebase token verification", async () => {
+    mockedResolveUserRoleFromToken.mockResolvedValue("admin");
     mockedVerifySessionToken.mockResolvedValue({ uid: "admin-1", role: "admin" });
 
     const response = await POST(requestWithBody({ token: "valid-token" }));
     const setCookie = response.headers.get("set-cookie") || "";
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true });
+    expect(await response.json()).toEqual({ ok: true, role: "admin" });
     expect(setCookie).toContain("scsc_token=valid-token");
+    expect(setCookie).toContain("scsc_role=admin");
     expect(setCookie.toLowerCase()).toContain("httponly");
     expect(setCookie.toLowerCase()).toContain("samesite=lax");
   });
