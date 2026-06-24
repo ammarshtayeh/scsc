@@ -128,12 +128,49 @@ export async function sendContactEmail(payload: ContactMessagePayload) {
 export async function issueMembershipQrPass(
   input?: IssueMembershipQrInput
 ): Promise<MembershipQrSession> {
-  const callable = httpsCallable<undefined, MembershipQrSession>(
-    requireFunctions(),
-    "issueMembershipQrPass"
-  );
-  const result = await callable(undefined);
-  return result.data;
+  try {
+    const callable = httpsCallable<undefined, MembershipQrSession>(
+      requireFunctions(),
+      "issueMembershipQrPass"
+    );
+    const result = await callable(undefined);
+    return result.data;
+  } catch (error) {
+    throw normalizeCallableError(error, "Unable to issue membership QR pass.");
+  }
+}
+
+function normalizeCallableError(error: unknown, fallbackMessage: string) {
+  const nextError = error as {
+    message?: string;
+    code?: string;
+    details?: unknown;
+  };
+
+  if (typeof nextError.details === "string" && nextError.details.trim()) {
+    return new Error(nextError.details);
+  }
+
+  if (
+    typeof nextError.details === "object" &&
+    nextError.details !== null &&
+    "message" in nextError.details &&
+    typeof (nextError.details as { message?: unknown }).message === "string"
+  ) {
+    const detailsMessage = (nextError.details as { message: string }).message.trim();
+    if (detailsMessage) {
+      return new Error(detailsMessage);
+    }
+  }
+
+  if (typeof nextError.message === "string" && nextError.message.trim()) {
+    const normalizedMessage = nextError.message.replace(/^functions\/[a-z-]+\s*/i, "").trim();
+    if (normalizedMessage && normalizedMessage.toLowerCase() !== "internal") {
+      return new Error(normalizedMessage);
+    }
+  }
+
+  return new Error(fallbackMessage);
 }
 
 export async function verifyMembershipPass(pass: string): Promise<VerifyMembershipResponse> {

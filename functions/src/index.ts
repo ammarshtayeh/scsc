@@ -1,26 +1,34 @@
 import { createHash, createCipheriv, createDecipheriv, randomBytes } from "crypto";
 
-import { getApps, initializeApp } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
-import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import nodemailer from "nodemailer";
 import { v4 as uuidv4 } from "uuid";
 
-function ensureFirebaseApp() {
-  if (!getApps().length) {
-    initializeApp();
+function loadAdminApp() {
+  const { getApp, initializeApp } = require("firebase-admin/app") as typeof import("firebase-admin/app");
+
+  try {
+    return getApp();
+  } catch {
+    return initializeApp();
   }
 }
 
 function getDb() {
-  ensureFirebaseApp();
+  loadAdminApp();
+  const { getFirestore } = require("firebase-admin/firestore") as typeof import("firebase-admin/firestore");
   return getFirestore();
 }
 
 function getAuthClient() {
-  ensureFirebaseApp();
+  loadAdminApp();
+  const { getAuth } = require("firebase-admin/auth") as typeof import("firebase-admin/auth");
   return getAuth();
+}
+
+function getFieldValue() {
+  const { FieldValue } = require("firebase-admin/firestore") as typeof import("firebase-admin/firestore");
+  return FieldValue;
 }
 
 const QR_LIFETIME_SECONDS = 45;
@@ -346,6 +354,7 @@ export const sendContactEmail = onCall(publicCallableOptions, async (request) =>
 });
 
 export const issueMembershipQrPass = onCall(publicCallableOptions, async (request) => {
+  try {
   const userId = request.auth?.uid;
 
   if (!userId) {
@@ -445,6 +454,17 @@ export const issueMembershipQrPass = onCall(publicCallableOptions, async (reques
     issuedAt,
     refreshIntervalSeconds: QR_LIFETIME_SECONDS
   };
+  } catch (error) {
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+
+    console.error("issueMembershipQrPass failed:", error);
+    throw new HttpsError(
+      "internal",
+      error instanceof Error ? error.message : "Unable to issue membership QR pass."
+    );
+  }
 });
 
 export const verifyMembership = onCall(publicCallableOptions, async (request) => {
@@ -698,7 +718,7 @@ export const deleteEvent = onCall(publicCallableOptions, async (request) => {
       batch.set(
         getDb().collection("users").doc(registrationDoc.id),
         {
-          registeredEventIds: FieldValue.arrayRemove(id),
+          registeredEventIds: getFieldValue().arrayRemove(id),
           lastEventCancellationAt: new Date().toISOString()
         },
         { merge: true }
@@ -1563,7 +1583,7 @@ export const removeEventRegistration = onCall(publicCallableOptions, async (requ
     transaction.set(
       userRef,
       {
-        registeredEventIds: FieldValue.arrayRemove(eventId),
+        registeredEventIds: getFieldValue().arrayRemove(eventId),
         lastEventCancellationAt: new Date().toISOString()
       },
       { merge: true }

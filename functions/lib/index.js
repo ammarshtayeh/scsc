@@ -5,24 +5,31 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.deleteOrder = exports.updateOrderStatus = exports.deleteUserAdmin = exports.sendUserPasswordResetAdmin = exports.createUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.updateFinanceSettings = exports.upsertHomeSettings = exports.deleteArchivedEvent = exports.upsertArchivedEvent = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
 const crypto_1 = require("crypto");
-const app_1 = require("firebase-admin/app");
-const auth_1 = require("firebase-admin/auth");
-const firestore_1 = require("firebase-admin/firestore");
 const https_1 = require("firebase-functions/v2/https");
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const uuid_1 = require("uuid");
-function ensureFirebaseApp() {
-    if (!(0, app_1.getApps)().length) {
-        (0, app_1.initializeApp)();
+function loadAdminApp() {
+    const { getApp, initializeApp } = require("firebase-admin/app");
+    try {
+        return getApp();
+    }
+    catch {
+        return initializeApp();
     }
 }
 function getDb() {
-    ensureFirebaseApp();
-    return (0, firestore_1.getFirestore)();
+    loadAdminApp();
+    const { getFirestore } = require("firebase-admin/firestore");
+    return getFirestore();
 }
 function getAuthClient() {
-    ensureFirebaseApp();
-    return (0, auth_1.getAuth)();
+    loadAdminApp();
+    const { getAuth } = require("firebase-admin/auth");
+    return getAuth();
+}
+function getFieldValue() {
+    const { FieldValue } = require("firebase-admin/firestore");
+    return FieldValue;
 }
 const QR_LIFETIME_SECONDS = 45;
 const publicCallableOptions = { invoker: "public" };
@@ -254,78 +261,87 @@ exports.sendContactEmail = (0, https_1.onCall)(publicCallableOptions, async (req
 });
 exports.issueMembershipQrPass = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     var _a;
-    const userId = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
-    if (!userId) {
-        throw new https_1.HttpsError("unauthenticated", "You must be signed in to issue a QR pass.");
-    }
-    const userRef = getDb().collection("users").doc(userId);
-    const userSnap = await userRef.get();
-    if (!userSnap.exists) {
-        throw new https_1.HttpsError("not-found", "User profile not found.");
-    }
-    const userData = userSnap.data();
-    const membershipStatus = normalizeMembershipStatus(userData);
-    if (membershipStatus !== "active") {
-        throw new https_1.HttpsError("failed-precondition", "Only active memberships can issue a QR pass.");
-    }
-    const now = new Date();
-    const issuedAt = now.toISOString();
-    const expiresAt = new Date(now.getTime() + QR_LIFETIME_SECONDS * 1000).toISOString();
-    const sessionId = (0, uuid_1.v4)();
-    const accessToken = (0, uuid_1.v4)();
-    const memberId = userData.membershipId || `SCSC-${userId.slice(0, 8).toUpperCase()}`;
-    const fullName = userData.displayName || "Association Member";
-    const membershipExpiryDate = userData.membershipExpiresAt || new Date(now.getTime() + 31536000000).toISOString();
-    const encryptedPass = encryptMembershipPayload({
-        userId,
-        sessionId,
-        memberId,
-        fullName,
-        membershipExpiryDate,
-        accessToken,
-        expiresAt
-    });
-    const nextSessionRef = userRef.collection("membershipPasses").doc(sessionId);
-    await getDb().runTransaction(async (transaction) => {
-        const freshUserSnap = await transaction.get(userRef);
-        const freshUserData = freshUserSnap.data();
-        const previousSessionId = freshUserData === null || freshUserData === void 0 ? void 0 : freshUserData.activeQrSessionId;
-        if (previousSessionId) {
-            transaction.set(userRef.collection("membershipPasses").doc(previousSessionId), {
-                status: "revoked",
-                revokedAt: issuedAt
-            }, { merge: true });
+    try {
+        const userId = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
+        if (!userId) {
+            throw new https_1.HttpsError("unauthenticated", "You must be signed in to issue a QR pass.");
         }
-        transaction.set(nextSessionRef, {
+        const userRef = getDb().collection("users").doc(userId);
+        const userSnap = await userRef.get();
+        if (!userSnap.exists) {
+            throw new https_1.HttpsError("not-found", "User profile not found.");
+        }
+        const userData = userSnap.data();
+        const membershipStatus = normalizeMembershipStatus(userData);
+        if (membershipStatus !== "active") {
+            throw new https_1.HttpsError("failed-precondition", "Only active memberships can issue a QR pass.");
+        }
+        const now = new Date();
+        const issuedAt = now.toISOString();
+        const expiresAt = new Date(now.getTime() + QR_LIFETIME_SECONDS * 1000).toISOString();
+        const sessionId = (0, uuid_1.v4)();
+        const accessToken = (0, uuid_1.v4)();
+        const memberId = userData.membershipId || `SCSC-${userId.slice(0, 8).toUpperCase()}`;
+        const fullName = userData.displayName || "Association Member";
+        const membershipExpiryDate = userData.membershipExpiresAt || new Date(now.getTime() + 31536000000).toISOString();
+        const encryptedPass = encryptMembershipPayload({
+            userId,
             sessionId,
             memberId,
             fullName,
             membershipExpiryDate,
-            accessTokenHash: hashAccessToken(accessToken),
-            issuedAt,
+            accessToken,
+            expiresAt
+        });
+        const nextSessionRef = userRef.collection("membershipPasses").doc(sessionId);
+        await getDb().runTransaction(async (transaction) => {
+            const freshUserSnap = await transaction.get(userRef);
+            const freshUserData = freshUserSnap.data();
+            const previousSessionId = freshUserData === null || freshUserData === void 0 ? void 0 : freshUserData.activeQrSessionId;
+            if (previousSessionId) {
+                transaction.set(userRef.collection("membershipPasses").doc(previousSessionId), {
+                    status: "revoked",
+                    revokedAt: issuedAt
+                }, { merge: true });
+            }
+            transaction.set(nextSessionRef, {
+                sessionId,
+                memberId,
+                fullName,
+                membershipExpiryDate,
+                accessTokenHash: hashAccessToken(accessToken),
+                issuedAt,
+                expiresAt,
+                status: "active",
+                usedAt: null,
+                duplicateAttempts: 0
+            });
+            transaction.update(userRef, {
+                membershipId: memberId,
+                activeQrSessionId: sessionId,
+                activeQrSessionExpiresAt: expiresAt,
+                lastQrIssuedAt: issuedAt,
+                qrToken: (0, uuid_1.v4)()
+            });
+        });
+        return {
+            qrValue: `/verify?pass=${encodeURIComponent(encryptedPass)}`,
+            sessionId,
+            memberId,
+            fullName,
+            membershipExpiryDate,
             expiresAt,
-            status: "active",
-            usedAt: null,
-            duplicateAttempts: 0
-        });
-        transaction.update(userRef, {
-            membershipId: memberId,
-            activeQrSessionId: sessionId,
-            activeQrSessionExpiresAt: expiresAt,
-            lastQrIssuedAt: issuedAt,
-            qrToken: (0, uuid_1.v4)()
-        });
-    });
-    return {
-        qrValue: `/verify?pass=${encodeURIComponent(encryptedPass)}`,
-        sessionId,
-        memberId,
-        fullName,
-        membershipExpiryDate,
-        expiresAt,
-        issuedAt,
-        refreshIntervalSeconds: QR_LIFETIME_SECONDS
-    };
+            issuedAt,
+            refreshIntervalSeconds: QR_LIFETIME_SECONDS
+        };
+    }
+    catch (error) {
+        if (error instanceof https_1.HttpsError) {
+            throw error;
+        }
+        console.error("issueMembershipQrPass failed:", error);
+        throw new https_1.HttpsError("internal", error instanceof Error ? error.message : "Unable to issue membership QR pass.");
+    }
 });
 exports.verifyMembership = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     const { pass } = request.data;
@@ -507,7 +523,7 @@ exports.deleteEvent = (0, https_1.onCall)(publicCallableOptions, async (request)
         allRegistrationsSnap.docs.forEach((registrationDoc) => {
             batch.delete(registrationDoc.ref);
             batch.set(getDb().collection("users").doc(registrationDoc.id), {
-                registeredEventIds: firestore_1.FieldValue.arrayRemove(id),
+                registeredEventIds: getFieldValue().arrayRemove(id),
                 lastEventCancellationAt: new Date().toISOString()
             }, { merge: true });
         });
@@ -1092,7 +1108,7 @@ exports.removeEventRegistration = (0, https_1.onCall)(publicCallableOptions, asy
             registeredCount: Math.max(0, registeredCount - 1)
         });
         transaction.set(userRef, {
-            registeredEventIds: firestore_1.FieldValue.arrayRemove(eventId),
+            registeredEventIds: getFieldValue().arrayRemove(eventId),
             lastEventCancellationAt: new Date().toISOString()
         }, { merge: true });
     });
