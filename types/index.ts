@@ -250,6 +250,10 @@ export interface VerifyMembershipResponse {
   reason?: "expired" | "duplicate" | "invalid" | "inactive" | "stale";
   memberId?: string;
   memberName?: string;
+  studentId?: string;
+  degree?: string;
+  specialization?: string;
+  photoURL?: string;
   membershipExpiryDate?: string;
   scannedAt?: string;
   newTokenIssued?: boolean;

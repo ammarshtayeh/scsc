@@ -480,6 +480,14 @@ export const dictionaries = {
       memberName: "Member",
       membershipExpiry: "Membership expiry",
       verifiedAt: "Verified at",
+      associationShort: "SCSC-NNU",
+      associationLine: "Society of Cosmetics & Skin Care",
+      university: "An-Najah National University",
+      nameLabel: "Name",
+      studentIdLabel: "Student ID",
+      degreeLabel: "Degree",
+      expLabel: "EXP",
+      verifiedStamp: "Verified",
       reasonDuplicate:
         "This QR has already been used once. Duplicate use was detected and rejected.",
       reasonExpired:
@@ -1023,6 +1031,14 @@ export const dictionaries = {
       memberName: "العضو",
       membershipExpiry: "انتهاء العضوية",
       verifiedAt: "تم التحقق في",
+      associationShort: "SCSC-NNU",
+      associationLine: "جمعية مستحضرات التجميل والعناية بالبشرة",
+      university: "جامعة النجاح الوطنية",
+      nameLabel: "الاسم",
+      studentIdLabel: "الرقم الجامعي",
+      degreeLabel: "الدرجة",
+      expLabel: "EXP",
+      verifiedStamp: "تم التحقق",
       reasonDuplicate:
         "تم استخدام هذا الرمز سابقًا مرة واحدة. تم اكتشاف محاولة تكرار ورفضها.",
       reasonExpired:

@@ -467,6 +467,33 @@ export const issueMembershipQrPass = onCall(publicCallableOptions, async (reques
   }
 });
 
+function buildVerifyMemberDetails(
+  userData: {
+    displayName?: string;
+    membershipId?: string;
+    membershipExpiresAt?: string;
+    studentId?: string;
+    degree?: string;
+    specialization?: string;
+    photoURL?: string;
+  },
+  sessionData?: {
+    memberId?: string;
+    fullName?: string;
+    membershipExpiryDate?: string;
+  }
+) {
+  return {
+    memberId: sessionData?.memberId || userData.membershipId,
+    memberName: sessionData?.fullName || userData.displayName,
+    membershipExpiryDate: sessionData?.membershipExpiryDate || userData.membershipExpiresAt,
+    studentId: userData.studentId,
+    degree: userData.degree,
+    specialization: userData.specialization,
+    photoURL: userData.photoURL
+  };
+}
+
 export const verifyMembership = onCall(publicCallableOptions, async (request) => {
   const { pass } = request.data as { pass?: string };
 
@@ -502,6 +529,10 @@ export const verifyMembership = onCall(publicCallableOptions, async (request) =>
       membershipStatus?: MembershipStatus;
       membershipExpiresAt?: string;
       activeQrSessionId?: string | null;
+      studentId?: string;
+      degree?: string;
+      specialization?: string;
+      photoURL?: string;
     };
 
     const sessionData = sessionSnap.data() as {
@@ -527,9 +558,7 @@ export const verifyMembership = onCall(publicCallableOptions, async (request) =>
       return {
         valid: false,
         reason: "inactive" as const,
-        memberId: userData.membershipId,
-        memberName: userData.displayName,
-        membershipExpiryDate: userData.membershipExpiresAt
+        ...buildVerifyMemberDetails(userData, sessionData)
       };
     }
 
@@ -550,9 +579,7 @@ export const verifyMembership = onCall(publicCallableOptions, async (request) =>
       return {
         valid: false,
         reason: "expired" as const,
-        memberId: sessionData.memberId,
-        memberName: sessionData.fullName,
-        membershipExpiryDate: sessionData.membershipExpiryDate
+        ...buildVerifyMemberDetails(userData, sessionData)
       };
     }
 
@@ -566,9 +593,7 @@ export const verifyMembership = onCall(publicCallableOptions, async (request) =>
       return {
         valid: false,
         reason: "stale" as const,
-        memberId: sessionData.memberId,
-        memberName: sessionData.fullName,
-        membershipExpiryDate: sessionData.membershipExpiryDate
+        ...buildVerifyMemberDetails(userData, sessionData)
       };
     }
 
@@ -589,9 +614,7 @@ export const verifyMembership = onCall(publicCallableOptions, async (request) =>
       return {
         valid: false,
         reason: "duplicate" as const,
-        memberId: sessionData.memberId,
-        memberName: sessionData.fullName,
-        membershipExpiryDate: sessionData.membershipExpiryDate
+        ...buildVerifyMemberDetails(userData, sessionData)
       };
     }
 
@@ -623,9 +646,7 @@ export const verifyMembership = onCall(publicCallableOptions, async (request) =>
 
     return {
       valid: true,
-      memberId: sessionData.memberId,
-      memberName: sessionData.fullName,
-      membershipExpiryDate: sessionData.membershipExpiryDate,
+      ...buildVerifyMemberDetails(userData, sessionData),
       scannedAt,
       newTokenIssued: true
     };

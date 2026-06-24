@@ -343,6 +343,17 @@ exports.issueMembershipQrPass = (0, https_1.onCall)(publicCallableOptions, async
         throw new https_1.HttpsError("internal", error instanceof Error ? error.message : "Unable to issue membership QR pass.");
     }
 });
+function buildVerifyMemberDetails(userData, sessionData) {
+    return {
+        memberId: (sessionData === null || sessionData === void 0 ? void 0 : sessionData.memberId) || userData.membershipId,
+        memberName: (sessionData === null || sessionData === void 0 ? void 0 : sessionData.fullName) || userData.displayName,
+        membershipExpiryDate: (sessionData === null || sessionData === void 0 ? void 0 : sessionData.membershipExpiryDate) || userData.membershipExpiresAt,
+        studentId: userData.studentId,
+        degree: userData.degree,
+        specialization: userData.specialization,
+        photoURL: userData.photoURL
+    };
+}
 exports.verifyMembership = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     const { pass } = request.data;
     if (!pass) {
@@ -378,9 +389,7 @@ exports.verifyMembership = (0, https_1.onCall)(publicCallableOptions, async (req
             return {
                 valid: false,
                 reason: "inactive",
-                memberId: userData.membershipId,
-                memberName: userData.displayName,
-                membershipExpiryDate: userData.membershipExpiresAt
+                ...buildVerifyMemberDetails(userData, sessionData)
             };
         }
         if (new Date(payload.expiresAt).getTime() <= Date.now() || !sessionData.expiresAt || new Date(sessionData.expiresAt).getTime() <= Date.now()) {
@@ -395,9 +404,7 @@ exports.verifyMembership = (0, https_1.onCall)(publicCallableOptions, async (req
             return {
                 valid: false,
                 reason: "expired",
-                memberId: sessionData.memberId,
-                memberName: sessionData.fullName,
-                membershipExpiryDate: sessionData.membershipExpiryDate
+                ...buildVerifyMemberDetails(userData, sessionData)
             };
         }
         if (userData.activeQrSessionId !== payload.sessionId || sessionData.status === "revoked") {
@@ -409,9 +416,7 @@ exports.verifyMembership = (0, https_1.onCall)(publicCallableOptions, async (req
             return {
                 valid: false,
                 reason: "stale",
-                memberId: sessionData.memberId,
-                memberName: sessionData.fullName,
-                membershipExpiryDate: sessionData.membershipExpiryDate
+                ...buildVerifyMemberDetails(userData, sessionData)
             };
         }
         if (sessionData.usedAt) {
@@ -426,9 +431,7 @@ exports.verifyMembership = (0, https_1.onCall)(publicCallableOptions, async (req
             return {
                 valid: false,
                 reason: "duplicate",
-                memberId: sessionData.memberId,
-                memberName: sessionData.fullName,
-                membershipExpiryDate: sessionData.membershipExpiryDate
+                ...buildVerifyMemberDetails(userData, sessionData)
             };
         }
         if (sessionData.accessTokenHash !== hashAccessToken(payload.accessToken)) {
@@ -456,9 +459,7 @@ exports.verifyMembership = (0, https_1.onCall)(publicCallableOptions, async (req
         });
         return {
             valid: true,
-            memberId: sessionData.memberId,
-            memberName: sessionData.fullName,
-            membershipExpiryDate: sessionData.membershipExpiryDate,
+            ...buildVerifyMemberDetails(userData, sessionData),
             scannedAt,
             newTokenIssued: true
         };
