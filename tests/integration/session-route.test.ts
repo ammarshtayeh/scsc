@@ -23,10 +23,10 @@ const { resolveUserRoleFromToken } = jest.requireMock("@/lib/firebase/resolve-us
 };
 
 const mockedVerifySessionToken = verifySessionToken as unknown as jest.MockedFunction<
-  (token?: string, roleCookie?: string) => Promise<{ uid: string; role: "admin" | "moderator" | "user" } | null>
+  (token?: string, roleCookie?: string) => Promise<{ uid: string; role: "admin" | "moderator" | "company" | "user" } | null>
 >;
 const mockedResolveUserRoleFromToken = resolveUserRoleFromToken as unknown as jest.MockedFunction<
-  (token: string) => Promise<"admin" | "moderator" | "user">
+  (token: string) => Promise<"admin" | "moderator" | "company" | "user">
 >;
 
 function requestWithBody(body: unknown, url = "https://scsc.example/api/session") {

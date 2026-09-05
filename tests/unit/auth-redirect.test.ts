@@ -6,6 +6,7 @@ describe("auth redirect helpers", () => {
   it("returns role default redirect", () => {
     expect(getDefaultRedirectByRole("admin")).toBe("/admin");
     expect(getDefaultRedirectByRole("moderator")).toBe("/moderator");
+    expect(getDefaultRedirectByRole("company")).toBe("/company");
     expect(getDefaultRedirectByRole("user")).toBe("/");
   });
 

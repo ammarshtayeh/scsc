@@ -10,6 +10,10 @@ service firebase.storage {
       return request.auth.token.role;
     }
 
+    function isCompany() {
+      return isSignedIn() && role() == "company";
+    }
+
     function isAdminOrModerator() {
       return isSignedIn() && (role() == "admin" || role() == "moderator");
     }
@@ -26,7 +30,7 @@ service firebase.storage {
 
     match /images/products/{allPaths=**} {
       allow read: if isSignedIn();
-      allow write: if isAdminOrModerator();
+      allow write: if isAdminOrModerator() || isCompany();
     }
 
     match /images/articles/{allPaths=**} {

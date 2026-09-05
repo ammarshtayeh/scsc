@@ -539,6 +539,7 @@ export const dictionaries = {
       roles: {
         admin: "Admin",
         moderator: "Moderator",
+        company: "Company",
         user: "User"
       },
       boardRoles: {
@@ -1088,6 +1089,7 @@ export const dictionaries = {
       roles: {
         admin: "مدير",
         moderator: "مشرف",
+        company: "شركة",
         user: "مستخدم"
       },
       boardRoles: {

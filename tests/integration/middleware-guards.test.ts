@@ -17,7 +17,7 @@ const { verifySessionToken } = jest.requireMock("@/lib/firebase/session") as {
 };
 
 const mockedVerifySessionToken = verifySessionToken as unknown as jest.MockedFunction<
-  (token?: string, roleCookie?: string) => Promise<{ uid: string; role: "admin" | "moderator" | "user" } | null>
+  (token?: string, roleCookie?: string) => Promise<{ uid: string; role: "admin" | "moderator" | "company" | "user" } | null>
 >;
 
 function nextRequest(path: string, cookieValue = "token", role = "user") {
@@ -60,10 +60,19 @@ describe("role middleware guards", () => {
     expect(response.headers.get("location")).toBe("https://scsc.example/profile");
   });
 
-  it("sends signed-in users without moderator privileges from dashboard to profile", async () => {
+  it("allows companies to enter company portal", async () => {
+    mockedVerifySessionToken.mockResolvedValue({ uid: "company-1", role: "company" });
+
+    const response = await middleware(nextRequest("/company", "token", "company"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("sends non-company non-admin users away from company portal", async () => {
     mockedVerifySessionToken.mockResolvedValue({ uid: "user-1", role: "user" });
 
-    const response = await middleware(nextRequest("/dashboard"));
+    const response = await middleware(nextRequest("/company"));
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe("https://scsc.example/profile");

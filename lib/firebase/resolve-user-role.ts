@@ -4,7 +4,7 @@ import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import type { Role } from "@/types";
 
 function normalizeRole(value: unknown): Role {
-  return value === "admin" || value === "moderator" ? value : "user";
+  return value === "admin" || value === "moderator" || value === "company" ? value : "user";
 }
 
 export async function resolveUserRoleFromToken(token: string): Promise<Role> {

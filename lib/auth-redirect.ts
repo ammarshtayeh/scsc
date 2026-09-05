@@ -3,6 +3,7 @@ import type { Role } from "@/types";
 const DEFAULT_REDIRECT_BY_ROLE: Record<Role, string> = {
   admin: "/admin",
   moderator: "/moderator",
+  company: "/company",
   user: "/"
 };
 

@@ -27,6 +27,7 @@ const dashboardSections: DashboardSection[] = [
   "event-archive",
   "registrants",
   "products",
+  "companies",
   "board-members",
   "users",
   "orders",

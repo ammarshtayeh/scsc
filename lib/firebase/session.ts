@@ -3,7 +3,7 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 export const SESSION_COOKIE_NAME = "scsc_token";
 export const SESSION_ROLE_COOKIE_NAME = "scsc_role";
 
-export type SessionRole = "admin" | "moderator" | "user";
+export type SessionRole = "admin" | "moderator" | "company" | "user";
 
 export interface SessionData {
   uid: string;
@@ -16,7 +16,7 @@ const firebaseJwks = createRemoteJWKSet(
 );
 
 function normalizeRole(role: unknown): SessionRole {
-  return role === "admin" || role === "moderator" ? role : "user";
+  return role === "admin" || role === "moderator" || role === "company" ? role : "user";
 }
 
 export async function verifySessionToken(

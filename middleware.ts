@@ -50,6 +50,16 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  if (pathname.startsWith("/company")) {
+    if (!session) {
+      return buildLoginRedirect(request);
+    }
+
+    if (!["admin", "company"].includes(session.role)) {
+      return buildRoleRedirect(request);
+    }
+  }
+
   if (pathname.startsWith("/dashboard")) {
     if (!session) {
       return buildLoginRedirect(request);
@@ -64,5 +74,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/profile/:path*", "/admin/:path*", "/moderator/:path*", "/dashboard/:path*"]
+  matcher: ["/profile/:path*", "/admin/:path*", "/moderator/:path*", "/company/:path*", "/dashboard/:path*"]
 };

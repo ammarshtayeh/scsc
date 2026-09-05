@@ -29,9 +29,17 @@ export function Navbar() {
     { href: "/contact", label: dictionary.nav.contact }
   ];
   const dashboardHref =
-    user?.role === "admin" ? "/admin" : user?.role === "moderator" ? "/moderator" : "/profile";
+    user?.role === "admin"
+      ? "/admin"
+      : user?.role === "moderator"
+        ? "/moderator"
+        : user?.role === "company"
+          ? "/company"
+          : "/profile";
   const accountHref =
-    user?.role === "admin" || user?.role === "moderator" ? "/profile" : dashboardHref;
+    user?.role === "admin" || user?.role === "moderator" || user?.role === "company"
+      ? "/profile"
+      : dashboardHref;
 
   const linkClass = (href: string) =>
     cn(
@@ -47,10 +55,16 @@ export function Navbar() {
           <span>{dictionary.nav.store}</span>
         </Button>
       </Link>
-      {(user.role === "admin" || user.role === "moderator") && (
+      {(user.role === "admin" || user.role === "moderator" || user.role === "company") && (
         <Link href={dashboardHref}>
           <Button variant="secondary" size="sm" className="whitespace-nowrap">
-            <span>{dictionary.nav.dashboard}</span>
+            <span>
+              {user.role === "company"
+                ? locale === "ar"
+                  ? "لوحة الشركة"
+                  : "Company Portal"
+                : dictionary.nav.dashboard}
+            </span>
           </Button>
         </Link>
       )}
@@ -181,13 +195,17 @@ export function Navbar() {
                   >
                     {dictionary.nav.profile}
                   </Link>
-                  {(user.role === "admin" || user.role === "moderator") && (
+                  {(user.role === "admin" || user.role === "moderator" || user.role === "company") && (
                     <Link
                       href={dashboardHref}
                       onClick={() => setOpen(false)}
                       className="text-sm font-medium text-slate-700 dark:text-brand-mist"
                     >
-                      {dictionary.nav.dashboard}
+                      {user.role === "company"
+                        ? locale === "ar"
+                          ? "لوحة الشركة"
+                          : "Company Portal"
+                        : dictionary.nav.dashboard}
                     </Link>
                   )}
                   <Button size="sm" onClick={() => logout()}>

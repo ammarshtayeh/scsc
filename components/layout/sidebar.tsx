@@ -34,6 +34,7 @@ export function Sidebar() {
         },
         { href: `${basePath}/registrants#registrants`, label: dictionary.dashboard.eventRegistrants || "Registrants" },
         { href: `${basePath}/products#products`, label: dictionary.dashboard.productManagement },
+        { href: `${basePath}/companies#companies`, label: dictionary.localeName === "العربية" ? "الشركات" : "Companies" },
         { href: `${basePath}/board-members#board-members`, label: dictionary.dashboard.boardMembers || "Board" },
         { href: `${basePath}/users#users`, label: dictionary.dashboard.userManagement },
         { href: `${basePath}/orders#orders`, label: dictionary.dashboard.orders },
