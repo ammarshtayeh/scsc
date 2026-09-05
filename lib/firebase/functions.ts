@@ -202,7 +202,10 @@ export async function deleteArchivedEventAdmin(id: string) {
 }
 
 export async function upsertProductAdmin(payload: AdminProductInput) {
-  return callAdminFunction<AdminProductInput>("upsertProduct", payload);
+  return callAdminFunction<AdminProductInput, { success: boolean; id?: string; slug?: string }>(
+    "upsertProduct",
+    payload
+  );
 }
 
 export async function deleteProductAdmin(id: string) {
@@ -259,6 +262,8 @@ export async function updateUserAdmin(payload: {
   memberGrade?: UserProfile["memberGrade"];
   accountStatus?: UserProfile["accountStatus"];
   role?: Role;
+  company?: string;
+  photoURL?: string;
   membershipStatus?: UserProfile["membershipStatus"];
   membershipExpiresAt?: string;
 }) {
@@ -276,6 +281,8 @@ export async function createUserAdmin(payload: {
   memberGrade?: UserProfile["memberGrade"];
   accountStatus?: UserProfile["accountStatus"];
   role?: Role;
+  company?: string;
+  photoURL?: string;
   membershipStatus?: UserProfile["membershipStatus"];
 }) {
   return callAdminFunction<
@@ -290,6 +297,8 @@ export async function createUserAdmin(payload: {
       memberGrade?: UserProfile["memberGrade"];
       accountStatus?: UserProfile["accountStatus"];
       role?: Role;
+      company?: string;
+      photoURL?: string;
       membershipStatus?: UserProfile["membershipStatus"];
     },
     { success: boolean; uid: string }
@@ -322,6 +331,13 @@ export async function updateOrderStatusAdmin(payload: {
   status: OrderStatus;
 }) {
   return callAdminFunction("updateOrderStatus", payload);
+}
+
+export async function updateCompanyOrderFulfillment(payload: {
+  id: string;
+  status: OrderStatus;
+}) {
+  return callAdminFunction("updateCompanyOrderFulfillment", payload);
 }
 
 export async function deleteOrderAdmin(id: string) {

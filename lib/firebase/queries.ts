@@ -110,6 +110,7 @@ function normalizeProduct(id: string, data: Record<string, unknown>) {
     discountPercent: cleanDiscountPercent(data.discountPercent),
     category: cleanString(data.category, "Skin Care") as Product["category"],
     company: cleanString(data.company, "SCSC Partner"),
+    companyId: cleanString(data.companyId) || undefined,
     stock: Math.max(0, cleanNumber(data.stock)),
     images: sanitizeImageSources(data.images),
     featured: Boolean(data.featured)
@@ -408,6 +409,32 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   return doc.exists ? normalizeProduct(doc.id, doc.data() || {}) : null;
 }
 
+export async function getProductsByCompany(companyId: string): Promise<Product[]> {
+  if (!isFirebaseAdminConfigured || !adminDb || !companyId) {
+    return [];
+  }
+
+  const [byIdSnap, byCompanySnap] = await Promise.all([
+    adminDb.collection("products").where("companyId", "==", companyId).get(),
+    adminDb.collection("products").where("company", "==", companyId).get()
+  ]);
+
+  const map = new Map<string, Product>();
+  byIdSnap.docs.forEach((doc) => map.set(doc.id, normalizeProduct(doc.id, doc.data())));
+  byCompanySnap.docs.forEach((doc) => map.set(doc.id, normalizeProduct(doc.id, doc.data())));
+
+  return Array.from(map.values());
+}
+
+export async function getAllCompanies(): Promise<UserProfile[]> {
+  if (!isFirebaseAdminConfigured || !adminDb) {
+    return [];
+  }
+
+  const snapshot = await adminDb.collection("users").where("role", "==", "company").get();
+  return snapshot.docs.map((doc) => normalizeUserProfile(doc.id, doc.data()));
+}
+
 export async function getBoardMembersByYear(): Promise<Record<string, BoardMember[]>> {
   if (!isFirebaseAdminConfigured || !adminDb) {
     return {};
@@ -475,11 +502,12 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   }
 
   const now = Date.now();
-  const [users, events, orders, products] = await Promise.all([
+  const [users, events, orders, products, companyUsers] = await Promise.all([
     adminDb.collection("users").count().get(),
     adminDb.collection("events").select("startsAt").get(),
     adminDb.collection("orders").count().get(),
-    adminDb.collection("products").select("company").get()
+    adminDb.collection("products").select("company").get(),
+    adminDb.collection("users").where("role", "==", "company").count().get()
   ]);
 
   const companySet = new Set(products.docs.map((doc) => doc.get("company")).filter(Boolean));
@@ -492,7 +520,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     totalUsers: users.data().count,
     upcomingEvents,
     totalOrders: orders.data().count,
-    registeredCompanies: companySet.size
+    registeredCompanies: Math.max(companyUsers.data().count, companySet.size)
   };
 }
 
@@ -545,4 +573,32 @@ export async function getAllOrders(): Promise<Order[]> {
 
   const snapshot = await adminDb.collection("orders").orderBy("createdAt", "desc").get();
   return snapshot.docs.map((doc) => convertDoc<Order>(doc.id, doc.data()));
+}
+
+export async function getOrdersForCompany(companyId: string): Promise<Order[]> {
+  if (!isFirebaseAdminConfigured || !adminDb || !companyId) {
+    return [];
+  }
+
+  try {
+    const snapshot = await adminDb
+      .collection("orders")
+      .where("companyIds", "array-contains", companyId)
+      .orderBy("createdAt", "desc")
+      .get();
+
+    return snapshot.docs.map((doc) => convertDoc<Order>(doc.id, doc.data()));
+  } catch {
+    // Fallback if composite index is not ready yet.
+    const snapshot = await adminDb.collection("orders").orderBy("createdAt", "desc").get();
+    return snapshot.docs
+      .map((doc) => convertDoc<Order>(doc.id, doc.data()))
+      .filter((order) => {
+        if (Array.isArray(order.companyIds) && order.companyIds.includes(companyId)) {
+          return true;
+        }
+
+        return (order.items || []).some((item) => item.companyId === companyId);
+      });
+  }
 }

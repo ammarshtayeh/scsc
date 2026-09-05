@@ -100,6 +100,7 @@ export type DashboardSection =
   | "event-archive"
   | "registrants"
   | "products"
+  | "companies"
   | "board-members"
   | "users"
   | "orders"
@@ -109,7 +110,7 @@ export type DashboardSection =
 const productCategories: ProductCategory[] = ["Skin Care", "Body Care", "Makeup", "Masks"];
 const articleCategories: ArticleCategory[] = ["Skin Care", "Makeup", "Hair Care", "Others"];
 const orderStatuses: OrderStatus[] = ["pending", "confirmed", "processing", "delivered"];
-const roles: Role[] = ["admin", "moderator", "user"];
+const roles: Role[] = ["admin", "moderator", "company", "user"];
 const membershipStatuses: UserProfile["membershipStatus"][] = [
   "active",
   "expired",
@@ -625,7 +626,8 @@ export function DashboardShell({
     users: users.length,
     orders: orders.length,
     boardMembers: boardMembers.length,
-    pendingArticles: articles.filter((article) => !article.approved).length
+    pendingArticles: articles.filter((article) => !article.approved).length,
+    companies: users.filter((user) => user.role === "company").length
   });
   const [localArchivedEvents, setLocalArchivedEvents] = useState(archivedEvents);
   const [localProducts, setLocalProducts] = useState(products);
@@ -693,6 +695,18 @@ export function DashboardShell({
     role: "user" as Role,
     membershipStatus: "active" as UserProfile["membershipStatus"]
   });
+  const [isCreateCompanyFormOpen, setIsCreateCompanyFormOpen] = useState(false);
+  const [companySearchQuery, setCompanySearchQuery] = useState("");
+  const [companyLogoFile, setCompanyLogoFile] = useState<File | null>(null);
+  const [createCompanyForm, setCreateCompanyForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    phone: "",
+    logo: ""
+  });
+  const [adminProductSearch, setAdminProductSearch] = useState("");
+  const [adminProductCompanyFilter, setAdminProductCompanyFilter] = useState("all");
   const imageLabels =
     locale === "ar"
       ? {
@@ -1188,7 +1202,8 @@ export function DashboardShell({
       users: usersSnapshot.docs.length,
       orders: ordersSnapshot.docs.length,
       boardMembers: boardMembersSnapshot.docs.length,
-      pendingArticles: articlesSnapshot.docs.filter((article) => article.data().approved !== true).length
+      pendingArticles: articlesSnapshot.docs.filter((article) => article.data().approved !== true).length,
+      companies: usersSnapshot.docs.filter((entry) => entry.data().role === "company").length
     });
   }, [stats]);
 
@@ -1209,7 +1224,11 @@ export function DashboardShell({
       });
 
     setLocalUsers(nextUsers);
-    setLocalCounts((current) => ({ ...current, users: nextUsers.length }));
+    setLocalCounts((current) => ({
+      ...current,
+      users: nextUsers.length,
+      companies: nextUsers.filter((u) => u.role === "company").length
+    }));
   }, [users]);
 
   const refreshClientHomeSettings = useCallback(async () => {
@@ -1236,7 +1255,8 @@ export function DashboardShell({
       users: users.length,
       orders: orders.length,
       boardMembers: boardMembers.length,
-      pendingArticles: articles.filter((article) => !article.approved).length
+      pendingArticles: articles.filter((article) => !article.approved).length,
+      companies: users.filter((user) => user.role === "company").length
     });
     setLocalArchivedEvents(archivedEvents);
     setLocalProducts(products);
@@ -1285,7 +1305,7 @@ export function DashboardShell({
       void refreshClientBoardMembers().catch(() => undefined);
     }
 
-    if (activeSection === "users") {
+    if (activeSection === "users" || activeSection === "companies") {
       void refreshClientUsers().catch(() => undefined);
     }
 
@@ -1334,6 +1354,12 @@ export function DashboardShell({
         title: labels.productManagement,
         metric: localCounts.products,
         icon: Package
+      },
+      {
+        href: "/admin/companies",
+        title: locale === "ar" ? "الشركات الشريكة" : "Partner Companies",
+        metric: localCounts.companies,
+        icon: ShieldCheck
       },
       {
         href: "/admin/events",
@@ -2166,9 +2192,16 @@ export function DashboardShell({
 
           {showAdminSection("products") ? (
           <Card id="products" className="space-y-5">
-            <h2 className="font-heading text-2xl font-semibold text-brand-primary">
-              {labels.productManagement}
-            </h2>
+            <div className="space-y-2">
+              <h2 className="font-heading text-2xl font-semibold text-brand-primary">
+                {labels.productManagement}
+              </h2>
+              <p className={`text-sm leading-7 ${dashboardMutedTextClass}`}>
+                {locale === "ar"
+                  ? "المنتجات الأساسية تُضاف من حسابات الشركات عبر بوابة الشركاء وتظهر فورًا في المتجر. استخدموا هذا القسم للقراءة والتدخل عند الحاجة فقط."
+                  : "Companies add products from the partner portal and they appear in the store immediately. Use this section for review and intervention only."}
+              </p>
+            </div>
             <form
               className="grid gap-3 md:grid-cols-2"
               onSubmit={(event) => {
@@ -2285,8 +2318,40 @@ export function DashboardShell({
               </Button>
             </form>
 
+            <div className="grid gap-3 sm:grid-cols-2">
+              <input
+                placeholder={locale === "ar" ? "ابحث عن منتج..." : "Search products..."}
+                value={adminProductSearch}
+                onChange={(event) => setAdminProductSearch(event.target.value)}
+                className={dashboardFieldClass}
+              />
+              <select
+                value={adminProductCompanyFilter}
+                onChange={(event) => setAdminProductCompanyFilter(event.target.value)}
+                className={dashboardFieldClass}
+              >
+                <option value="all">{locale === "ar" ? "جميع الشركات" : "All Companies"}</option>
+                {Array.from(new Set(localProducts.map((p) => p.company).filter(Boolean))).map((comp) => (
+                  <option key={comp} value={comp}>
+                    {comp}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="grid gap-4">
-              {localProducts.map((product) => (
+              {localProducts
+                .filter((p) => {
+                  if (adminProductCompanyFilter !== "all" && p.company !== adminProductCompanyFilter) return false;
+                  if (!adminProductSearch.trim()) return true;
+                  const query = adminProductSearch.trim().toLowerCase();
+                  return (
+                    p.name.toLowerCase().includes(query) ||
+                    p.company.toLowerCase().includes(query) ||
+                    p.description.toLowerCase().includes(query)
+                  );
+                })
+                .map((product) => (
                 <div key={product.id} className={`${dashboardPanelClass} grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start`}>
                   <div className="min-w-0">
                     <p className="break-words font-medium text-brand-primary">{product.name}</p>
@@ -2827,6 +2892,295 @@ export function DashboardShell({
                   </details>
                 </div>
               ))}
+            </div>
+          </Card>
+          ) : null}
+
+          {showAdminSection("companies") ? (
+          <Card id="companies" className="space-y-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h2 className="font-heading text-2xl font-semibold text-brand-primary dark:text-brand-ink">
+                  {locale === "ar" ? "إدارة الشركات الشريكة" : "Partner Companies Management"}
+                </h2>
+                <p className="mt-1 text-sm text-slate-600 dark:text-brand-mist">
+                  {locale === "ar"
+                    ? "إنشاء وإدارة حسابات الشركات الشريكة التي تضيف وتدير منتجاتها بشكل مستقل في المتجر."
+                    : "Create and manage partner company accounts that independently manage their products in the store."}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant={isCreateCompanyFormOpen ? "ghost" : "primary"}
+                onClick={() => setIsCreateCompanyFormOpen((current) => !current)}
+                className="whitespace-nowrap"
+              >
+                <UserPlus className="h-4 w-4" />
+                {isCreateCompanyFormOpen
+                  ? locale === "ar"
+                    ? "إغلاق النموذج"
+                    : "Close form"
+                  : locale === "ar"
+                    ? "إضافة حساب شركة جديد"
+                    : "Add company account"}
+              </Button>
+            </div>
+
+            {isCreateCompanyFormOpen ? (
+              <form
+                className={`${dashboardPanelClass} grid gap-3 md:grid-cols-2`}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void runAction("create-company", async () => {
+                    let uploadedLogo = createCompanyForm.logo.trim();
+                    if (companyLogoFile) {
+                      uploadedLogo = await uploadDashboardAsset("images/members", companyLogoFile);
+                    }
+                    await createUserAdmin({
+                      displayName: createCompanyForm.name.trim(),
+                      email: createCompanyForm.email.trim(),
+                      password: createCompanyForm.password,
+                      phone: createCompanyForm.phone.trim(),
+                      company: createCompanyForm.name.trim(),
+                      photoURL: uploadedLogo,
+                      role: "company",
+                      accountStatus: "approved",
+                      membershipStatus: "active"
+                    });
+                    setCreateCompanyForm({
+                      name: "",
+                      email: "",
+                      password: "",
+                      phone: "",
+                      logo: ""
+                    });
+                    setCompanyLogoFile(null);
+                    setIsCreateCompanyFormOpen(false);
+                    await refreshClientUsers();
+                  }, { skipRouteRefresh: true });
+                }}
+              >
+                <div className={`${dashboardSubtlePanelClass} md:col-span-2`}>
+                  <p className="text-sm text-slate-600 dark:text-brand-mist">
+                    {locale === "ar"
+                      ? "سيتم إنشاء حساب جديد للشركة برول (company) وتفعيله تلقائياً لتتمكن الشركة من تسجيل الدخول وإضافة منتجاتها مباشرة."
+                      : "A new company account with role (company) will be created and activated so the company can log in and manage their products."}
+                  </p>
+                </div>
+
+                <DashboardFieldLabel label={locale === "ar" ? "اسم الشركة" : "Company Name"}>
+                  <input
+                    required
+                    placeholder={locale === "ar" ? "مثال: شركة الجمال للعناية" : "e.g. Beauty Line Co."}
+                    value={createCompanyForm.name}
+                    onChange={(event) =>
+                      setCreateCompanyForm((current) => ({ ...current, name: event.target.value }))
+                    }
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
+
+                <DashboardFieldLabel label={locale === "ar" ? "البريد الإلكتروني لتسجيل الدخول" : "Login Email"}>
+                  <input
+                    required
+                    type="email"
+                    placeholder="company@domain.com"
+                    value={createCompanyForm.email}
+                    onChange={(event) =>
+                      setCreateCompanyForm((current) => ({ ...current, email: event.target.value }))
+                    }
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
+
+                <DashboardFieldLabel label={locale === "ar" ? "كلمة المرور (8 خانات على الأقل)" : "Password (8+ chars)"}>
+                  <input
+                    required
+                    type="password"
+                    minLength={8}
+                    placeholder="••••••••"
+                    value={createCompanyForm.password}
+                    onChange={(event) =>
+                      setCreateCompanyForm((current) => ({ ...current, password: event.target.value }))
+                    }
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
+
+                <DashboardFieldLabel label={locale === "ar" ? "رقم الهاتف / للتواصل" : "Phone / Contact"}>
+                  <input
+                    placeholder="+970 59..."
+                    value={createCompanyForm.phone}
+                    onChange={(event) =>
+                      setCreateCompanyForm((current) => ({ ...current, phone: event.target.value }))
+                    }
+                    className={dashboardFieldClass}
+                  />
+                </DashboardFieldLabel>
+
+                <div className="space-y-2 md:col-span-2">
+                  <span className={dashboardLabelClass}>
+                    {locale === "ar" ? "شعار الشركة (رابط أو رفع من الجهاز)" : "Company Logo (URL or Upload)"}
+                  </span>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <input
+                      placeholder={imageLabels.url}
+                      value={createCompanyForm.logo}
+                      onChange={(event) =>
+                        setCreateCompanyForm((current) => ({ ...current, logo: event.target.value }))
+                      }
+                      className={dashboardFieldClass}
+                    />
+                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-brand-primary/20 bg-brand-primary/[0.03] px-4 py-3 text-sm font-medium text-brand-primary transition hover:border-brand-accent hover:bg-brand-primary/[0.06] dark:border-white/20 dark:bg-white/[0.03] dark:text-brand-ink">
+                      <ImageUp className="h-4 w-4" />
+                      <span>{companyLogoFile ? companyLogoFile.name : imageLabels.upload}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] || null;
+                          setCompanyLogoFile(file);
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 md:col-span-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsCreateCompanyFormOpen(false)}
+                  >
+                    {locale === "ar" ? "إلغاء" : "Cancel"}
+                  </Button>
+                  <Button type="submit" loading={loadingAction === "create-company"}>
+                    <Save className="h-4 w-4" />
+                    {locale === "ar" ? "إنشاء حساب الشركة" : "Create Company Account"}
+                  </Button>
+                </div>
+              </form>
+            ) : null}
+
+            <div className={dashboardPanelClass}>
+              <input
+                value={companySearchQuery}
+                onChange={(event) => setCompanySearchQuery(event.target.value)}
+                placeholder={
+                  locale === "ar"
+                    ? "ابحث باسم الشركة أو البريد الإلكتروني أو الهاتف..."
+                    : "Search companies by name, email, or phone..."
+                }
+                className={dashboardFieldClass}
+              />
+            </div>
+
+            <div className="space-y-3">
+              {localUsers
+                .filter((user) => user.role === "company")
+                .filter((company) => {
+                  const query = companySearchQuery.trim().toLowerCase();
+                  if (!query) return true;
+                  return (
+                    company.displayName?.toLowerCase().includes(query) ||
+                    company.company?.toLowerCase().includes(query) ||
+                    company.email?.toLowerCase().includes(query) ||
+                    company.phone?.toLowerCase().includes(query)
+                  );
+                })
+                .map((company) => {
+                  const companyProducts = localProducts.filter(
+                    (p) =>
+                      p.companyId === company.id ||
+                      (p.company &&
+                        p.company.toLowerCase() === (company.company || company.displayName).toLowerCase())
+                  );
+                  return (
+                    <div
+                      key={company.id}
+                      className="flex flex-col gap-4 rounded-2xl border border-brand-primary/10 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/[0.04] sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-brand-primary/10 bg-brand-sky dark:border-white/10 dark:bg-white/5">
+                          {company.photoURL ? (
+                            <SmartImage
+                              src={company.photoURL}
+                              alt={company.displayName}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center font-heading text-lg font-bold text-brand-primary dark:text-brand-accent">
+                              {(company.displayName || "C")[0].toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-heading font-semibold text-brand-primary dark:text-brand-ink">
+                              {company.displayName}
+                            </h3>
+                            <Badge>
+                              {locale === "ar" ? "شركة شريكة" : "Partner Company"}
+                            </Badge>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-brand-mist">
+                            <span>{company.email}</span>
+                            {company.phone ? <span>{company.phone}</span> : null}
+                            <span className="font-medium text-brand-accent">
+                              {companyProducts.length} {locale === "ar" ? "منتج" : "products"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          loading={loadingAction === `reset-company-pass-${company.id}`}
+                          onClick={() => {
+                            void runAction(`reset-company-pass-${company.id}`, async () => {
+                              await sendUserPasswordResetAdmin({ email: company.email });
+                            });
+                          }}
+                          className="text-xs whitespace-nowrap"
+                        >
+                          {locale === "ar" ? "إعادة تعيين كلمة المرور" : "Reset Password"}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          loading={loadingAction === `delete-company-${company.id}`}
+                          onClick={() => {
+                            const message =
+                              locale === "ar"
+                                ? `هل أنت متأكد من حذف حساب الشركة "${company.displayName}"؟`
+                                : `Are you sure you want to delete company "${company.displayName}"?`;
+                            if (!window.confirm(message)) return;
+                            void runAction(`delete-company-${company.id}`, async () => {
+                              await deleteUserAdmin(company.id);
+                              await refreshClientUsers();
+                            });
+                          }}
+                          className="text-xs text-red-600 hover:text-red-700 dark:text-red-400"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          {labels.delete}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+
+              {localUsers.filter((user) => user.role === "company").length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-brand-primary/20 p-8 text-center text-sm text-slate-500 dark:border-white/10 dark:text-brand-mist">
+                  {locale === "ar"
+                    ? "لا توجد شركات مسجلة حالياً. اضغط على \"إضافة حساب شركة جديد\" لإنشاء أول حساب لشركة شريكة."
+                    : "No partner companies registered yet. Click \"Add company account\" to create the first one."}
+                </div>
+              ) : null}
             </div>
           </Card>
           ) : null}

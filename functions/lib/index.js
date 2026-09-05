@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.deleteOrder = exports.updateOrderStatus = exports.deleteUserAdmin = exports.sendUserPasswordResetAdmin = exports.createUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.updateFinanceSettings = exports.upsertHomeSettings = exports.deleteArchivedEvent = exports.upsertArchivedEvent = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
+exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.deleteOrder = exports.updateCompanyOrderFulfillment = exports.updateOrderStatus = exports.deleteUserAdmin = exports.sendUserPasswordResetAdmin = exports.createUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.updateFinanceSettings = exports.upsertHomeSettings = exports.deleteArchivedEvent = exports.upsertArchivedEvent = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
 const crypto_1 = require("crypto");
 const https_1 = require("firebase-functions/v2/https");
 const nodemailer_1 = __importDefault(require("nodemailer"));
@@ -148,6 +148,14 @@ function requireAdminOrModerator(request) {
     if (callerRole !== "admin" && callerRole !== "moderator") {
         throw new https_1.HttpsError("permission-denied", "Only admins or moderators can perform this action.");
     }
+}
+function requireAdminOrModeratorOrCompany(request) {
+    var _a, _b;
+    const callerRole = (_b = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.role;
+    if (callerRole !== "admin" && callerRole !== "moderator" && callerRole !== "company") {
+        throw new https_1.HttpsError("permission-denied", "Only admins, moderators, or companies can perform this action.");
+    }
+    return callerRole;
 }
 function requireAdmin(request) {
     var _a, _b;
@@ -469,8 +477,8 @@ exports.verifyMembership = (0, https_1.onCall)(publicCallableOptions, async (req
 exports.setUserRole = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdmin(request);
     const { uid, role } = request.data;
-    if (!uid || !role) {
-        throw new https_1.HttpsError("invalid-argument", "User ID and role are required.");
+    if (!uid || !role || !["admin", "moderator", "company", "user"].includes(role)) {
+        throw new https_1.HttpsError("invalid-argument", "Valid user ID and role are required.");
     }
     await getAuthClient().setCustomUserClaims(uid, { role });
     await getDb().collection("users").doc(uid).set({ role }, { merge: true });
@@ -716,7 +724,9 @@ exports.updateFinanceSettings = (0, https_1.onCall)(publicCallableOptions, async
     return { success: true, finance: nextFinance };
 });
 exports.upsertProduct = (0, https_1.onCall)(publicCallableOptions, async (request) => {
-    requireAdminOrModerator(request);
+    var _a, _b;
+    const callerRole = requireAdminOrModeratorOrCompany(request);
+    const callerUid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
     const data = request.data;
     const id = cleanString(data.id) || getDb().collection("products").doc().id;
     const name = cleanString(data.name);
@@ -725,8 +735,37 @@ exports.upsertProduct = (0, https_1.onCall)(publicCallableOptions, async (reques
     if (!name || price <= 0 || stock < 0) {
         throw new https_1.HttpsError("invalid-argument", "Product name, price, and stock are required.");
     }
+    let companyName = cleanString(data.company, "SCSC Partner");
+    let companyId = cleanString(data.companyId);
+    if (callerRole === "company") {
+        if (!callerUid) {
+            throw new https_1.HttpsError("unauthenticated", "Authentication required.");
+        }
+        const existingSnap = await getDb().collection("products").doc(id).get();
+        if (existingSnap.exists) {
+            const existingData = existingSnap.data() || {};
+            if (existingData.companyId && existingData.companyId !== callerUid) {
+                throw new https_1.HttpsError("permission-denied", "You can only edit your own products.");
+            }
+        }
+        const companySnap = await getDb().collection("users").doc(callerUid).get();
+        const companyData = companySnap.data() || {};
+        companyName = cleanString(companyData.company) || cleanString(companyData.displayName) || "Partner Company";
+        companyId = callerUid;
+    }
+    const baseSlug = cleanString(data.slug) || slugify(name) || id;
+    let finalSlug = baseSlug;
+    if (callerRole === "company" && companyId) {
+        const existingSnap = await getDb().collection("products").doc(id).get();
+        if (!existingSnap.exists || ((_b = existingSnap.data()) === null || _b === void 0 ? void 0 : _b.slug) !== baseSlug) {
+            const conflictSnap = await getDb().collection("products").where("slug", "==", baseSlug).limit(1).get();
+            if (!conflictSnap.empty && conflictSnap.docs[0].id !== id) {
+                finalSlug = `${baseSlug}-${companyId.slice(0, 5).toLowerCase()}`;
+            }
+        }
+    }
     const payload = {
-        slug: cleanString(data.slug) || slugify(name) || id,
+        slug: finalSlug,
         name,
         description: cleanString(data.description),
         longDescription: cleanStringArray(data.longDescription),
@@ -734,20 +773,35 @@ exports.upsertProduct = (0, https_1.onCall)(publicCallableOptions, async (reques
         memberPrice: cleanNumber(data.memberPrice, price),
         discountPercent: cleanDiscountPercent(data.discountPercent),
         category: cleanString(data.category, "Skin Care"),
-        company: cleanString(data.company, "SCSC Partner"),
+        company: companyName,
+        companyId: companyId || null,
         stock,
         images: cleanImageStringArray(data.images),
         featured: Boolean(data.featured),
         updatedAt: new Date().toISOString()
     };
     await getDb().collection("products").doc(id).set(payload, { merge: true });
-    return { success: true, id };
+    return { success: true, id, slug: finalSlug };
 });
 exports.deleteProduct = (0, https_1.onCall)(publicCallableOptions, async (request) => {
-    requireAdminOrModerator(request);
+    var _a;
+    const callerRole = requireAdminOrModeratorOrCompany(request);
+    const callerUid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
     const { id } = request.data;
     if (!id) {
         throw new https_1.HttpsError("invalid-argument", "Product ID is required.");
+    }
+    if (callerRole === "company") {
+        if (!callerUid) {
+            throw new https_1.HttpsError("unauthenticated", "Authentication required.");
+        }
+        const existingSnap = await getDb().collection("products").doc(id).get();
+        if (existingSnap.exists) {
+            const existingData = existingSnap.data() || {};
+            if (existingData.companyId && existingData.companyId !== callerUid) {
+                throw new https_1.HttpsError("permission-denied", "You can only delete your own products.");
+            }
+        }
     }
     await getDb().collection("products").doc(id).delete();
     return { success: true };
@@ -784,11 +838,11 @@ exports.deleteBoardMember = (0, https_1.onCall)(publicCallableOptions, async (re
 });
 exports.updateUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdmin(request);
-    const { uid, displayName, email, phone, studentId, specialization, degree, memberGrade, accountStatus, role, membershipStatus, membershipExpiresAt } = request.data;
+    const { uid, displayName, email, phone, studentId, specialization, degree, memberGrade, accountStatus, role, company, membershipStatus, membershipExpiresAt } = request.data;
     if (!uid) {
         throw new https_1.HttpsError("invalid-argument", "User ID is required.");
     }
-    const allowedRoles = ["admin", "moderator", "user"];
+    const allowedRoles = ["admin", "moderator", "company", "user"];
     const allowedStatuses = ["active", "expired", "pendingRenewal"];
     const allowedGrades = ["first", "second"];
     const allowedAccountStatuses = ["new", "approved", "rejected"];
@@ -796,6 +850,9 @@ exports.updateUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
         updatedAt: new Date().toISOString()
     };
     const authUpdates = {};
+    if (typeof company === "string") {
+        payload.company = cleanString(company);
+    }
     if (typeof displayName === "string") {
         const nextDisplayName = cleanString(displayName);
         if (!nextDisplayName) {
@@ -867,7 +924,7 @@ exports.updateUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
 });
 exports.createUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdmin(request);
-    const { displayName, email, password, phone, studentId, specialization, degree, memberGrade, accountStatus, role, membershipStatus } = request.data;
+    const { displayName, email, password, phone, studentId, specialization, degree, memberGrade, accountStatus, role, company, photoURL, membershipStatus } = request.data;
     const nextDisplayName = cleanString(displayName);
     const nextEmail = cleanString(email).toLowerCase();
     const nextPassword = typeof password === "string" ? password : "";
@@ -886,7 +943,7 @@ exports.createUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
     if (nextPassword.length < 8) {
         throw new https_1.HttpsError("invalid-argument", "Password must be at least 8 characters.");
     }
-    if (!["admin", "moderator", "user"].includes(nextRole)) {
+    if (!["admin", "moderator", "company", "user"].includes(nextRole)) {
         throw new https_1.HttpsError("invalid-argument", "Invalid role.");
     }
     if (!["active", "expired", "pendingRenewal"].includes(nextMembershipStatus)) {
@@ -918,8 +975,10 @@ exports.createUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
             degree: nextDegree,
             memberGrade: nextMemberGrade,
             accountStatus: nextAccountStatus,
-            company: "",
-            photoURL: "",
+            company: nextRole === "company"
+                ? cleanString(company) || nextDisplayName
+                : cleanString(company),
+            photoURL: cleanImageString(photoURL),
             role: nextRole,
             membershipStatus: nextMembershipStatus,
             membershipExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
@@ -1010,6 +1069,62 @@ exports.updateOrderStatus = (0, https_1.onCall)(publicCallableOptions, async (re
     }, { merge: true });
     await sendOrderStatusEmail(id, status);
     return { success: true };
+});
+exports.updateCompanyOrderFulfillment = (0, https_1.onCall)(publicCallableOptions, async (request) => {
+    var _a;
+    const callerRole = requireAdminOrModeratorOrCompany(request);
+    const callerUid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
+    const { id, status } = request.data;
+    const allowedStatuses = ["pending", "confirmed", "processing", "delivered"];
+    if (!id || !status || !allowedStatuses.includes(status)) {
+        throw new https_1.HttpsError("invalid-argument", "Order ID and a valid status are required.");
+    }
+    if (!callerUid) {
+        throw new https_1.HttpsError("unauthenticated", "Authentication required.");
+    }
+    const orderRef = getDb().collection("orders").doc(id);
+    const orderSnap = await orderRef.get();
+    if (!orderSnap.exists) {
+        throw new https_1.HttpsError("not-found", "Order not found.");
+    }
+    const orderData = orderSnap.data();
+    const companyIds = Array.isArray(orderData.companyIds) ? orderData.companyIds : [];
+    const ownsOrder = callerRole === "admin" ||
+        callerRole === "moderator" ||
+        companyIds.includes(callerUid) ||
+        (orderData.items || []).some((item) => item.companyId === callerUid);
+    if (!ownsOrder) {
+        throw new https_1.HttpsError("permission-denied", "You can only update orders that include your products.");
+    }
+    const nextItems = (orderData.items || []).map((item) => {
+        if (callerRole === "company" && item.companyId !== callerUid) {
+            return item;
+        }
+        return {
+            ...item,
+            fulfillmentStatus: status
+        };
+    });
+    const allDelivered = nextItems.length > 0 && nextItems.every((item) => item.fulfillmentStatus === "delivered");
+    const anyProcessing = nextItems.some((item) => item.fulfillmentStatus === "processing");
+    const anyConfirmed = nextItems.some((item) => item.fulfillmentStatus === "confirmed");
+    const nextOrderStatus = allDelivered
+        ? "delivered"
+        : anyProcessing
+            ? "processing"
+            : anyConfirmed
+                ? "confirmed"
+                : orderData.status || "pending";
+    await orderRef.set({
+        items: nextItems,
+        status: nextOrderStatus,
+        updatedAt: new Date().toISOString(),
+        updatedBy: callerUid
+    }, { merge: true });
+    if (nextOrderStatus !== orderData.status) {
+        await sendOrderStatusEmail(id, nextOrderStatus);
+    }
+    return { success: true, status: nextOrderStatus };
 });
 exports.deleteOrder = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     requireAdmin(request);

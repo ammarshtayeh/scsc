@@ -35,7 +35,7 @@ const QR_LIFETIME_SECONDS = 45;
 const publicCallableOptions = { invoker: "public" as const };
 
 type MembershipStatus = "active" | "expired" | "pendingRenewal";
-type Role = "admin" | "moderator" | "user";
+type Role = "admin" | "moderator" | "company" | "user";
 type MemberGrade = "first" | "second";
 type AccountStatus = "new" | "approved" | "rejected";
 type OrderStatus = "pending" | "confirmed" | "processing" | "delivered";
@@ -205,6 +205,14 @@ function requireAdminOrModerator(request: { auth?: { token?: Record<string, unkn
   if (callerRole !== "admin" && callerRole !== "moderator") {
     throw new HttpsError("permission-denied", "Only admins or moderators can perform this action.");
   }
+}
+
+function requireAdminOrModeratorOrCompany(request: { auth?: { token?: Record<string, unknown> } }): Role {
+  const callerRole = request.auth?.token?.role as Role | undefined;
+  if (callerRole !== "admin" && callerRole !== "moderator" && callerRole !== "company") {
+    throw new HttpsError("permission-denied", "Only admins, moderators, or companies can perform this action.");
+  }
+  return callerRole;
 }
 
 function requireAdmin(request: { auth?: { token?: Record<string, unknown> } }) {
@@ -663,8 +671,8 @@ export const setUserRole = onCall(publicCallableOptions, async (request) => {
     role?: Role;
   };
 
-  if (!uid || !role) {
-    throw new HttpsError("invalid-argument", "User ID and role are required.");
+  if (!uid || !role || !["admin", "moderator", "company", "user"].includes(role)) {
+    throw new HttpsError("invalid-argument", "Valid user ID and role are required.");
   }
 
   await getAuthClient().setCustomUserClaims(uid, { role });
@@ -1030,7 +1038,8 @@ export const updateFinanceSettings = onCall(publicCallableOptions, async (reques
 });
 
 export const upsertProduct = onCall(publicCallableOptions, async (request) => {
-  requireAdminOrModerator(request);
+  const callerRole = requireAdminOrModeratorOrCompany(request);
+  const callerUid = request.auth?.uid;
 
   const data = request.data as Record<string, unknown>;
   const id = cleanString(data.id) || getDb().collection("products").doc().id;
@@ -1042,8 +1051,41 @@ export const upsertProduct = onCall(publicCallableOptions, async (request) => {
     throw new HttpsError("invalid-argument", "Product name, price, and stock are required.");
   }
 
-  const payload = {
-    slug: cleanString(data.slug) || slugify(name) || id,
+  let companyName = cleanString(data.company, "SCSC Partner");
+  let companyId = cleanString(data.companyId);
+
+  if (callerRole === "company") {
+    if (!callerUid) {
+      throw new HttpsError("unauthenticated", "Authentication required.");
+    }
+    const existingSnap = await getDb().collection("products").doc(id).get();
+    if (existingSnap.exists) {
+      const existingData = existingSnap.data() || {};
+      if (existingData.companyId && existingData.companyId !== callerUid) {
+        throw new HttpsError("permission-denied", "You can only edit your own products.");
+      }
+    }
+
+    const companySnap = await getDb().collection("users").doc(callerUid).get();
+    const companyData = companySnap.data() || {};
+    companyName = cleanString(companyData.company) || cleanString(companyData.displayName) || "Partner Company";
+    companyId = callerUid;
+  }
+
+  const baseSlug = cleanString(data.slug) || slugify(name) || id;
+  let finalSlug = baseSlug;
+  if (callerRole === "company" && companyId) {
+    const existingSnap = await getDb().collection("products").doc(id).get();
+    if (!existingSnap.exists || existingSnap.data()?.slug !== baseSlug) {
+      const conflictSnap = await getDb().collection("products").where("slug", "==", baseSlug).limit(1).get();
+      if (!conflictSnap.empty && conflictSnap.docs[0].id !== id) {
+        finalSlug = `${baseSlug}-${companyId.slice(0, 5).toLowerCase()}`;
+      }
+    }
+  }
+
+  const payload: Record<string, unknown> = {
+    slug: finalSlug,
     name,
     description: cleanString(data.description),
     longDescription: cleanStringArray(data.longDescription),
@@ -1051,7 +1093,8 @@ export const upsertProduct = onCall(publicCallableOptions, async (request) => {
     memberPrice: cleanNumber(data.memberPrice, price),
     discountPercent: cleanDiscountPercent(data.discountPercent),
     category: cleanString(data.category, "Skin Care"),
-    company: cleanString(data.company, "SCSC Partner"),
+    company: companyName,
+    companyId: companyId || null,
     stock,
     images: cleanImageStringArray(data.images),
     featured: Boolean(data.featured),
@@ -1059,15 +1102,29 @@ export const upsertProduct = onCall(publicCallableOptions, async (request) => {
   };
 
   await getDb().collection("products").doc(id).set(payload, { merge: true });
-  return { success: true, id };
+  return { success: true, id, slug: finalSlug };
 });
 
 export const deleteProduct = onCall(publicCallableOptions, async (request) => {
-  requireAdminOrModerator(request);
+  const callerRole = requireAdminOrModeratorOrCompany(request);
+  const callerUid = request.auth?.uid;
   const { id } = request.data as { id?: string };
 
   if (!id) {
     throw new HttpsError("invalid-argument", "Product ID is required.");
+  }
+
+  if (callerRole === "company") {
+    if (!callerUid) {
+      throw new HttpsError("unauthenticated", "Authentication required.");
+    }
+    const existingSnap = await getDb().collection("products").doc(id).get();
+    if (existingSnap.exists) {
+      const existingData = existingSnap.data() || {};
+      if (existingData.companyId && existingData.companyId !== callerUid) {
+        throw new HttpsError("permission-denied", "You can only delete your own products.");
+      }
+    }
   }
 
   await getDb().collection("products").doc(id).delete();
@@ -1129,6 +1186,7 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
     memberGrade,
     accountStatus,
     role,
+    company,
     membershipStatus,
     membershipExpiresAt
   } = request.data as {
@@ -1142,6 +1200,7 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
     memberGrade?: MemberGrade;
     accountStatus?: AccountStatus;
     role?: Role;
+    company?: string;
     membershipStatus?: MembershipStatus;
     membershipExpiresAt?: string;
   };
@@ -1150,7 +1209,7 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
     throw new HttpsError("invalid-argument", "User ID is required.");
   }
 
-  const allowedRoles: Role[] = ["admin", "moderator", "user"];
+  const allowedRoles: Role[] = ["admin", "moderator", "company", "user"];
   const allowedStatuses: MembershipStatus[] = ["active", "expired", "pendingRenewal"];
   const allowedGrades: MemberGrade[] = ["first", "second"];
   const allowedAccountStatuses: AccountStatus[] = ["new", "approved", "rejected"];
@@ -1161,6 +1220,10 @@ export const updateUserAdmin = onCall(publicCallableOptions, async (request) => 
     displayName?: string;
     email?: string;
   } = {};
+
+  if (typeof company === "string") {
+    payload.company = cleanString(company);
+  }
 
   if (typeof displayName === "string") {
     const nextDisplayName = cleanString(displayName);
@@ -1265,6 +1328,8 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
     memberGrade,
     accountStatus,
     role,
+    company,
+    photoURL,
     membershipStatus
   } = request.data as {
     displayName?: string;
@@ -1277,6 +1342,8 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
     memberGrade?: MemberGrade;
     accountStatus?: AccountStatus;
     role?: Role;
+    company?: string;
+    photoURL?: string;
     membershipStatus?: MembershipStatus;
   };
 
@@ -1303,7 +1370,7 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
     throw new HttpsError("invalid-argument", "Password must be at least 8 characters.");
   }
 
-  if (!["admin", "moderator", "user"].includes(nextRole)) {
+  if (!["admin", "moderator", "company", "user"].includes(nextRole)) {
     throw new HttpsError("invalid-argument", "Invalid role.");
   }
 
@@ -1341,8 +1408,11 @@ export const createUserAdmin = onCall(publicCallableOptions, async (request) => 
       degree: nextDegree,
       memberGrade: nextMemberGrade,
       accountStatus: nextAccountStatus,
-      company: "",
-      photoURL: "",
+      company:
+        nextRole === "company"
+          ? cleanString(company) || nextDisplayName
+          : cleanString(company),
+      photoURL: cleanImageString(photoURL),
       role: nextRole,
       membershipStatus: nextMembershipStatus,
       membershipExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString(),
@@ -1468,6 +1538,95 @@ export const updateOrderStatus = onCall(publicCallableOptions, async (request) =
   await sendOrderStatusEmail(id, status);
 
   return { success: true };
+});
+
+export const updateCompanyOrderFulfillment = onCall(publicCallableOptions, async (request) => {
+  const callerRole = requireAdminOrModeratorOrCompany(request);
+  const callerUid = request.auth?.uid;
+
+  const { id, status } = request.data as {
+    id?: string;
+    status?: OrderStatus;
+  };
+  const allowedStatuses: OrderStatus[] = ["pending", "confirmed", "processing", "delivered"];
+
+  if (!id || !status || !allowedStatuses.includes(status)) {
+    throw new HttpsError("invalid-argument", "Order ID and a valid status are required.");
+  }
+
+  if (!callerUid) {
+    throw new HttpsError("unauthenticated", "Authentication required.");
+  }
+
+  const orderRef = getDb().collection("orders").doc(id);
+  const orderSnap = await orderRef.get();
+
+  if (!orderSnap.exists) {
+    throw new HttpsError("not-found", "Order not found.");
+  }
+
+  const orderData = orderSnap.data() as {
+    companyIds?: string[];
+    items?: Array<{
+      productId?: string;
+      name?: string;
+      price?: number;
+      quantity?: number;
+      companyId?: string;
+      company?: string;
+      fulfillmentStatus?: OrderStatus;
+    }>;
+    status?: OrderStatus;
+  };
+
+  const companyIds = Array.isArray(orderData.companyIds) ? orderData.companyIds : [];
+  const ownsOrder =
+    callerRole === "admin" ||
+    callerRole === "moderator" ||
+    companyIds.includes(callerUid) ||
+    (orderData.items || []).some((item) => item.companyId === callerUid);
+
+  if (!ownsOrder) {
+    throw new HttpsError("permission-denied", "You can only update orders that include your products.");
+  }
+
+  const nextItems = (orderData.items || []).map((item) => {
+    if (callerRole === "company" && item.companyId !== callerUid) {
+      return item;
+    }
+
+    return {
+      ...item,
+      fulfillmentStatus: status
+    };
+  });
+
+  const allDelivered = nextItems.length > 0 && nextItems.every((item) => item.fulfillmentStatus === "delivered");
+  const anyProcessing = nextItems.some((item) => item.fulfillmentStatus === "processing");
+  const anyConfirmed = nextItems.some((item) => item.fulfillmentStatus === "confirmed");
+  const nextOrderStatus: OrderStatus = allDelivered
+    ? "delivered"
+    : anyProcessing
+      ? "processing"
+      : anyConfirmed
+        ? "confirmed"
+        : orderData.status || "pending";
+
+  await orderRef.set(
+    {
+      items: nextItems,
+      status: nextOrderStatus,
+      updatedAt: new Date().toISOString(),
+      updatedBy: callerUid
+    },
+    { merge: true }
+  );
+
+  if (nextOrderStatus !== orderData.status) {
+    await sendOrderStatusEmail(id, nextOrderStatus);
+  }
+
+  return { success: true, status: nextOrderStatus };
 });
 
 export const deleteOrder = onCall(publicCallableOptions, async (request) => {

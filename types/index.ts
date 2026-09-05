@@ -1,4 +1,4 @@
-export type Role = "admin" | "moderator" | "user";
+export type Role = "admin" | "moderator" | "company" | "user";
 
 export type ArticleCategory = "Skin Care" | "Makeup" | "Hair Care" | "Others";
 export type ProductCategory = "Skin Care" | "Body Care" | "Makeup" | "Masks";
@@ -136,6 +136,7 @@ export interface Product {
   discountPercent?: number;
   category: ProductCategory;
   company: string;
+  companyId?: string;
   stock: number;
   images: string[];
   featured?: boolean;
@@ -146,11 +147,16 @@ export interface CartItem {
   quantity: number;
 }
 
+export type OrderFulfillmentStatus = "pending" | "confirmed" | "processing" | "delivered";
+
 export interface OrderLineItem {
   productId: string;
   name: string;
   price: number;
   quantity: number;
+  companyId?: string;
+  company?: string;
+  fulfillmentStatus?: OrderFulfillmentStatus;
 }
 
 export interface OrderDeliveryInfo {
@@ -169,6 +175,7 @@ export interface Order {
   discount: number;
   total: number;
   items: OrderLineItem[];
+  companyIds?: string[];
   deliveryInfo?: OrderDeliveryInfo;
 }
 

@@ -258,9 +258,20 @@ export async function checkoutCodOrder(
       productId: product.id,
       name: product.name,
       price: shouldUseMemberPricing ? product.memberPrice ?? product.price : product.price,
-      quantity: item.quantity
+      quantity: item.quantity,
+      companyId: product.companyId || undefined,
+      company: product.company || undefined,
+      fulfillmentStatus: "pending" as const
     };
   });
+
+  const companyIds = Array.from(
+    new Set(
+      lineItems
+        .map((item) => item.companyId)
+        .filter((value): value is string => Boolean(value && value.trim()))
+    )
+  );
 
   const subtotal = lineItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discount = shouldUseMemberPricing
@@ -299,6 +310,7 @@ export async function checkoutCodOrder(
       discount,
       total,
       items: lineItems,
+      companyIds,
       deliveryInfo: deliveryInfo
         ? {
             contactName: deliveryInfo.contactName.trim(),

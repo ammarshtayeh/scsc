@@ -27,6 +27,8 @@ describe("Store enterprise QA contracts", () => {
     expect(checkoutBlock).toContain("transaction.update(productRefs[index]");
     expect(checkoutBlock).toContain("transaction.set(doc(database, \"orders\", orderId)");
     expect(checkoutBlock).toContain("status: \"pending\"");
+    expect(checkoutBlock).toContain("companyIds");
+    expect(checkoutBlock).toContain("fulfillmentStatus: \"pending\"");
     expect(checkoutBlock).toContain("transaction.delete(doc(database, \"carts\", userId));");
   });
 

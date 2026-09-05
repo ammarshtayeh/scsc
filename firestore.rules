@@ -18,6 +18,10 @@ service cloud.firestore {
       return isSignedIn() && role() == "moderator";
     }
 
+    function isCompany() {
+      return isSignedIn() && role() == "company";
+    }
+
     function isAdminOrModerator() {
       return isAdmin() || isModerator();
     }
@@ -117,11 +121,25 @@ service cloud.firestore {
 
     match /products/{productId} {
       allow read: if isSignedIn() || isAdminOrModerator();
-      allow create, update, delete: if isAdminOrModerator();
+      allow create, update, delete: if isAdminOrModerator() || (
+        isCompany() && (
+          resource == null
+            ? request.resource.data.companyId == request.auth.uid
+            : resource.data.companyId == request.auth.uid
+        )
+      );
     }
 
     match /orders/{orderId} {
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdminOrModerator());
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isAdminOrModerator() ||
+        (
+          isCompany() &&
+          resource.data.companyIds is list &&
+          request.auth.uid in resource.data.companyIds
+        )
+      );
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdminOrModerator();
     }
