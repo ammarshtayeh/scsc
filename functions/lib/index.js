@@ -928,12 +928,13 @@ exports.createUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
     const nextDisplayName = cleanString(displayName);
     const nextEmail = cleanString(email).toLowerCase();
     const nextPassword = typeof password === "string" ? password : "";
-    const nextRole = role || "user";
+    const nextRole = cleanString(role || "user").toLowerCase();
     const nextMembershipStatus = membershipStatus || "active";
     const nextSpecialization = cleanString(specialization);
     const nextDegree = cleanString(degree);
     const nextMemberGrade = resolveMemberGrade(nextSpecialization, memberGrade);
     const nextAccountStatus = nextMembershipStatus === "active" ? "approved" : accountStatus || "new";
+    const allowedCreateRoles = ["admin", "moderator", "company", "user"];
     if (!nextDisplayName) {
         throw new https_1.HttpsError("invalid-argument", "Display name is required.");
     }
@@ -943,7 +944,7 @@ exports.createUserAdmin = (0, https_1.onCall)(publicCallableOptions, async (requ
     if (nextPassword.length < 8) {
         throw new https_1.HttpsError("invalid-argument", "Password must be at least 8 characters.");
     }
-    if (!["admin", "moderator", "company", "user"].includes(nextRole)) {
+    if (!allowedCreateRoles.includes(nextRole)) {
         throw new https_1.HttpsError("invalid-argument", "Invalid role.");
     }
     if (!["active", "expired", "pendingRenewal"].includes(nextMembershipStatus)) {
