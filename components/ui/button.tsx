@@ -25,6 +25,21 @@ const sizeClasses: Record<ButtonSize, string> = {
   lg: "h-12 px-6 text-sm font-semibold sm:h-14 sm:px-8 sm:text-base"
 };
 
+const baseButtonClassName =
+  "inline-flex items-center justify-center gap-2 rounded-xl font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-brand-background dark:focus-visible:ring-offset-brand-night disabled:pointer-events-none disabled:opacity-60 active:scale-[0.98]";
+
+export function getButtonClassName({
+  variant = "primary",
+  size = "md",
+  className
+}: {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  className?: string;
+} = {}) {
+  return cn(baseButtonClassName, variantClasses[variant], sizeClasses[size], className);
+}
+
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -44,16 +59,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     return (
-      <button
-        ref={ref}
-        className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-xl font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-brand-background dark:focus-visible:ring-offset-brand-night disabled:pointer-events-none disabled:opacity-60 active:scale-[0.98]",
-          variantClasses[variant],
-          sizeClasses[size],
-          className
-        )}
-        {...props}
-      >
+      <button ref={ref} className={getButtonClassName({ variant, size, className })} {...props}>
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
         {children}
       </button>

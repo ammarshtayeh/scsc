@@ -10,6 +10,7 @@ import {
   getProductsByCompany,
   getUserProfileById
 } from "@/lib/firebase/queries";
+import { resolveUserRoleFromUid } from "@/lib/firebase/resolve-user-role";
 import { getSessionFromCookies } from "@/lib/firebase/session";
 import type { UserProfile } from "@/types";
 
@@ -22,8 +23,13 @@ export default async function CompanySectionPage() {
     redirect("/auth/login?redirect=/company");
   }
 
-  if (session.role !== "company" && session.role !== "admin") {
-    redirect(getDefaultRedirectByRole(session.role));
+  const role =
+    session.role === "admin" || session.role === "company"
+      ? session.role
+      : await resolveUserRoleFromUid(session.uid, session.role);
+
+  if (role !== "company" && role !== "admin") {
+    redirect(getDefaultRedirectByRole(role));
   }
 
   const companyId = session.uid;

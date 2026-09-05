@@ -23,6 +23,17 @@ function normalizeRole(role: unknown): SessionRole {
   return role === "admin" || role === "moderator" || role === "company" ? role : "user";
 }
 
+function pickElevatedRole(primary: SessionRole, secondary: SessionRole): SessionRole {
+  const rank: Record<SessionRole, number> = {
+    admin: 3,
+    moderator: 2,
+    company: 1,
+    user: 0
+  };
+
+  return rank[primary] >= rank[secondary] ? primary : secondary;
+}
+
 export async function verifySessionToken(
   token?: string,
   roleOverride?: string | null
@@ -38,12 +49,15 @@ export async function verifySessionToken(
     });
 
     const claimRole = normalizeRole(payload.role);
-    const cookieRole = typeof roleOverride === "string" ? normalizeRole(roleOverride) : null;
+    const cookieRole =
+      typeof roleOverride === "string" && roleOverride.trim()
+        ? normalizeRole(roleOverride)
+        : claimRole;
 
     return {
       uid: String(payload.user_id || payload.sub),
-      // Prefer the synced role cookie (Firestore-aware) over JWT claims alone.
-      role: cookieRole || claimRole
+      // Keep the highest privilege between cookie/Firestore sync and JWT claims.
+      role: pickElevatedRole(cookieRole, claimRole)
     };
   } catch {
     return null;

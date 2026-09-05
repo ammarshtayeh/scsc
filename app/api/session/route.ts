@@ -38,14 +38,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing token." }, { status: 400 });
   }
 
-  const role = await resolveUserRoleFromToken(body.token);
-  const session = await verifySessionToken(body.token, role);
+  const roleFromProfile = await resolveUserRoleFromToken(body.token);
+  const verified = await verifySessionToken(body.token, roleFromProfile);
 
-  if (!session) {
+  if (!verified) {
     return NextResponse.json({ error: "Invalid token." }, { status: 401 });
   }
 
-  const response = NextResponse.json({ ok: true, role: session.role });
-  setSessionCookies(response, request, body.token, session.role);
+  // Never let a failed/empty claim resolution wipe an elevated JWT claim.
+  const role =
+    roleFromProfile !== "user"
+      ? roleFromProfile
+      : verified.role !== "user"
+        ? verified.role
+        : "user";
+
+  const response = NextResponse.json({ ok: true, role });
+  setSessionCookies(response, request, body.token, role);
   return response;
 }

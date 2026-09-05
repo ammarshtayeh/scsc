@@ -26,8 +26,27 @@ export async function resolveUserRoleFromToken(token: string): Promise<Role> {
     }
 
     const profileRole = normalizeRole(profileSnap.data()?.role);
+    // Prefer elevated Firestore role (admin/moderator/company) over stale JWT claims.
     return profileRole !== "user" ? profileRole : claimRole;
   } catch {
     return "user";
+  }
+}
+
+export async function resolveUserRoleFromUid(uid: string, fallback: Role = "user"): Promise<Role> {
+  if (!uid || !adminDb) {
+    return fallback;
+  }
+
+  try {
+    const profileSnap = await adminDb.collection("users").doc(uid).get();
+    if (!profileSnap.exists) {
+      return fallback;
+    }
+
+    const profileRole = normalizeRole(profileSnap.data()?.role);
+    return profileRole !== "user" ? profileRole : fallback;
+  } catch {
+    return fallback;
   }
 }

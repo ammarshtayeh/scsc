@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { DashboardPageContent } from "@/components/dashboard/dashboard-page-content";
 import { getDefaultRedirectByRole } from "@/lib/auth-redirect";
+import { resolveUserRoleFromUid } from "@/lib/firebase/resolve-user-role";
 import { getSessionFromCookies } from "@/lib/firebase/session";
 
 export const dynamic = "force-dynamic";
@@ -18,8 +19,13 @@ export default async function AdminPage({
     redirect("/auth/login?redirect=/admin");
   }
 
-  if (session.role !== "admin") {
-    redirect(getDefaultRedirectByRole(session.role));
+  const role =
+    session.role === "admin"
+      ? session.role
+      : await resolveUserRoleFromUid(session.uid, session.role);
+
+  if (role !== "admin") {
+    redirect(getDefaultRedirectByRole(role));
   }
 
   return <DashboardPageContent mode="admin" section={params.section?.[0]} />;

@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "@/hooks/useLocale";
 import { getManagementPortalHref, getProfileHref } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Button, getButtonClassName } from "@/components/ui/button";
 import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 import { LanguageToggle } from "@/components/ui/language-toggle";
 import { SiteLogo } from "@/components/ui/site-logo";
@@ -30,7 +30,9 @@ export function Navbar() {
     { href: "/jobs", label: dictionary.nav.jobs },
     { href: "/contact", label: dictionary.nav.contact }
   ];
-  const portalHref = getManagementPortalHref(user?.role);
+  const portalHref = getManagementPortalHref(user?.role) || "/admin";
+  const showPortal =
+    user?.role === "admin" || user?.role === "moderator" || user?.role === "company";
   const profileHref = getProfileHref();
   const portalLabel =
     user?.role === "company"
@@ -49,32 +51,32 @@ export function Navbar() {
 
   const authActions = user ? (
     <>
-      <Link href="/store">
-        <Button variant="secondary" size="sm" className="whitespace-nowrap">
-          <ShoppingBag className="h-4 w-4" />
-          <span>{dictionary.nav.store}</span>
-        </Button>
+      <Link href="/store" className={getButtonClassName({ variant: "secondary", size: "sm", className: "whitespace-nowrap" })}>
+        <ShoppingBag className="h-4 w-4" />
+        <span>{dictionary.nav.store}</span>
       </Link>
-      {portalHref ? (
-        <Link href={portalHref}>
-          <Button
-            variant={pathname.startsWith(portalHref) ? "primary" : "secondary"}
-            size="sm"
-            className="whitespace-nowrap"
-          >
-            <span>{portalLabel}</span>
-          </Button>
+      {showPortal ? (
+        <Link
+          href={portalHref}
+          className={getButtonClassName({
+            variant: pathname.startsWith(portalHref) ? "primary" : "secondary",
+            size: "sm",
+            className: "whitespace-nowrap"
+          })}
+        >
+          <span>{portalLabel}</span>
         </Link>
       ) : null}
-      <Link href={profileHref}>
-        <Button
-          variant={pathname.startsWith("/profile") ? "secondary" : "ghost"}
-          size="sm"
-          className="whitespace-nowrap"
-        >
-          <User2 className="h-4 w-4" />
-          <span className="max-w-28 truncate">{user.displayName}</span>
-        </Button>
+      <Link
+        href={profileHref}
+        className={getButtonClassName({
+          variant: pathname.startsWith("/profile") ? "secondary" : "ghost",
+          size: "sm",
+          className: "whitespace-nowrap"
+        })}
+      >
+        <User2 className="h-4 w-4" />
+        <span className="max-w-28 truncate">{user.displayName}</span>
       </Link>
       <Button variant="primary" size="sm" onClick={() => logout()} className="whitespace-nowrap">
         {dictionary.nav.logout}
@@ -82,15 +84,11 @@ export function Navbar() {
     </>
   ) : (
     <>
-      <Link href="/auth/login">
-        <Button variant="ghost" size="sm" className="whitespace-nowrap">
-          {dictionary.nav.login}
-        </Button>
+      <Link href="/auth/login" className={getButtonClassName({ variant: "ghost", size: "sm", className: "whitespace-nowrap" })}>
+        {dictionary.nav.login}
       </Link>
-      <Link href="/auth/signup">
-        <Button variant="accent" size="sm" className="whitespace-nowrap">
-          {dictionary.nav.signup}
-        </Button>
+      <Link href="/auth/signup" className={getButtonClassName({ variant: "accent", size: "sm", className: "whitespace-nowrap" })}>
+        {dictionary.nav.signup}
       </Link>
     </>
   );
@@ -190,7 +188,7 @@ export function Navbar() {
                   >
                     {dictionary.nav.store}
                   </Link>
-                  {portalHref ? (
+                  {showPortal ? (
                     <Link
                       href={portalHref}
                       onClick={() => setOpen(false)}
@@ -213,14 +211,14 @@ export function Navbar() {
               ) : (
                 <div className="flex flex-col gap-3 pt-1">
                   <Link href="/auth/login" onClick={() => setOpen(false)} className="w-full">
-                    <Button variant="secondary" size="sm" className="w-full">
+                    <span className={getButtonClassName({ variant: "secondary", size: "sm", className: "w-full" })}>
                       {dictionary.nav.login}
-                    </Button>
+                    </span>
                   </Link>
                   <Link href="/auth/signup" onClick={() => setOpen(false)} className="w-full">
-                    <Button variant="accent" size="sm" className="w-full">
+                    <span className={getButtonClassName({ variant: "accent", size: "sm", className: "w-full" })}>
                       {dictionary.nav.signup}
-                    </Button>
+                    </span>
                   </Link>
                 </div>
               )}
