@@ -29,6 +29,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MembershipIdCard } from "@/components/profile/membership-id-card";
+import { getManagementPortalHref } from "@/lib/auth-redirect";
 import { SmartImage } from "@/components/ui/smart-image";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -200,18 +201,6 @@ function normalizeEvent(id: string, data: Record<string, unknown>): EventItem {
     registeredCount: typeof data.registeredCount === "number" ? data.registeredCount : 0,
     tags: Array.isArray(data.tags) ? (data.tags as string[]) : []
   };
-}
-
-function getDashboardHref(role?: UserProfile["role"]) {
-  if (role === "admin") {
-    return "/admin";
-  }
-
-  if (role === "moderator") {
-    return "/moderator";
-  }
-
-  return "/profile";
 }
 
 function withoutUndefinedValues<T extends Record<string, unknown>>(value: T) {
@@ -868,13 +857,17 @@ export function ProfileShell({
             </div>
 
             <div className="flex flex-wrap gap-3">
-              {(profile.role === "admin" || profile.role === "moderator") && (
-                <Link href={getDashboardHref(profile.role)}>
+              {getManagementPortalHref(profile.role) ? (
+                <Link href={getManagementPortalHref(profile.role)!}>
                   <Button variant="secondary" className="w-full sm:w-auto">
-                    {dictionary.nav.dashboard}
+                    {profile.role === "company"
+                      ? locale === "ar"
+                        ? "لوحة الشركة"
+                        : "Company Portal"
+                      : dictionary.nav.dashboard}
                   </Button>
                 </Link>
-              )}
+              ) : null}
               {isMembershipActive ? (
                 <Link href={MEMBERSHIP_CARD_PATH}>
                   <Button className="w-full sm:w-auto">

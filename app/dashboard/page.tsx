@@ -1,20 +1,17 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { DashboardPageContent } from "@/components/dashboard/dashboard-page-content";
-import { getDefaultRedirectByRole } from "@/lib/auth-redirect";
-import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/firebase/session";
+import { getDefaultRedirectByRole, getManagementPortalHref, getProfileHref } from "@/lib/auth-redirect";
+import { getSessionFromCookies } from "@/lib/firebase/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const session = await verifySessionToken(cookies().get(SESSION_COOKIE_NAME)?.value);
+  const session = await getSessionFromCookies(cookies());
 
   if (!session) {
-    redirect("/auth/login");
+    redirect("/auth/login?redirect=/dashboard");
   }
 
-  redirect(getDefaultRedirectByRole(session.role));
-
-  return <DashboardPageContent mode="admin" />;
+  redirect(getManagementPortalHref(session.role) || getProfileHref() || getDefaultRedirectByRole(session.role));
 }

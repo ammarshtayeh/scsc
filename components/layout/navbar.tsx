@@ -8,6 +8,7 @@ import { useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "@/hooks/useLocale";
+import { getManagementPortalHref, getProfileHref } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
@@ -29,23 +30,21 @@ export function Navbar() {
     { href: "/jobs", label: dictionary.nav.jobs },
     { href: "/contact", label: dictionary.nav.contact }
   ];
-  const dashboardHref =
-    user?.role === "admin"
-      ? "/admin"
-      : user?.role === "moderator"
-        ? "/moderator"
-        : user?.role === "company"
-          ? "/company"
-          : "/profile";
-  const accountHref =
-    user?.role === "admin" || user?.role === "moderator" || user?.role === "company"
-      ? "/profile"
-      : dashboardHref;
+  const portalHref = getManagementPortalHref(user?.role);
+  const profileHref = getProfileHref();
+  const portalLabel =
+    user?.role === "company"
+      ? locale === "ar"
+        ? "لوحة الشركة"
+        : "Company Portal"
+      : dictionary.nav.dashboard;
 
   const linkClass = (href: string) =>
     cn(
       "text-sm font-medium transition hover:text-brand-accent-strong dark:hover:text-[#f5d669]",
-      pathname === href ? "text-brand-accent-strong dark:text-[#f5d669]" : "text-slate-700 dark:text-brand-mist"
+      pathname === href || (href !== "/" && pathname.startsWith(href))
+        ? "text-brand-accent-strong dark:text-[#f5d669]"
+        : "text-slate-700 dark:text-brand-mist"
     );
 
   const authActions = user ? (
@@ -56,21 +55,23 @@ export function Navbar() {
           <span>{dictionary.nav.store}</span>
         </Button>
       </Link>
-      {(user.role === "admin" || user.role === "moderator" || user.role === "company") && (
-        <Link href={dashboardHref}>
-          <Button variant="secondary" size="sm" className="whitespace-nowrap">
-            <span>
-              {user.role === "company"
-                ? locale === "ar"
-                  ? "لوحة الشركة"
-                  : "Company Portal"
-                : dictionary.nav.dashboard}
-            </span>
+      {portalHref ? (
+        <Link href={portalHref}>
+          <Button
+            variant={pathname.startsWith(portalHref) ? "primary" : "secondary"}
+            size="sm"
+            className="whitespace-nowrap"
+          >
+            <span>{portalLabel}</span>
           </Button>
         </Link>
-      )}
-      <Link href={accountHref}>
-        <Button variant="ghost" size="sm" className="whitespace-nowrap">
+      ) : null}
+      <Link href={profileHref}>
+        <Button
+          variant={pathname.startsWith("/profile") ? "secondary" : "ghost"}
+          size="sm"
+          className="whitespace-nowrap"
+        >
           <User2 className="h-4 w-4" />
           <span className="max-w-28 truncate">{user.displayName}</span>
         </Button>
@@ -189,26 +190,22 @@ export function Navbar() {
                   >
                     {dictionary.nav.store}
                   </Link>
+                  {portalHref ? (
+                    <Link
+                      href={portalHref}
+                      onClick={() => setOpen(false)}
+                      className="text-sm font-medium text-slate-700 dark:text-brand-mist"
+                    >
+                      {portalLabel}
+                    </Link>
+                  ) : null}
                   <Link
-                    href="/profile"
+                    href={profileHref}
                     onClick={() => setOpen(false)}
                     className="text-sm font-medium text-slate-700 dark:text-brand-mist"
                   >
                     {dictionary.nav.profile}
                   </Link>
-                  {(user.role === "admin" || user.role === "moderator" || user.role === "company") && (
-                    <Link
-                      href={dashboardHref}
-                      onClick={() => setOpen(false)}
-                      className="text-sm font-medium text-slate-700 dark:text-brand-mist"
-                    >
-                      {user.role === "company"
-                        ? locale === "ar"
-                          ? "لوحة الشركة"
-                          : "Company Portal"
-                        : dictionary.nav.dashboard}
-                    </Link>
-                  )}
                   <Button size="sm" onClick={() => logout()}>
                     {dictionary.nav.logout}
                   </Button>

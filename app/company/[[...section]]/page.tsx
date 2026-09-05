@@ -10,14 +10,13 @@ import {
   getProductsByCompany,
   getUserProfileById
 } from "@/lib/firebase/queries";
-import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/firebase/session";
+import { getSessionFromCookies } from "@/lib/firebase/session";
 import type { UserProfile } from "@/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function CompanySectionPage() {
-  const token = cookies().get(SESSION_COOKIE_NAME)?.value;
-  const session = await verifySessionToken(token);
+  const session = await getSessionFromCookies(cookies());
 
   if (!session) {
     redirect("/auth/login?redirect=/company");

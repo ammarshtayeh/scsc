@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { getDefaultRedirectByRole, getProfileHref } from "@/lib/auth-redirect";
 import {
   SESSION_COOKIE_NAME,
   SESSION_ROLE_COOKIE_NAME,
-  verifySessionToken
+  verifySessionToken,
+  type SessionRole
 } from "@/lib/firebase/session";
 
 function buildLoginRedirect(request: NextRequest) {
@@ -13,8 +15,12 @@ function buildLoginRedirect(request: NextRequest) {
   return NextResponse.redirect(url);
 }
 
-function buildRoleRedirect(request: NextRequest) {
-  return NextResponse.redirect(new URL("/profile", request.url));
+function buildRoleRedirect(request: NextRequest, role?: SessionRole | null) {
+  const target =
+    role === "admin" || role === "moderator" || role === "company"
+      ? getDefaultRedirectByRole(role)
+      : getProfileHref();
+  return NextResponse.redirect(new URL(target, request.url));
 }
 
 export async function middleware(request: NextRequest) {
@@ -36,7 +42,7 @@ export async function middleware(request: NextRequest) {
     }
 
     if (session.role !== "admin") {
-      return buildRoleRedirect(request);
+      return buildRoleRedirect(request, session.role);
     }
   }
 
@@ -46,7 +52,7 @@ export async function middleware(request: NextRequest) {
     }
 
     if (!["admin", "moderator"].includes(session.role)) {
-      return buildRoleRedirect(request);
+      return buildRoleRedirect(request, session.role);
     }
   }
 
@@ -56,17 +62,13 @@ export async function middleware(request: NextRequest) {
     }
 
     if (!["admin", "company"].includes(session.role)) {
-      return buildRoleRedirect(request);
+      return buildRoleRedirect(request, session.role);
     }
   }
 
   if (pathname.startsWith("/dashboard")) {
     if (!session) {
       return buildLoginRedirect(request);
-    }
-
-    if (!["admin", "moderator"].includes(session.role)) {
-      return buildRoleRedirect(request);
     }
   }
 

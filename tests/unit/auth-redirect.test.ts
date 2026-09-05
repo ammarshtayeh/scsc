@@ -1,6 +1,11 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { getDefaultRedirectByRole, getPostAuthRedirect } from "@/lib/auth-redirect";
+import {
+  getDefaultRedirectByRole,
+  getManagementPortalHref,
+  getPostAuthRedirect,
+  getProfileHref
+} from "@/lib/auth-redirect";
 
 describe("auth redirect helpers", () => {
   it("returns role default redirect", () => {
@@ -8,6 +13,14 @@ describe("auth redirect helpers", () => {
     expect(getDefaultRedirectByRole("moderator")).toBe("/moderator");
     expect(getDefaultRedirectByRole("company")).toBe("/company");
     expect(getDefaultRedirectByRole("user")).toBe("/");
+  });
+
+  it("returns management portal href only for staff roles", () => {
+    expect(getManagementPortalHref("admin")).toBe("/admin");
+    expect(getManagementPortalHref("moderator")).toBe("/moderator");
+    expect(getManagementPortalHref("company")).toBe("/company");
+    expect(getManagementPortalHref("user")).toBeNull();
+    expect(getProfileHref()).toBe("/profile");
   });
 
   it("uses safe redirect param when present", () => {
