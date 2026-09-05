@@ -382,6 +382,7 @@ export function CompanyDashboardShell({
             initialJobs={initialJobs}
             initialApplications={initialApplications}
             defaultCompanyName={companyName}
+            ownerId={companyId}
           />
         </Card>
       ) : null}

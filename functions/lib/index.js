@@ -142,6 +142,31 @@ function getErrorCode(error) {
         ? String(error.code || "")
         : "";
 }
+function normalizeCallerRole(value) {
+    return value === "admin" || value === "moderator" || value === "company" ? value : "user";
+}
+async function resolveCallerRole(request) {
+    var _a, _b, _c, _d;
+    const claimRole = normalizeCallerRole((_b = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.role);
+    const uid = (_c = request.auth) === null || _c === void 0 ? void 0 : _c.uid;
+    if (!uid || claimRole === "admin") {
+        return claimRole;
+    }
+    try {
+        const profileSnap = await getDb().collection("users").doc(uid).get();
+        if (!profileSnap.exists) {
+            return claimRole;
+        }
+        const profileRole = normalizeCallerRole((_d = profileSnap.data()) === null || _d === void 0 ? void 0 : _d.role);
+        if (profileRole === "admin" || profileRole === "moderator" || profileRole === "company") {
+            return profileRole;
+        }
+    }
+    catch {
+        return claimRole;
+    }
+    return claimRole;
+}
 function requireAdminOrModerator(request) {
     var _a, _b;
     const callerRole = (_b = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.role;
@@ -1261,7 +1286,10 @@ const JOB_STATUSES = ["open", "closed"];
 const JOB_APPLICATION_STATUSES = ["pending", "reviewed", "accepted", "rejected"];
 exports.upsertJob = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     var _a;
-    const callerRole = requireAdminOrModeratorOrCompany(request);
+    const callerRole = await resolveCallerRole(request);
+    if (callerRole !== "admin" && callerRole !== "moderator" && callerRole !== "company") {
+        throw new https_1.HttpsError("permission-denied", "Only admins, moderators, or companies can perform this action.");
+    }
     const callerUid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
     if (!callerUid) {
         throw new https_1.HttpsError("unauthenticated", "Authentication required.");
@@ -1329,7 +1357,10 @@ exports.upsertJob = (0, https_1.onCall)(publicCallableOptions, async (request) =
 });
 exports.deleteJob = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     var _a;
-    const callerRole = requireAdminOrModeratorOrCompany(request);
+    const callerRole = await resolveCallerRole(request);
+    if (callerRole !== "admin" && callerRole !== "moderator" && callerRole !== "company") {
+        throw new https_1.HttpsError("permission-denied", "Only admins, moderators, or companies can perform this action.");
+    }
     const callerUid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
     const { id } = request.data;
     if (!id) {
@@ -1419,7 +1450,10 @@ exports.submitJobApplication = (0, https_1.onCall)(publicCallableOptions, async 
 });
 exports.updateJobApplicationStatus = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     var _a;
-    const callerRole = requireAdminOrModeratorOrCompany(request);
+    const callerRole = await resolveCallerRole(request);
+    if (callerRole !== "admin" && callerRole !== "moderator" && callerRole !== "company") {
+        throw new https_1.HttpsError("permission-denied", "Only admins, moderators, or companies can perform this action.");
+    }
     const callerUid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
     if (!callerUid) {
         throw new https_1.HttpsError("unauthenticated", "Authentication required.");

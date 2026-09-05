@@ -200,6 +200,37 @@ function getErrorCode(error: unknown) {
     : "";
 }
 
+function normalizeCallerRole(value: unknown): Role {
+  return value === "admin" || value === "moderator" || value === "company" ? value : "user";
+}
+
+async function resolveCallerRole(request: {
+  auth?: { uid?: string; token?: Record<string, unknown> };
+}): Promise<Role> {
+  const claimRole = normalizeCallerRole(request.auth?.token?.role);
+  const uid = request.auth?.uid;
+
+  if (!uid || claimRole === "admin") {
+    return claimRole;
+  }
+
+  try {
+    const profileSnap = await getDb().collection("users").doc(uid).get();
+    if (!profileSnap.exists) {
+      return claimRole;
+    }
+
+    const profileRole = normalizeCallerRole(profileSnap.data()?.role);
+    if (profileRole === "admin" || profileRole === "moderator" || profileRole === "company") {
+      return profileRole;
+    }
+  } catch {
+    return claimRole;
+  }
+
+  return claimRole;
+}
+
 function requireAdminOrModerator(request: { auth?: { token?: Record<string, unknown> } }) {
   const callerRole = request.auth?.token?.role;
   if (callerRole !== "admin" && callerRole !== "moderator") {
@@ -1816,7 +1847,10 @@ const JOB_STATUSES = ["open", "closed"] as const;
 const JOB_APPLICATION_STATUSES = ["pending", "reviewed", "accepted", "rejected"] as const;
 
 export const upsertJob = onCall(publicCallableOptions, async (request) => {
-  const callerRole = requireAdminOrModeratorOrCompany(request);
+  const callerRole = await resolveCallerRole(request);
+  if (callerRole !== "admin" && callerRole !== "moderator" && callerRole !== "company") {
+    throw new HttpsError("permission-denied", "Only admins, moderators, or companies can perform this action.");
+  }
   const callerUid = request.auth?.uid;
 
   if (!callerUid) {
@@ -1893,7 +1927,10 @@ export const upsertJob = onCall(publicCallableOptions, async (request) => {
 });
 
 export const deleteJob = onCall(publicCallableOptions, async (request) => {
-  const callerRole = requireAdminOrModeratorOrCompany(request);
+  const callerRole = await resolveCallerRole(request);
+  if (callerRole !== "admin" && callerRole !== "moderator" && callerRole !== "company") {
+    throw new HttpsError("permission-denied", "Only admins, moderators, or companies can perform this action.");
+  }
   const callerUid = request.auth?.uid;
   const { id } = request.data as { id?: string };
 
@@ -2006,7 +2043,10 @@ export const submitJobApplication = onCall(publicCallableOptions, async (request
 });
 
 export const updateJobApplicationStatus = onCall(publicCallableOptions, async (request) => {
-  const callerRole = requireAdminOrModeratorOrCompany(request);
+  const callerRole = await resolveCallerRole(request);
+  if (callerRole !== "admin" && callerRole !== "moderator" && callerRole !== "company") {
+    throw new HttpsError("permission-denied", "Only admins, moderators, or companies can perform this action.");
+  }
   const callerUid = request.auth?.uid;
 
   if (!callerUid) {

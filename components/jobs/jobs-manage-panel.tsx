@@ -9,18 +9,23 @@ import {
   Users
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "@/hooks/useLocale";
 import {
   deleteJobAdmin,
   updateJobApplicationStatusAdmin,
   upsertJobAdmin
 } from "@/lib/firebase/functions";
+import {
+  fetchApplicationsForManagerClient,
+  fetchJobsForManagerClient
+} from "@/lib/firebase/jobs-client";
 import { formatDateTime } from "@/lib/utils";
 import type {
   Job,
@@ -35,6 +40,7 @@ interface JobsManagePanelProps {
   initialApplications: JobApplication[];
   defaultCompanyName?: string;
   canSetCompanyName?: boolean;
+  ownerId?: string;
 }
 
 const employmentTypes: JobEmploymentType[] = [
@@ -89,9 +95,11 @@ export function JobsManagePanel({
   initialJobs,
   initialApplications,
   defaultCompanyName = "SCSC",
-  canSetCompanyName = false
+  canSetCompanyName = false,
+  ownerId
 }: JobsManagePanelProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const { locale } = useLocale();
   const ar = locale === "ar";
   const { pushToast } = useToast();
@@ -111,6 +119,40 @@ export function JobsManagePanel({
     description: "",
     requirements: ""
   });
+
+  const elevated = user?.role === "admin" || user?.role === "moderator";
+  const managerOwnerId = ownerId || user?.id;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrate() {
+      const [nextJobs, nextApplications] = await Promise.all([
+        fetchJobsForManagerClient({
+          ownerId: managerOwnerId,
+          elevated
+        }),
+        fetchApplicationsForManagerClient({
+          ownerId: managerOwnerId,
+          elevated
+        })
+      ]);
+
+      if (cancelled) return;
+
+      if (nextJobs.length || !initialJobs.length) {
+        setJobs(nextJobs);
+      }
+      if (nextApplications.length || !initialApplications.length) {
+        setApplications(nextApplications);
+      }
+    }
+
+    void hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, [elevated, managerOwnerId, initialJobs.length, initialApplications.length]);
 
   const pendingApplications = useMemo(
     () => applications.filter((entry) => entry.status === "pending").length,
@@ -181,8 +223,8 @@ export function JobsManagePanel({
         published: payload.published,
         description: payload.description,
         requirements: payload.requirements,
-        ownerId: jobs.find((job) => job.id === nextId)?.ownerId || "",
-        ownerRole: jobs.find((job) => job.id === nextId)?.ownerRole || "company",
+        ownerId: jobs.find((job) => job.id === nextId)?.ownerId || managerOwnerId || "",
+        ownerRole: jobs.find((job) => job.id === nextId)?.ownerRole || user?.role || "company",
         applicationCount: jobs.find((job) => job.id === nextId)?.applicationCount || 0,
         createdAt: jobs.find((job) => job.id === nextId)?.createdAt || new Date().toISOString()
       };
@@ -194,6 +236,13 @@ export function JobsManagePanel({
       );
       resetForm();
       pushToast(ar ? "تم حفظ الوظيفة" : "Job saved", "success");
+
+      const [refreshedJobs, refreshedApplications] = await Promise.all([
+        fetchJobsForManagerClient({ ownerId: managerOwnerId, elevated }),
+        fetchApplicationsForManagerClient({ ownerId: managerOwnerId, elevated })
+      ]);
+      if (refreshedJobs.length) setJobs(refreshedJobs);
+      if (refreshedApplications.length) setApplications(refreshedApplications);
       router.refresh();
     } catch (error) {
       pushToast(error instanceof Error ? error.message : "Save failed", "error");

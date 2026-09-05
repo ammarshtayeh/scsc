@@ -2562,6 +2562,7 @@ export function DashboardShell({
               initialApplications={jobApplications}
               defaultCompanyName="SCSC"
               canSetCompanyName
+              ownerId={undefined}
             />
           </Card>
           ) : null}
