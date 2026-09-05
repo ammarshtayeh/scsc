@@ -2,6 +2,8 @@ import { DashboardShell, type DashboardSection } from "@/components/dashboard/da
 import { PageHero } from "@/components/ui/page-hero";
 import {
   getArchivedEvents,
+  getAllJobApplications,
+  getAllJobs,
   getAllOrders,
   getAllBoardMembers,
   getAllProducts,
@@ -27,6 +29,7 @@ const dashboardSections: DashboardSection[] = [
   "event-archive",
   "registrants",
   "products",
+  "jobs",
   "companies",
   "board-members",
   "users",
@@ -48,13 +51,17 @@ export async function DashboardPageContent({ mode = "admin", section }: Dashboar
     mode === "moderator"
       ? section === "event-archive"
         ? "event-archive"
-        : "moderation"
+        : section === "jobs"
+          ? "jobs"
+          : "moderation"
       : normalizeDashboardSection(section);
   const [
     stats,
     events,
     archivedEvents,
     products,
+    jobs,
+    jobApplications,
     users,
     orders,
     articles,
@@ -67,6 +74,8 @@ export async function DashboardPageContent({ mode = "admin", section }: Dashboar
     getUpcomingEvents(8),
     getArchivedEvents(),
     getAllProducts(),
+    getAllJobs(),
+    getAllJobApplications(),
     getAllUsers(),
     getAllOrders(),
     getArticlesForModeration(),
@@ -88,6 +97,8 @@ export async function DashboardPageContent({ mode = "admin", section }: Dashboar
         events={events}
         archivedEvents={archivedEvents}
         products={products}
+        jobs={jobs}
+        jobApplications={jobApplications}
         users={users}
         orders={orders}
         articles={articles}

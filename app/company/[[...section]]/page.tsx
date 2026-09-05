@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { CompanyDashboardShell } from "@/components/company/company-dashboard-shell";
 import { getDefaultRedirectByRole } from "@/lib/auth-redirect";
 import {
+  getJobApplicationsByOwner,
+  getJobsByOwner,
   getOrdersForCompany,
   getProductsByCompany,
   getUserProfileById
@@ -26,11 +28,14 @@ export default async function CompanySectionPage() {
   }
 
   const companyId = session.uid;
-  const [companyProfile, initialProducts, initialOrders] = await Promise.all([
-    getUserProfileById(companyId),
-    getProductsByCompany(companyId),
-    getOrdersForCompany(companyId)
-  ]);
+  const [companyProfile, initialProducts, initialOrders, initialJobs, initialApplications] =
+    await Promise.all([
+      getUserProfileById(companyId),
+      getProductsByCompany(companyId),
+      getOrdersForCompany(companyId),
+      getJobsByOwner(companyId),
+      getJobApplicationsByOwner(companyId)
+    ]);
 
   const fallbackCompany: UserProfile = {
     id: companyId,
@@ -47,6 +52,8 @@ export default async function CompanySectionPage() {
         company={companyProfile || fallbackCompany}
         initialProducts={initialProducts}
         initialOrders={initialOrders}
+        initialJobs={initialJobs}
+        initialApplications={initialApplications}
       />
     </main>
   );

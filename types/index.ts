@@ -265,3 +265,45 @@ export interface VerifyMembershipResponse {
   scannedAt?: string;
   newTokenIssued?: boolean;
 }
+
+export type JobEmploymentType = "full-time" | "part-time" | "internship" | "contract";
+export type JobStatus = "open" | "closed";
+export type JobApplicationStatus = "pending" | "reviewed" | "accepted" | "rejected";
+
+export interface Job {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  requirements: string[];
+  location: string;
+  employmentType: JobEmploymentType;
+  company: string;
+  ownerId: string;
+  ownerRole: Role;
+  status: JobStatus;
+  published: boolean;
+  applicationCount: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface JobApplication {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  jobSlug: string;
+  ownerId: string;
+  userId: string;
+  displayName: string;
+  email: string;
+  phone?: string;
+  coverLetter?: string;
+  additionalInfo?: string;
+  cvUrl: string;
+  cvFileName: string;
+  cvContentType?: string;
+  status: JobApplicationStatus;
+  createdAt: string;
+  updatedAt?: string;
+}

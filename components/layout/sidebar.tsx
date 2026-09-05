@@ -22,6 +22,7 @@ export function Sidebar() {
           href: "/moderator/event-archive#event-archive",
           label: dictionary.localeName === "العربية" ? "أرشيف الفعاليات" : "Events archive"
         },
+        { href: "/moderator/jobs#jobs", label: dictionary.dashboard.jobManagement || "Jobs" },
         { href: "/moderator/moderation#moderation", label: dictionary.dashboard.moderation }
       ]
     : [
@@ -34,6 +35,7 @@ export function Sidebar() {
         },
         { href: `${basePath}/registrants#registrants`, label: dictionary.dashboard.eventRegistrants || "Registrants" },
         { href: `${basePath}/products#products`, label: dictionary.dashboard.productManagement },
+        { href: `${basePath}/jobs#jobs`, label: dictionary.dashboard.jobManagement || "Jobs" },
         { href: `${basePath}/companies#companies`, label: dictionary.localeName === "العربية" ? "الشركات" : "Companies" },
         { href: `${basePath}/board-members#board-members`, label: dictionary.dashboard.boardMembers || "Board" },
         { href: `${basePath}/users#users`, label: dictionary.dashboard.userManagement },

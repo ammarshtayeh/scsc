@@ -26,6 +26,7 @@ export function Navbar() {
     { href: "/about", label: dictionary.nav.about },
     { href: "/education", label: dictionary.nav.education },
     { href: "/events", label: dictionary.nav.events },
+    { href: "/jobs", label: dictionary.nav.jobs },
     { href: "/contact", label: dictionary.nav.contact }
   ];
   const dashboardHref =

@@ -5,6 +5,7 @@ import {
   ClipboardList,
   ExternalLink,
   ImageUp,
+  Briefcase,
   Package,
   PackageCheck,
   PackageX,
@@ -19,6 +20,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { JobsManagePanel } from "@/components/jobs/jobs-manage-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -34,12 +36,14 @@ import {
 import { uploadFileToStorage } from "@/lib/firebase/storage";
 import { translateOrderStatus, translateProductCategory } from "@/lib/i18n/helpers";
 import { formatCurrency, formatDateTime, formatNumber } from "@/lib/utils";
-import type { Order, OrderStatus, Product, ProductCategory, UserProfile } from "@/types";
+import type { Job, JobApplication, Order, OrderStatus, Product, ProductCategory, UserProfile } from "@/types";
 
 interface CompanyDashboardShellProps {
   company: UserProfile;
   initialProducts: Product[];
   initialOrders: Order[];
+  initialJobs: Job[];
+  initialApplications: JobApplication[];
 }
 
 const productCategories: ProductCategory[] = ["Skin Care", "Body Care", "Makeup", "Masks"];
@@ -48,13 +52,15 @@ const orderStatuses: OrderStatus[] = ["pending", "confirmed", "processing", "del
 export function CompanyDashboardShell({
   company,
   initialProducts,
-  initialOrders
+  initialOrders,
+  initialJobs,
+  initialApplications
 }: CompanyDashboardShellProps) {
   const router = useRouter();
   const { locale } = useLocale();
   const { pushToast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<"products" | "orders">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "orders" | "jobs">("products");
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [searchQuery, setSearchQuery] = useState("");
@@ -303,6 +309,12 @@ export function CompanyDashboardShell({
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
+            <Link href="/jobs" target="_blank">
+              <Button variant="secondary" size="sm">
+                <Briefcase className="h-4 w-4" />
+                {locale === "ar" ? "صفحة الوظائف" : "View Jobs"}
+              </Button>
+            </Link>
             <Link href="/store" target="_blank">
               <Button variant="secondary" size="sm">
                 <Store className="h-4 w-4" />
@@ -342,7 +354,37 @@ export function CompanyDashboardShell({
             ? `الطلبات (${formatNumber(stats.totalOrders, locale)})`
             : `Orders (${stats.totalOrders})`}
         </Button>
+        <Button
+          size="sm"
+          variant={activeTab === "jobs" ? "primary" : "secondary"}
+          onClick={() => setActiveTab("jobs")}
+        >
+          <Briefcase className="h-4 w-4" />
+          {locale === "ar"
+            ? `الوظائف (${formatNumber(initialJobs.length, locale)})`
+            : `Jobs (${initialJobs.length})`}
+        </Button>
       </div>
+
+      {activeTab === "jobs" ? (
+        <Card className="space-y-4 p-5">
+          <div>
+            <h2 className="font-heading text-xl font-semibold text-brand-primary dark:text-brand-ink">
+              {locale === "ar" ? "وظائف شركتكم" : "Your company jobs"}
+            </h2>
+            <p className="mt-1 text-sm text-slate-600 dark:text-brand-mist">
+              {locale === "ar"
+                ? "انشروا وظائف، واستعرضوا طلبات المتقدمين مع السير الذاتية."
+                : "Post openings and review applicant CVs and details."}
+            </p>
+          </div>
+          <JobsManagePanel
+            initialJobs={initialJobs}
+            initialApplications={initialApplications}
+            defaultCompanyName={companyName}
+          />
+        </Card>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card className="flex items-center gap-4 p-5">

@@ -1809,3 +1809,233 @@ export const moderateArticle = onCall(publicCallableOptions, async (request) => 
 
   return { success: true };
 });
+
+const JOB_EMPLOYMENT_TYPES = ["full-time", "part-time", "internship", "contract"] as const;
+const JOB_STATUSES = ["open", "closed"] as const;
+const JOB_APPLICATION_STATUSES = ["pending", "reviewed", "accepted", "rejected"] as const;
+
+export const upsertJob = onCall(publicCallableOptions, async (request) => {
+  const callerRole = requireAdminOrModeratorOrCompany(request);
+  const callerUid = request.auth?.uid;
+
+  if (!callerUid) {
+    throw new HttpsError("unauthenticated", "Authentication required.");
+  }
+
+  const data = request.data as Record<string, unknown>;
+  const id = cleanString(data.id) || getDb().collection("jobs").doc().id;
+  const title = cleanString(data.title);
+
+  if (!title) {
+    throw new HttpsError("invalid-argument", "Job title is required.");
+  }
+
+  const existingSnap = await getDb().collection("jobs").doc(id).get();
+  if (existingSnap.exists) {
+    const existing = existingSnap.data() || {};
+    if (callerRole === "company" && existing.ownerId && existing.ownerId !== callerUid) {
+      throw new HttpsError("permission-denied", "You can only edit your own jobs.");
+    }
+  }
+
+  let companyName = cleanString(data.company, "SCSC");
+  if (callerRole === "company") {
+    const companySnap = await getDb().collection("users").doc(callerUid).get();
+    const companyData = companySnap.data() || {};
+    companyName =
+      cleanString(companyData.company) ||
+      cleanString(companyData.displayName) ||
+      "Partner Company";
+  }
+
+  const employmentTypeRaw = cleanString(data.employmentType, "full-time");
+  const employmentType = (JOB_EMPLOYMENT_TYPES as readonly string[]).includes(employmentTypeRaw)
+    ? employmentTypeRaw
+    : "full-time";
+  const statusRaw = cleanString(data.status, "open");
+  const status = (JOB_STATUSES as readonly string[]).includes(statusRaw) ? statusRaw : "open";
+  const baseSlug = cleanString(data.slug) || slugify(title) || id;
+  let finalSlug = baseSlug;
+  const conflictSnap = await getDb().collection("jobs").where("slug", "==", baseSlug).limit(1).get();
+  if (!conflictSnap.empty && conflictSnap.docs[0].id !== id) {
+    finalSlug = `${baseSlug}-${callerUid.slice(0, 5).toLowerCase()}`;
+  }
+
+  const now = new Date().toISOString();
+  const existingData = existingSnap.data() || {};
+  const payload: Record<string, unknown> = {
+    slug: finalSlug,
+    title,
+    description: cleanString(data.description),
+    requirements: cleanStringArray(data.requirements),
+    location: cleanString(data.location, "Nablus"),
+    employmentType,
+    company: companyName,
+    ownerId: existingSnap.exists ? cleanString(existingData.ownerId, callerUid) : callerUid,
+    ownerRole: existingSnap.exists
+      ? cleanString(existingData.ownerRole, callerRole)
+      : callerRole,
+    status,
+    published: data.published === false ? false : true,
+    applicationCount: existingSnap.exists ? cleanNumber(existingData.applicationCount) : 0,
+    updatedAt: now,
+    updatedBy: callerUid
+  };
+
+  if (!existingSnap.exists) {
+    payload.createdAt = now;
+    payload.createdBy = callerUid;
+  }
+
+  await getDb().collection("jobs").doc(id).set(payload, { merge: true });
+  return { success: true, id, slug: finalSlug };
+});
+
+export const deleteJob = onCall(publicCallableOptions, async (request) => {
+  const callerRole = requireAdminOrModeratorOrCompany(request);
+  const callerUid = request.auth?.uid;
+  const { id } = request.data as { id?: string };
+
+  if (!id) {
+    throw new HttpsError("invalid-argument", "Job ID is required.");
+  }
+
+  if (!callerUid) {
+    throw new HttpsError("unauthenticated", "Authentication required.");
+  }
+
+  const existingSnap = await getDb().collection("jobs").doc(id).get();
+  if (!existingSnap.exists) {
+    throw new HttpsError("not-found", "Job not found.");
+  }
+
+  const existing = existingSnap.data() || {};
+  if (callerRole === "company" && existing.ownerId !== callerUid) {
+    throw new HttpsError("permission-denied", "You can only delete your own jobs.");
+  }
+
+  const applicationsSnap = await getDb()
+    .collection("jobApplications")
+    .where("jobId", "==", id)
+    .get();
+
+  const batch = getDb().batch();
+  applicationsSnap.docs.forEach((doc) => batch.delete(doc.ref));
+  batch.delete(existingSnap.ref);
+  await batch.commit();
+
+  return { success: true };
+});
+
+export const submitJobApplication = onCall(publicCallableOptions, async (request) => {
+  const userId = request.auth?.uid;
+  if (!userId) {
+    throw new HttpsError("unauthenticated", "You must be signed in to apply.");
+  }
+
+  const data = request.data as Record<string, unknown>;
+  const jobId = cleanString(data.jobId);
+  const cvUrl = cleanString(data.cvUrl);
+  const cvFileName = cleanString(data.cvFileName, "cv");
+  const displayName = cleanString(data.displayName);
+  const email = cleanString(data.email);
+
+  if (!jobId || !cvUrl || !displayName || !email) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Job, CV, display name, and email are required."
+    );
+  }
+
+  const jobSnap = await getDb().collection("jobs").doc(jobId).get();
+  if (!jobSnap.exists) {
+    throw new HttpsError("not-found", "Job not found.");
+  }
+
+  const jobData = jobSnap.data() || {};
+  if (jobData.published !== true || jobData.status !== "open") {
+    throw new HttpsError("failed-precondition", "This job is not open for applications.");
+  }
+
+  const duplicateSnap = await getDb()
+    .collection("jobApplications")
+    .where("userId", "==", userId)
+    .where("jobId", "==", jobId)
+    .limit(1)
+    .get();
+
+  if (!duplicateSnap.empty) {
+    throw new HttpsError("already-exists", "You already applied to this job.");
+  }
+
+  const applicationId = getDb().collection("jobApplications").doc().id;
+  const now = new Date().toISOString();
+  const payload = {
+    jobId,
+    jobTitle: cleanString(jobData.title, "Job"),
+    jobSlug: cleanString(jobData.slug, jobId),
+    ownerId: cleanString(jobData.ownerId),
+    userId,
+    displayName,
+    email,
+    phone: cleanString(data.phone) || null,
+    coverLetter: cleanString(data.coverLetter) || null,
+    additionalInfo: cleanString(data.additionalInfo) || null,
+    cvUrl,
+    cvFileName,
+    cvContentType: cleanString(data.cvContentType) || null,
+    status: "pending",
+    createdAt: now,
+    updatedAt: now
+  };
+
+  await getDb().runTransaction(async (transaction) => {
+    transaction.set(getDb().collection("jobApplications").doc(applicationId), payload);
+    transaction.set(
+      jobSnap.ref,
+      {
+        applicationCount: cleanNumber(jobData.applicationCount) + 1,
+        updatedAt: now
+      },
+      { merge: true }
+    );
+  });
+
+  return { success: true, id: applicationId };
+});
+
+export const updateJobApplicationStatus = onCall(publicCallableOptions, async (request) => {
+  const callerRole = requireAdminOrModeratorOrCompany(request);
+  const callerUid = request.auth?.uid;
+
+  if (!callerUid) {
+    throw new HttpsError("unauthenticated", "Authentication required.");
+  }
+
+  const { id, status } = request.data as { id?: string; status?: string };
+  if (!id || !status || !(JOB_APPLICATION_STATUSES as readonly string[]).includes(status)) {
+    throw new HttpsError("invalid-argument", "Application ID and a valid status are required.");
+  }
+
+  const appRef = getDb().collection("jobApplications").doc(id);
+  const appSnap = await appRef.get();
+  if (!appSnap.exists) {
+    throw new HttpsError("not-found", "Application not found.");
+  }
+
+  const appData = appSnap.data() || {};
+  if (callerRole === "company" && appData.ownerId !== callerUid) {
+    throw new HttpsError("permission-denied", "You can only update applications for your jobs.");
+  }
+
+  await appRef.set(
+    {
+      status,
+      updatedAt: new Date().toISOString(),
+      updatedBy: callerUid
+    },
+    { merge: true }
+  );
+
+  return { success: true };
+});

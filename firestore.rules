@@ -163,6 +163,22 @@ service cloud.firestore {
       allow read, write: if isSelf(userId) || isAdminOrModerator();
     }
 
+    match /jobs/{jobId} {
+      allow read: if resource.data.published == true || isAdminOrModerator() || (
+        isSignedIn() && resource.data.ownerId == request.auth.uid
+      );
+      allow create, update, delete: if false;
+    }
+
+    match /jobApplications/{applicationId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.ownerId == request.auth.uid ||
+        isAdminOrModerator()
+      );
+      allow create, update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

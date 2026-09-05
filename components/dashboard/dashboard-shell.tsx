@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardList,
+  Briefcase,
   DollarSign,
   Download,
   ExternalLink,
@@ -25,6 +26,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { JobsManagePanel } from "@/components/jobs/jobs-manage-panel";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,6 +86,8 @@ import type {
   FinanceSettings,
   FinanceTransactionType,
   HomePageSettings,
+  Job,
+  JobApplication,
   Order,
   OrderStatus,
   Product,
@@ -100,6 +104,7 @@ export type DashboardSection =
   | "event-archive"
   | "registrants"
   | "products"
+  | "jobs"
   | "companies"
   | "board-members"
   | "users"
@@ -551,6 +556,8 @@ export function DashboardShell({
   events,
   archivedEvents,
   products,
+  jobs = [],
+  jobApplications = [],
   users,
   orders,
   articles,
@@ -567,6 +574,8 @@ export function DashboardShell({
   events: EventItem[];
   archivedEvents: ArchivedEvent[];
   products: Product[];
+  jobs?: Job[];
+  jobApplications?: JobApplication[];
   users: UserProfile[];
   orders: Order[];
   articles: Article[];
@@ -584,6 +593,7 @@ export function DashboardShell({
     registeredCompanies: string;
     eventManagement: string;
     productManagement: string;
+    jobManagement?: string;
     userManagement: string;
     orders: string;
     moderation: string;
@@ -991,6 +1001,8 @@ export function DashboardShell({
   const showOverview = showManagementSections && activeSection === "overview";
   const showModerationSection = activeSection === "moderation";
   const showArchiveSection = activeSection === "event-archive";
+  const showJobsSection =
+    (mode === "admin" || mode === "moderator") && activeSection === "jobs";
   const showAdminSection = (section: DashboardSection) =>
     showManagementSections && activeSection === section;
   const adminLabels =
@@ -1354,6 +1366,12 @@ export function DashboardShell({
         title: labels.productManagement,
         metric: localCounts.products,
         icon: Package
+      },
+      {
+        href: "/admin/jobs",
+        title: labels.jobManagement || (locale === "ar" ? "الوظائف" : "Jobs"),
+        metric: jobs.length,
+        icon: Briefcase
       },
       {
         href: "/admin/companies",
@@ -2524,6 +2542,27 @@ export function DashboardShell({
                 </div>
               ))}
             </div>
+          </Card>
+          ) : null}
+
+          {showJobsSection ? (
+          <Card id="jobs" className="space-y-5">
+            <div className="space-y-2">
+              <h2 className="font-heading text-2xl font-semibold text-brand-primary">
+                {labels.jobManagement || (locale === "ar" ? "الوظائف" : "Jobs")}
+              </h2>
+              <p className={`text-sm leading-7 ${dashboardMutedTextClass}`}>
+                {locale === "ar"
+                  ? "انشروا وظائف للطلاب والأعضاء، أو راجعوا الوظائف وطلبات الشركات مع السير الذاتية."
+                  : "Post jobs for students and members, or review company openings and applicant CVs."}
+              </p>
+            </div>
+            <JobsManagePanel
+              initialJobs={jobs}
+              initialApplications={jobApplications}
+              defaultCompanyName="SCSC"
+              canSetCompanyName
+            />
           </Card>
           ) : null}
 

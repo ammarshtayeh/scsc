@@ -13,6 +13,9 @@ import type {
   FinanceSettings,
   FinanceTransactionType,
   HomePageSettings,
+  Job,
+  JobApplication,
+  JobApplicationStatus,
   MembershipQrSession,
   MembershipStatus,
   OrderStatus,
@@ -342,6 +345,43 @@ export async function updateCompanyOrderFulfillment(payload: {
 
 export async function deleteOrderAdmin(id: string) {
   return callAdminFunction<{ id: string }>("deleteOrder", { id });
+}
+
+type JobInput = Partial<Job> & Pick<Job, "title">;
+
+export async function upsertJobAdmin(payload: JobInput) {
+  return callAdminFunction<JobInput, { success: boolean; id?: string; slug?: string }>(
+    "upsertJob",
+    payload
+  );
+}
+
+export async function deleteJobAdmin(id: string) {
+  return callAdminFunction<{ id: string }>("deleteJob", { id });
+}
+
+export async function submitJobApplication(payload: {
+  jobId: string;
+  displayName: string;
+  email: string;
+  phone?: string;
+  coverLetter?: string;
+  additionalInfo?: string;
+  cvUrl: string;
+  cvFileName: string;
+  cvContentType?: string;
+}) {
+  return callAdminFunction<typeof payload, { success: boolean; id?: string }>(
+    "submitJobApplication",
+    payload
+  );
+}
+
+export async function updateJobApplicationStatusAdmin(payload: {
+  id: string;
+  status: JobApplicationStatus;
+}) {
+  return callAdminFunction("updateJobApplicationStatus", payload);
 }
 
 export async function moderateArticleAdmin(payload: Pick<Article, "id" | "approved">) {

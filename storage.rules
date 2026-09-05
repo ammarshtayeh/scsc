@@ -58,6 +58,23 @@ service firebase.storage {
       allow write: if isSignedIn() && (request.auth.uid == userId || isAdminOrModerator());
     }
 
+    match /documents/cvs/{userId}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.size < 10 * 1024 * 1024
+        && (
+          request.resource.contentType.matches('application/pdf')
+          || request.resource.contentType.matches('application/msword')
+          || request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+          || request.resource.contentType.matches('application/rtf')
+          || request.resource.contentType.matches('text/plain')
+          || request.resource.contentType.matches('application/vnd.oasis.opendocument.text')
+          || request.resource.contentType.matches('image/.*')
+          || request.resource.contentType.matches('application/octet-stream')
+        );
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

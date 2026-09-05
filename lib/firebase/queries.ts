@@ -14,6 +14,11 @@ import type {
   FinanceSettings,
   FinanceTransaction,
   HomePageSettings,
+  Job,
+  JobApplication,
+  JobApplicationStatus,
+  JobEmploymentType,
+  JobStatus,
   PartnerHighlight,
   Order,
   Product,
@@ -115,6 +120,55 @@ function normalizeProduct(id: string, data: Record<string, unknown>) {
     images: sanitizeImageSources(data.images),
     featured: Boolean(data.featured)
   } satisfies Product;
+}
+
+function normalizeJob(id: string, data: Record<string, unknown>): Job {
+  const employmentType = cleanString(data.employmentType, "full-time") as JobEmploymentType;
+  const status = cleanString(data.status, "open") as JobStatus;
+
+  return {
+    id,
+    slug: cleanString(data.slug, id) || id,
+    title: cleanString(data.title, "Untitled job"),
+    description: cleanString(data.description),
+    requirements: cleanStringArray(data.requirements),
+    location: cleanString(data.location, "Nablus"),
+    employmentType: ["full-time", "part-time", "internship", "contract"].includes(employmentType)
+      ? employmentType
+      : "full-time",
+    company: cleanString(data.company, "SCSC"),
+    ownerId: cleanString(data.ownerId),
+    ownerRole: (cleanString(data.ownerRole, "admin") as Job["ownerRole"]) || "admin",
+    status: status === "closed" ? "closed" : "open",
+    published: data.published !== false,
+    applicationCount: Math.max(0, cleanNumber(data.applicationCount)),
+    createdAt: cleanString(data.createdAt, new Date(0).toISOString()),
+    updatedAt: cleanString(data.updatedAt) || undefined
+  };
+}
+
+function normalizeJobApplication(id: string, data: Record<string, unknown>): JobApplication {
+  const status = cleanString(data.status, "pending") as JobApplicationStatus;
+
+  return {
+    id,
+    jobId: cleanString(data.jobId),
+    jobTitle: cleanString(data.jobTitle, "Job"),
+    jobSlug: cleanString(data.jobSlug),
+    ownerId: cleanString(data.ownerId),
+    userId: cleanString(data.userId),
+    displayName: cleanString(data.displayName),
+    email: cleanString(data.email),
+    phone: cleanString(data.phone) || undefined,
+    coverLetter: cleanString(data.coverLetter) || undefined,
+    additionalInfo: cleanString(data.additionalInfo) || undefined,
+    cvUrl: cleanString(data.cvUrl),
+    cvFileName: cleanString(data.cvFileName, "cv"),
+    cvContentType: cleanString(data.cvContentType) || undefined,
+    status: ["pending", "reviewed", "accepted", "rejected"].includes(status) ? status : "pending",
+    createdAt: cleanString(data.createdAt, new Date(0).toISOString()),
+    updatedAt: cleanString(data.updatedAt) || undefined
+  };
 }
 
 function normalizeEvent(id: string, data: Record<string, unknown>) {
@@ -601,4 +655,109 @@ export async function getOrdersForCompany(companyId: string): Promise<Order[]> {
         return (order.items || []).some((item) => item.companyId === companyId);
       });
   }
+}
+
+export async function getPublishedJobs(): Promise<Job[]> {
+  if (!isFirebaseAdminConfigured || !adminDb) {
+    return [];
+  }
+
+  try {
+    const snapshot = await adminDb
+      .collection("jobs")
+      .where("published", "==", true)
+      .where("status", "==", "open")
+      .orderBy("createdAt", "desc")
+      .get();
+
+    return snapshot.docs.map((doc) => normalizeJob(doc.id, doc.data()));
+  } catch {
+    const snapshot = await adminDb.collection("jobs").get();
+    return snapshot.docs
+      .map((doc) => normalizeJob(doc.id, doc.data()))
+      .filter((job) => job.published && job.status === "open")
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+}
+
+export async function getAllJobs(): Promise<Job[]> {
+  if (!isFirebaseAdminConfigured || !adminDb) {
+    return [];
+  }
+
+  const snapshot = await adminDb.collection("jobs").get();
+  return snapshot.docs
+    .map((doc) => normalizeJob(doc.id, doc.data()))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export async function getJobsByOwner(ownerId: string): Promise<Job[]> {
+  if (!isFirebaseAdminConfigured || !adminDb || !ownerId) {
+    return [];
+  }
+
+  try {
+    const snapshot = await adminDb
+      .collection("jobs")
+      .where("ownerId", "==", ownerId)
+      .orderBy("createdAt", "desc")
+      .get();
+
+    return snapshot.docs.map((doc) => normalizeJob(doc.id, doc.data()));
+  } catch {
+    const snapshot = await adminDb.collection("jobs").where("ownerId", "==", ownerId).get();
+    return snapshot.docs
+      .map((doc) => normalizeJob(doc.id, doc.data()))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+}
+
+export async function getJobBySlug(slug: string): Promise<Job | null> {
+  if (!isFirebaseAdminConfigured || !adminDb || !slug) {
+    return null;
+  }
+
+  const snapshot = await adminDb.collection("jobs").where("slug", "==", slug).limit(1).get();
+  if (!snapshot.empty) {
+    return normalizeJob(snapshot.docs[0].id, snapshot.docs[0].data());
+  }
+
+  const doc = await adminDb.collection("jobs").doc(slug).get();
+  return doc.exists ? normalizeJob(doc.id, doc.data() || {}) : null;
+}
+
+export async function getJobApplicationsByOwner(ownerId: string): Promise<JobApplication[]> {
+  if (!isFirebaseAdminConfigured || !adminDb || !ownerId) {
+    return [];
+  }
+
+  try {
+    const snapshot = await adminDb
+      .collection("jobApplications")
+      .where("ownerId", "==", ownerId)
+      .orderBy("createdAt", "desc")
+      .get();
+
+    return snapshot.docs.map((doc) => normalizeJobApplication(doc.id, doc.data()));
+  } catch {
+    const snapshot = await adminDb
+      .collection("jobApplications")
+      .where("ownerId", "==", ownerId)
+      .get();
+
+    return snapshot.docs
+      .map((doc) => normalizeJobApplication(doc.id, doc.data()))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+}
+
+export async function getAllJobApplications(): Promise<JobApplication[]> {
+  if (!isFirebaseAdminConfigured || !adminDb) {
+    return [];
+  }
+
+  const snapshot = await adminDb.collection("jobApplications").get();
+  return snapshot.docs
+    .map((doc) => normalizeJobApplication(doc.id, doc.data()))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
