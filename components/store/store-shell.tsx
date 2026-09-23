@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ function normalizeClientProduct(id: string, data: Record<string, unknown>): Prod
       : 0,
     category: (typeof data.category === "string" ? data.category : "Skin Care") as Product["category"],
     company: typeof data.company === "string" && data.company.trim() ? data.company : "SCSC Partner",
+    companyId: typeof data.companyId === "string" && data.companyId.trim() ? data.companyId.trim() : undefined,
     stock: Math.max(0, Number(data.stock) || 0),
     images: sanitizeImageSources(data.images),
     featured: Boolean(data.featured)
@@ -76,29 +77,44 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
   }, [priceCeiling]);
 
   useEffect(() => {
-    if (initialProducts.length || !db) {
-      setProducts(initialProducts);
-      return;
-    }
-
     let mounted = true;
 
     async function loadClientProducts() {
-      const snapshot = await getDocs(query(collection(db!, "products"), orderBy("__name__")));
-      if (!mounted) {
+      if (!db) {
+        if (mounted) {
+          setProducts(initialProducts);
+        }
         return;
       }
 
-      setProducts(
-        snapshot.docs.map((doc) =>
+      try {
+        const snapshot = await getDocs(collection(db, "products"));
+        if (!mounted) {
+          return;
+        }
+
+        const nextProducts = snapshot.docs.map((doc) =>
           normalizeClientProduct(doc.id, doc.data() as Record<string, unknown>)
-        )
-      );
+        );
+        setProducts(nextProducts.length ? nextProducts : initialProducts);
+      } catch (error) {
+        if (!mounted) {
+          return;
+        }
+
+        if (initialProducts.length) {
+          setProducts(initialProducts);
+          return;
+        }
+
+        pushToast(
+          error instanceof Error ? error.message : dictionary.store.noProductsDescription,
+          "error"
+        );
+      }
     }
 
-    void loadClientProducts().catch((error) => {
-      pushToast(error instanceof Error ? error.message : dictionary.store.noProductsDescription, "error");
-    });
+    void loadClientProducts();
 
     return () => {
       mounted = false;

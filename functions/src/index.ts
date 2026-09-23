@@ -1069,7 +1069,13 @@ export const updateFinanceSettings = onCall(publicCallableOptions, async (reques
 });
 
 export const upsertProduct = onCall(publicCallableOptions, async (request) => {
-  const callerRole = requireAdminOrModeratorOrCompany(request);
+  const callerRole = await resolveCallerRole(request);
+  if (callerRole !== "admin" && callerRole !== "moderator" && callerRole !== "company") {
+    throw new HttpsError(
+      "permission-denied",
+      "Only admins, moderators, or companies can perform this action."
+    );
+  }
   const callerUid = request.auth?.uid;
 
   const data = request.data as Record<string, unknown>;
@@ -1137,7 +1143,13 @@ export const upsertProduct = onCall(publicCallableOptions, async (request) => {
 });
 
 export const deleteProduct = onCall(publicCallableOptions, async (request) => {
-  const callerRole = requireAdminOrModeratorOrCompany(request);
+  const callerRole = await resolveCallerRole(request);
+  if (callerRole !== "admin" && callerRole !== "moderator" && callerRole !== "company") {
+    throw new HttpsError(
+      "permission-denied",
+      "Only admins, moderators, or companies can perform this action."
+    );
+  }
   const callerUid = request.auth?.uid;
   const { id } = request.data as { id?: string };
 

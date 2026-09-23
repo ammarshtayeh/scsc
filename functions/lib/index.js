@@ -750,7 +750,10 @@ exports.updateFinanceSettings = (0, https_1.onCall)(publicCallableOptions, async
 });
 exports.upsertProduct = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     var _a, _b;
-    const callerRole = requireAdminOrModeratorOrCompany(request);
+    const callerRole = await resolveCallerRole(request);
+    if (callerRole !== "admin" && callerRole !== "moderator" && callerRole !== "company") {
+        throw new https_1.HttpsError("permission-denied", "Only admins, moderators, or companies can perform this action.");
+    }
     const callerUid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
     const data = request.data;
     const id = cleanString(data.id) || getDb().collection("products").doc().id;
@@ -810,7 +813,10 @@ exports.upsertProduct = (0, https_1.onCall)(publicCallableOptions, async (reques
 });
 exports.deleteProduct = (0, https_1.onCall)(publicCallableOptions, async (request) => {
     var _a;
-    const callerRole = requireAdminOrModeratorOrCompany(request);
+    const callerRole = await resolveCallerRole(request);
+    if (callerRole !== "admin" && callerRole !== "moderator" && callerRole !== "company") {
+        throw new https_1.HttpsError("permission-denied", "Only admins, moderators, or companies can perform this action.");
+    }
     const callerUid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
     const { id } = request.data;
     if (!id) {

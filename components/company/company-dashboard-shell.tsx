@@ -18,7 +18,7 @@ import {
   X
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { JobsManagePanel } from "@/components/jobs/jobs-manage-panel";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +33,7 @@ import {
   updateCompanyOrderFulfillment,
   upsertProductAdmin
 } from "@/lib/firebase/functions";
+import { fetchProductsByCompanyClient } from "@/lib/firebase/products-client";
 import { uploadFileToStorage } from "@/lib/firebase/storage";
 import { translateOrderStatus, translateProductCategory } from "@/lib/i18n/helpers";
 import { formatCurrency, formatDateTime, formatNumber } from "@/lib/utils";
@@ -84,6 +85,26 @@ export function CompanyDashboardShell({
     featured: false
   });
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrateProducts() {
+      const nextProducts = await fetchProductsByCompanyClient(company.id);
+      if (cancelled) {
+        return;
+      }
+
+      if (nextProducts.length || !initialProducts.length) {
+        setProducts(nextProducts);
+      }
+    }
+
+    void hydrateProducts();
+    return () => {
+      cancelled = true;
+    };
+  }, [company.id, initialProducts.length]);
 
   const companyName = company.company || company.displayName || "Company Partner";
   const companyId = company.id;
@@ -228,7 +249,11 @@ export function CompanyDashboardShell({
       );
       setIsModalOpen(false);
       pushToast(locale === "ar" ? "تم حفظ المنتج بنجاح" : "Product saved successfully", "success");
-      router.refresh();
+
+      const refreshed = await fetchProductsByCompanyClient(company.id);
+      if (refreshed.length) {
+        setProducts(refreshed);
+      }
     } catch (error) {
       pushToast(error instanceof Error ? error.message : "Save failed", "error");
     } finally {

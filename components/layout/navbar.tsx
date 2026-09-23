@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, ShoppingBag, User2, X } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -18,9 +18,27 @@ import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
   const { dictionary, locale } = useLocale();
   const [open, setOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    if (loggingOut) {
+      return;
+    }
+
+    try {
+      setLoggingOut(true);
+      setOpen(false);
+      await logout();
+      router.replace("/");
+      router.refresh();
+    } finally {
+      setLoggingOut(false);
+    }
+  }
 
   const navLinks = [
     { href: "/", label: dictionary.nav.home },
@@ -78,7 +96,13 @@ export function Navbar() {
         <User2 className="h-4 w-4" />
         <span className="max-w-28 truncate">{user.displayName}</span>
       </Link>
-      <Button variant="primary" size="sm" onClick={() => logout()} className="whitespace-nowrap">
+      <Button
+        variant="primary"
+        size="sm"
+        onClick={() => void handleLogout()}
+        loading={loggingOut}
+        className="whitespace-nowrap"
+      >
         {dictionary.nav.logout}
       </Button>
     </>
@@ -204,7 +228,7 @@ export function Navbar() {
                   >
                     {dictionary.nav.profile}
                   </Link>
-                  <Button size="sm" onClick={() => logout()}>
+                  <Button size="sm" onClick={() => void handleLogout()} loading={loggingOut}>
                     {dictionary.nav.logout}
                   </Button>
                 </>
