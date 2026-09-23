@@ -1,8 +1,8 @@
 import "server-only";
 
-import { applicationDefault, cert, getApp, getApps, initializeApp } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { applicationDefault, cert, getApp, getApps, initializeApp, type App } from "firebase-admin/app";
+import { getAuth, type Auth } from "firebase-admin/auth";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
 function normalizePrivateKey(value?: string) {
   if (!value) {
@@ -51,21 +51,28 @@ export const isFirebaseAdminConfigured = Boolean(
     (serviceAccount?.project_id && serviceAccount.client_email && serviceAccount.private_key)
 );
 
-const adminApp =
-  isFirebaseAdminConfigured && getApps().length === 0
-    ? initializeApp({
-        credential: process.env.GOOGLE_APPLICATION_CREDENTIALS
-          ? applicationDefault()
-          : cert({
-              projectId: projectId || serviceAccount?.project_id,
-              clientEmail: clientEmail || serviceAccount?.client_email,
-              privateKey: privateKey || normalizePrivateKey(serviceAccount?.private_key)
-            }),
-        projectId: projectId || serviceAccount?.project_id
-      })
-    : isFirebaseAdminConfigured
-      ? getApp()
-      : null;
+let adminApp: App | null = null;
 
-export const adminDb = adminApp ? getFirestore(adminApp) : null;
-export const adminAuth = adminApp ? getAuth(adminApp) : null;
+try {
+  if (isFirebaseAdminConfigured) {
+    adminApp =
+      getApps().length === 0
+        ? initializeApp({
+            credential: process.env.GOOGLE_APPLICATION_CREDENTIALS
+              ? applicationDefault()
+              : cert({
+                  projectId: projectId || serviceAccount?.project_id,
+                  clientEmail: clientEmail || serviceAccount?.client_email,
+                  privateKey: privateKey || normalizePrivateKey(serviceAccount?.private_key)
+                }),
+            projectId: projectId || serviceAccount?.project_id
+          })
+        : getApp();
+  }
+} catch (error) {
+  console.error("[firebase-admin:init]", error instanceof Error ? error.message : error);
+  adminApp = null;
+}
+
+export const adminDb: Firestore | null = adminApp ? getFirestore(adminApp) : null;
+export const adminAuth: Auth | null = adminApp ? getAuth(adminApp) : null;

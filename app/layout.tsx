@@ -43,33 +43,40 @@ const tajawal = Tajawal({
 });
 
 export function generateMetadata(): Metadata {
-  const dictionary = getServerDictionary();
-  const metadataBase = process.env.NEXT_PUBLIC_APP_URL
-    ? new URL(process.env.NEXT_PUBLIC_APP_URL)
-    : undefined;
+  try {
+    const dictionary = getServerDictionary();
+    const metadataBase = process.env.NEXT_PUBLIC_APP_URL
+      ? new URL(process.env.NEXT_PUBLIC_APP_URL)
+      : undefined;
 
-  return {
-    metadataBase,
-    title: {
-      default: dictionary.site.title,
-      template: `%s | ${dictionary.site.title}`
-    },
-    description: dictionary.site.description,
-    manifest: "/manifest.webmanifest",
-    appleWebApp: {
-      capable: true,
-      statusBarStyle: "default",
-      title: dictionary.site.title
-    },
-    icons: {
-      icon: [
-        { url: "/favicon.svg", type: "image/svg+xml" },
-        { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-        { url: "/icon-512.png", sizes: "512x512", type: "image/png" }
-      ],
-      apple: "/apple-touch-icon.png"
-    }
-  };
+    return {
+      metadataBase,
+      title: {
+        default: dictionary.site.title,
+        template: `%s | ${dictionary.site.title}`
+      },
+      description: dictionary.site.description,
+      manifest: "/manifest.webmanifest",
+      appleWebApp: {
+        capable: true,
+        statusBarStyle: "default",
+        title: dictionary.site.title
+      },
+      icons: {
+        icon: [
+          { url: "/favicon.svg", type: "image/svg+xml" },
+          { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+          { url: "/icon-512.png", sizes: "512x512", type: "image/png" }
+        ],
+        apple: "/apple-touch-icon.png"
+      }
+    };
+  } catch {
+    return {
+      title: "SCSC-NNU",
+      description: "Society of Cosmetics and Skin Care"
+    };
+  }
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

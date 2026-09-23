@@ -35,25 +35,34 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 async function syncSessionCookie(token: string) {
-  const response = await fetch("/api/session", {
-    method: "POST",
-    cache: "no-store",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token })
-  });
+  try {
+    const response = await fetch("/api/session", {
+      method: "POST",
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token })
+    });
 
-  if (!response.ok) {
-    throw new Error("Unable to sync the authenticated session.");
+    if (!response.ok) {
+      throw new Error("Unable to sync the authenticated session.");
+    }
+  } catch (error) {
+    // Soft-fail: client auth still works; middleware may ask for re-login later.
+    console.error("[auth:session-sync]", error instanceof Error ? error.message : error);
   }
 }
 
 async function clearSessionCookie() {
-  await fetch("/api/session/logout", {
-    method: "POST",
-    cache: "no-store",
-    credentials: "same-origin"
-  });
+  try {
+    await fetch("/api/session/logout", {
+      method: "POST",
+      cache: "no-store",
+      credentials: "same-origin"
+    });
+  } catch (error) {
+    console.error("[auth:session-clear]", error instanceof Error ? error.message : error);
+  }
 }
 
 async function buildFirebaseSessionUser(firebaseUser: FirebaseUser): Promise<AppSessionUser> {

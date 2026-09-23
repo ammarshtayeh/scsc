@@ -55,35 +55,62 @@ export async function DashboardPageContent({ mode = "admin", section }: Dashboar
           ? "jobs"
           : "moderation"
       : normalizeDashboardSection(section);
-  const [
-    stats,
-    events,
-    archivedEvents,
-    products,
-    jobs,
-    jobApplications,
-    users,
-    orders,
-    articles,
-    boardMembers,
-    eventRegistrations,
-    financeSettings,
-    homeSettings
-  ] = await Promise.all([
-    getDashboardStats(),
-    getUpcomingEvents(8),
-    getArchivedEvents(),
-    getAllProducts(),
-    getAllJobs(),
-    getAllJobApplications(),
-    getAllUsers(),
-    getAllOrders(),
-    getArticlesForModeration(),
-    getAllBoardMembers(),
-    getEventRegistrationsForDashboard(),
-    getFinanceSettings(),
-    getHomePageSettings()
-  ]);
+
+  let stats = {
+    totalUsers: 0,
+    upcomingEvents: 0,
+    totalOrders: 0,
+    registeredCompanies: 0
+  };
+  let events: Awaited<ReturnType<typeof getUpcomingEvents>> = [];
+  let archivedEvents: Awaited<ReturnType<typeof getArchivedEvents>> = [];
+  let products: Awaited<ReturnType<typeof getAllProducts>> = [];
+  let jobs: Awaited<ReturnType<typeof getAllJobs>> = [];
+  let jobApplications: Awaited<ReturnType<typeof getAllJobApplications>> = [];
+  let users: Awaited<ReturnType<typeof getAllUsers>> = [];
+  let orders: Awaited<ReturnType<typeof getAllOrders>> = [];
+  let articles: Awaited<ReturnType<typeof getArticlesForModeration>> = [];
+  let boardMembers: Awaited<ReturnType<typeof getAllBoardMembers>> = [];
+  let eventRegistrations: Awaited<ReturnType<typeof getEventRegistrationsForDashboard>> = [];
+  let financeSettings: Awaited<ReturnType<typeof getFinanceSettings>> = {
+    balance: 0,
+    transactions: []
+  };
+  let homeSettings: Awaited<ReturnType<typeof getHomePageSettings>> = null;
+
+  try {
+    [
+      stats,
+      events,
+      archivedEvents,
+      products,
+      jobs,
+      jobApplications,
+      users,
+      orders,
+      articles,
+      boardMembers,
+      eventRegistrations,
+      financeSettings,
+      homeSettings
+    ] = await Promise.all([
+      getDashboardStats(),
+      getUpcomingEvents(8),
+      getArchivedEvents(),
+      getAllProducts(),
+      getAllJobs(),
+      getAllJobApplications(),
+      getAllUsers(),
+      getAllOrders(),
+      getArticlesForModeration(),
+      getAllBoardMembers(),
+      getEventRegistrationsForDashboard(),
+      getFinanceSettings(),
+      getHomePageSettings()
+    ]);
+  } catch (error) {
+    console.error("[dashboard:load]", error instanceof Error ? error.message : error);
+  }
 
   return (
     <>

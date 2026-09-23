@@ -66,8 +66,13 @@ export async function verifySessionToken(
 
 /** Server pages/middleware: always read token + role cookies together. */
 export async function getSessionFromCookies(cookieStore: CookieReader): Promise<SessionData | null> {
-  return verifySessionToken(
-    cookieStore.get(SESSION_COOKIE_NAME)?.value,
-    cookieStore.get(SESSION_ROLE_COOKIE_NAME)?.value
-  );
+  try {
+    return await verifySessionToken(
+      cookieStore.get(SESSION_COOKIE_NAME)?.value,
+      cookieStore.get(SESSION_ROLE_COOKIE_NAME)?.value
+    );
+  } catch (error) {
+    console.error("[session:cookies]", error instanceof Error ? error.message : error);
+    return null;
+  }
 }

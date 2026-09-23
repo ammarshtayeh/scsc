@@ -24,55 +24,65 @@ function buildRoleRedirect(request: NextRequest, role?: SessionRole | null) {
 }
 
 export async function middleware(request: NextRequest) {
-  const session = await verifySessionToken(
-    request.cookies.get(SESSION_COOKIE_NAME)?.value,
-    request.cookies.get(SESSION_ROLE_COOKIE_NAME)?.value
-  );
-  const pathname = request.nextUrl.pathname;
+  try {
+    const session = await verifySessionToken(
+      request.cookies.get(SESSION_COOKIE_NAME)?.value,
+      request.cookies.get(SESSION_ROLE_COOKIE_NAME)?.value
+    );
+    const pathname = request.nextUrl.pathname;
 
-  if (pathname.startsWith("/profile")) {
-    if (!session) {
+    if (pathname.startsWith("/profile")) {
+      if (!session) {
+        return buildLoginRedirect(request);
+      }
+    }
+
+    if (pathname.startsWith("/admin")) {
+      if (!session) {
+        return buildLoginRedirect(request);
+      }
+
+      if (session.role !== "admin") {
+        return buildRoleRedirect(request, session.role);
+      }
+    }
+
+    if (pathname.startsWith("/moderator")) {
+      if (!session) {
+        return buildLoginRedirect(request);
+      }
+
+      if (!["admin", "moderator"].includes(session.role)) {
+        return buildRoleRedirect(request, session.role);
+      }
+    }
+
+    if (pathname.startsWith("/company")) {
+      if (!session) {
+        return buildLoginRedirect(request);
+      }
+
+      if (!["admin", "company"].includes(session.role)) {
+        return buildRoleRedirect(request, session.role);
+      }
+    }
+
+    if (pathname.startsWith("/dashboard")) {
+      if (!session) {
+        return buildLoginRedirect(request);
+      }
+    }
+
+    return NextResponse.next();
+  } catch (error) {
+    // Never return 500 from middleware — soft-fail to login for protected routes.
+    console.error("[middleware]", error instanceof Error ? error.message : error);
+    try {
       return buildLoginRedirect(request);
+    } catch {
+      return NextResponse.next();
     }
   }
-
-  if (pathname.startsWith("/admin")) {
-    if (!session) {
-      return buildLoginRedirect(request);
-    }
-
-    if (session.role !== "admin") {
-      return buildRoleRedirect(request, session.role);
-    }
-  }
-
-  if (pathname.startsWith("/moderator")) {
-    if (!session) {
-      return buildLoginRedirect(request);
-    }
-
-    if (!["admin", "moderator"].includes(session.role)) {
-      return buildRoleRedirect(request, session.role);
-    }
-  }
-
-  if (pathname.startsWith("/company")) {
-    if (!session) {
-      return buildLoginRedirect(request);
-    }
-
-    if (!["admin", "company"].includes(session.role)) {
-      return buildRoleRedirect(request, session.role);
-    }
-  }
-
-  if (pathname.startsWith("/dashboard")) {
-    if (!session) {
-      return buildLoginRedirect(request);
-    }
-  }
-
-  return NextResponse.next();
 }
 
 export const config = {

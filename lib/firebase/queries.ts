@@ -307,275 +307,325 @@ function convertDoc<T>(id: string, data: Record<string, unknown>) {
   } as T;
 }
 
-export async function getLatestArticles(limit = 3): Promise<Article[]> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return [];
+/** Never let a Firestore/Admin failure become an HTTP 500 — return fallback and keep rendering. */
+async function safeQuery<T>(label: string, fallback: T, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    console.error(`[firestore:${label}]`, error instanceof Error ? error.message : error);
+    return fallback;
   }
+}
 
-  const snapshot = await adminDb
-    .collection("articles")
-    .where("approved", "==", true)
-    .get();
+const EMPTY_DASHBOARD_STATS: DashboardStats = {
+  totalUsers: 0,
+  upcomingEvents: 0,
+  totalOrders: 0,
+  registeredCompanies: 0
+};
 
-  return sortByDate(
-    snapshot.docs.map((doc) => convertDoc<Article>(doc.id, doc.data())),
-    "publishedAt"
-  ).slice(0, limit);
+export async function getLatestArticles(limit = 3): Promise<Article[]> {
+  return safeQuery("getLatestArticles", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return [];
+    }
+
+    const snapshot = await adminDb
+      .collection("articles")
+      .where("approved", "==", true)
+      .get();
+
+    return sortByDate(
+      snapshot.docs.map((doc) => convertDoc<Article>(doc.id, doc.data())),
+      "publishedAt"
+    ).slice(0, limit);
+  });
 }
 
 export async function getHomePageSettings(): Promise<HomePageSettings | null> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return null;
-  }
+  return safeQuery("getHomePageSettings", null, async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return null;
+    }
 
-  const doc = await adminDb.collection("siteSettings").doc("home").get();
-  return doc.exists ? normalizeHomeSettings(doc.data() || {}) : null;
+    const doc = await adminDb.collection("siteSettings").doc("home").get();
+    return doc.exists ? normalizeHomeSettings(doc.data() || {}) : null;
+  });
 }
 
 export async function getFinanceSettings(): Promise<FinanceSettings> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return { balance: 0, transactions: [] };
-  }
+  return safeQuery("getFinanceSettings", { balance: 0, transactions: [] }, async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return { balance: 0, transactions: [] };
+    }
 
-  const doc = await adminDb.collection("siteSettings").doc("finance").get();
-  const data = doc.exists ? doc.data() || {} : {};
+    const doc = await adminDb.collection("siteSettings").doc("finance").get();
+    const data = doc.exists ? doc.data() || {} : {};
 
-  return {
-    balance: cleanNumber(data.balance),
-    transactions: Array.isArray(data.transactions)
-      ? data.transactions
-          .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
-          .map(normalizeFinanceTransaction)
-      : [],
-    updatedAt: normalizeDateValue(data.updatedAt) || undefined,
-    updatedBy: cleanString(data.updatedBy) || undefined
-  };
+    return {
+      balance: cleanNumber(data.balance),
+      transactions: Array.isArray(data.transactions)
+        ? data.transactions
+            .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
+            .map(normalizeFinanceTransaction)
+        : [],
+      updatedAt: normalizeDateValue(data.updatedAt) || undefined,
+      updatedBy: cleanString(data.updatedBy) || undefined
+    };
+  });
 }
 
 export async function getAllArticles(category?: string): Promise<Article[]> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return [];
-  }
+  return safeQuery("getAllArticles", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return [];
+    }
 
-  let query = adminDb.collection("articles").where("approved", "==", true);
-  if (category) {
-    query = query.where("category", "==", category);
-  }
-  const snapshot = await query.get();
-  return sortByDate(
-    snapshot.docs.map((doc) => convertDoc<Article>(doc.id, doc.data())),
-    "publishedAt"
-  );
+    let query = adminDb.collection("articles").where("approved", "==", true);
+    if (category) {
+      query = query.where("category", "==", category);
+    }
+    const snapshot = await query.get();
+    return sortByDate(
+      snapshot.docs.map((doc) => convertDoc<Article>(doc.id, doc.data())),
+      "publishedAt"
+    );
+  });
 }
 
 export async function getArticlesForModeration(): Promise<Article[]> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return [];
-  }
+  return safeQuery("getArticlesForModeration", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return [];
+    }
 
-  const snapshot = await adminDb.collection("articles").orderBy("publishedAt", "desc").get();
-  return snapshot.docs
-    .map((doc) => convertDoc<Article>(doc.id, doc.data()))
-    .sort((a, b) => Number(a.approved) - Number(b.approved));
+    const snapshot = await adminDb.collection("articles").orderBy("publishedAt", "desc").get();
+    return snapshot.docs
+      .map((doc) => convertDoc<Article>(doc.id, doc.data()))
+      .sort((a, b) => Number(a.approved) - Number(b.approved));
+  });
 }
 
 export async function getArticleBySlug(slug: string): Promise<Article | null> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return null;
-  }
+  return safeQuery("getArticleBySlug", null, async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return null;
+    }
 
-  const snapshot = await adminDb
-    .collection("articles")
-    .where("slug", "==", slug)
-    .limit(1)
-    .get();
+    const snapshot = await adminDb
+      .collection("articles")
+      .where("slug", "==", slug)
+      .limit(1)
+      .get();
 
-  if (snapshot.empty) {
-    return null;
-  }
+    if (snapshot.empty) {
+      return null;
+    }
 
-  const doc = snapshot.docs[0];
-  const article = convertDoc<Article>(doc.id, doc.data());
-  return article.approved ? article : null;
+    const doc = snapshot.docs[0];
+    const article = convertDoc<Article>(doc.id, doc.data());
+    return article.approved ? article : null;
+  });
 }
 
 export async function getUpcomingEvents(limit?: number): Promise<EventItem[]> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return [];
-  }
+  return safeQuery("getUpcomingEvents", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return [];
+    }
 
-  const snapshot = await adminDb.collection("events").get();
-  const events = snapshot.docs
-    .map((doc) => normalizeEvent(doc.id, doc.data()))
-    .sort((a, b) => new Date(a.startsAt || 0).getTime() - new Date(b.startsAt || 0).getTime());
+    const snapshot = await adminDb.collection("events").get();
+    const events = snapshot.docs
+      .map((doc) => normalizeEvent(doc.id, doc.data()))
+      .sort((a, b) => new Date(a.startsAt || 0).getTime() - new Date(b.startsAt || 0).getTime());
 
-  return typeof limit === "number" ? events.slice(0, limit) : events;
+    return typeof limit === "number" ? events.slice(0, limit) : events;
+  });
 }
 
 export async function getEventBySlug(slug: string): Promise<EventItem | null> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return null;
-  }
+  return safeQuery("getEventBySlug", null, async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return null;
+    }
 
-  const snapshot = await adminDb.collection("events").where("slug", "==", slug).limit(1).get();
-  if (snapshot.empty) {
-    return null;
-  }
+    const snapshot = await adminDb.collection("events").where("slug", "==", slug).limit(1).get();
+    if (snapshot.empty) {
+      return null;
+    }
 
-  const doc = snapshot.docs[0];
-  return normalizeEvent(doc.id, doc.data());
+    const doc = snapshot.docs[0];
+    return normalizeEvent(doc.id, doc.data());
+  });
 }
 
 export async function getArchivedEvents(limit?: number): Promise<ArchivedEvent[]> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return [];
-  }
+  return safeQuery("getArchivedEvents", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return [];
+    }
 
-  const snapshot = await adminDb.collection("archivedEvents").get();
-  const archivedEvents = snapshot.docs
-    .map((doc) => normalizeArchivedEvent(doc.id, doc.data()))
-    .sort((a, b) => new Date(b.eventDate || 0).getTime() - new Date(a.eventDate || 0).getTime());
+    const snapshot = await adminDb.collection("archivedEvents").get();
+    const archivedEvents = snapshot.docs
+      .map((doc) => normalizeArchivedEvent(doc.id, doc.data()))
+      .sort((a, b) => new Date(b.eventDate || 0).getTime() - new Date(a.eventDate || 0).getTime());
 
-  return typeof limit === "number" ? archivedEvents.slice(0, limit) : archivedEvents;
+    return typeof limit === "number" ? archivedEvents.slice(0, limit) : archivedEvents;
+  });
 }
 
 export async function getAllProducts(): Promise<Product[]> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return [];
-  }
+  return safeQuery("getAllProducts", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return [];
+    }
 
-  const snapshot = await adminDb.collection("products").orderBy(FieldPath.documentId()).get();
-  return snapshot.docs.map((doc) => normalizeProduct(doc.id, doc.data()));
+    const snapshot = await adminDb.collection("products").orderBy(FieldPath.documentId()).get();
+    return snapshot.docs.map((doc) => normalizeProduct(doc.id, doc.data()));
+  });
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return null;
-  }
+  return safeQuery("getProductBySlug", null, async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return null;
+    }
 
-  const snapshot = await adminDb.collection("products").where("slug", "==", slug).limit(1).get();
-  if (!snapshot.empty) {
-    const doc = snapshot.docs[0];
-    return normalizeProduct(doc.id, doc.data());
-  }
+    const snapshot = await adminDb.collection("products").where("slug", "==", slug).limit(1).get();
+    if (!snapshot.empty) {
+      const doc = snapshot.docs[0];
+      return normalizeProduct(doc.id, doc.data());
+    }
 
-  const doc = await adminDb.collection("products").doc(slug).get();
-  return doc.exists ? normalizeProduct(doc.id, doc.data() || {}) : null;
+    const doc = await adminDb.collection("products").doc(slug).get();
+    return doc.exists ? normalizeProduct(doc.id, doc.data() || {}) : null;
+  });
 }
 
 export async function getProductsByCompany(companyId: string): Promise<Product[]> {
-  if (!isFirebaseAdminConfigured || !adminDb || !companyId) {
-    return [];
-  }
+  return safeQuery("getProductsByCompany", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb || !companyId) {
+      return [];
+    }
 
-  const [byIdSnap, byCompanySnap] = await Promise.all([
-    adminDb.collection("products").where("companyId", "==", companyId).get(),
-    adminDb.collection("products").where("company", "==", companyId).get()
-  ]);
+    const [byIdSnap, byCompanySnap] = await Promise.all([
+      adminDb.collection("products").where("companyId", "==", companyId).get(),
+      adminDb.collection("products").where("company", "==", companyId).get()
+    ]);
 
-  const map = new Map<string, Product>();
-  byIdSnap.docs.forEach((doc) => map.set(doc.id, normalizeProduct(doc.id, doc.data())));
-  byCompanySnap.docs.forEach((doc) => map.set(doc.id, normalizeProduct(doc.id, doc.data())));
+    const map = new Map<string, Product>();
+    byIdSnap.docs.forEach((doc) => map.set(doc.id, normalizeProduct(doc.id, doc.data())));
+    byCompanySnap.docs.forEach((doc) => map.set(doc.id, normalizeProduct(doc.id, doc.data())));
 
-  return Array.from(map.values());
+    return Array.from(map.values());
+  });
 }
 
 export async function getAllCompanies(): Promise<UserProfile[]> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return [];
-  }
+  return safeQuery("getAllCompanies", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return [];
+    }
 
-  const snapshot = await adminDb.collection("users").where("role", "==", "company").get();
-  return snapshot.docs.map((doc) => normalizeUserProfile(doc.id, doc.data()));
+    const snapshot = await adminDb.collection("users").where("role", "==", "company").get();
+    return snapshot.docs.map((doc) => normalizeUserProfile(doc.id, doc.data()));
+  });
 }
 
 export async function getBoardMembersByYear(): Promise<Record<string, BoardMember[]>> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return {};
-  }
+  return safeQuery("getBoardMembersByYear", {}, async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return {};
+    }
 
-  const snapshot = await adminDb.collection("boardMembers").orderBy("year", "desc").get();
-  return snapshot.docs.reduce<Record<string, BoardMember[]>>((acc, doc) => {
-    const member = convertDoc<BoardMember>(doc.id, doc.data());
-    acc[member.year] = acc[member.year] ? [...acc[member.year], member] : [member];
-    return acc;
-  }, {});
+    const snapshot = await adminDb.collection("boardMembers").orderBy("year", "desc").get();
+    return snapshot.docs.reduce<Record<string, BoardMember[]>>((acc, doc) => {
+      const member = convertDoc<BoardMember>(doc.id, doc.data());
+      acc[member.year] = acc[member.year] ? [...acc[member.year], member] : [member];
+      return acc;
+    }, {});
+  });
 }
 
 export async function getAllBoardMembers(): Promise<BoardMember[]> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return [];
-  }
+  return safeQuery("getAllBoardMembers", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return [];
+    }
 
-  const snapshot = await adminDb.collection("boardMembers").orderBy("year", "desc").get();
-  return snapshot.docs.map((doc) => convertDoc<BoardMember>(doc.id, doc.data()));
+    const snapshot = await adminDb.collection("boardMembers").orderBy("year", "desc").get();
+    return snapshot.docs.map((doc) => convertDoc<BoardMember>(doc.id, doc.data()));
+  });
 }
 
 export async function getEventRegistrationsForDashboard(): Promise<EventRegistration[]> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return [];
-  }
+  return safeQuery("getEventRegistrationsForDashboard", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return [];
+    }
 
-  const [eventsSnapshot, usersSnapshot] = await Promise.all([
-    adminDb.collection("events").get(),
-    adminDb.collection("users").get()
-  ]);
-  const usersById = new Map(usersSnapshot.docs.map((doc) => [doc.id, doc.data()]));
-  const registrations = await Promise.all(
-    eventsSnapshot.docs.map(async (eventDoc) => {
-      const snapshot = await eventDoc.ref.collection("registrations").get();
-      return snapshot.docs.map((doc) => {
-        const user = usersById.get(doc.id) as { displayName?: string; email?: string } | undefined;
-        const data = doc.data();
-        const registeredAt = normalizeDateValue(data.registeredAt || data.createdAt) || undefined;
+    const [eventsSnapshot, usersSnapshot] = await Promise.all([
+      adminDb.collection("events").get(),
+      adminDb.collection("users").get()
+    ]);
+    const usersById = new Map(usersSnapshot.docs.map((doc) => [doc.id, doc.data()]));
+    const registrations = await Promise.all(
+      eventsSnapshot.docs.map(async (eventDoc) => {
+        try {
+          const snapshot = await eventDoc.ref.collection("registrations").get();
+          return snapshot.docs.map((doc) => {
+            const user = usersById.get(doc.id) as { displayName?: string; email?: string } | undefined;
+            const data = doc.data();
+            const registeredAt = normalizeDateValue(data.registeredAt || data.createdAt) || undefined;
 
-        return convertDoc<EventRegistration>(doc.id, {
-          ...doc.data(),
-          eventId: eventDoc.id,
-          userId: doc.id,
-          displayName: data.displayName || user?.displayName,
-          email: data.email || user?.email,
-          registeredAt,
-          checkedInAt: normalizeDateValue(data.checkedInAt) || null
-        });
-      });
-    })
-  );
+            return convertDoc<EventRegistration>(doc.id, {
+              ...doc.data(),
+              eventId: eventDoc.id,
+              userId: doc.id,
+              displayName: data.displayName || user?.displayName,
+              email: data.email || user?.email,
+              registeredAt,
+              checkedInAt: normalizeDateValue(data.checkedInAt) || null
+            });
+          });
+        } catch {
+          return [] as EventRegistration[];
+        }
+      })
+    );
 
-  return registrations.flat();
+    return registrations.flat();
+  });
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
+  return safeQuery("getDashboardStats", EMPTY_DASHBOARD_STATS, async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return EMPTY_DASHBOARD_STATS;
+    }
+
+    const now = Date.now();
+    const [users, events, orders, products, companyUsers] = await Promise.all([
+      adminDb.collection("users").count().get(),
+      adminDb.collection("events").select("startsAt").get(),
+      adminDb.collection("orders").count().get(),
+      adminDb.collection("products").select("company").get(),
+      adminDb.collection("users").where("role", "==", "company").count().get()
+    ]);
+
+    const companySet = new Set(products.docs.map((doc) => doc.get("company")).filter(Boolean));
+    const upcomingEvents = events.docs.filter((doc) => {
+      const startsAt = normalizeDateValue(doc.get("startsAt"));
+      return startsAt && new Date(startsAt).getTime() >= now;
+    }).length;
+
     return {
-      totalUsers: 0,
-      upcomingEvents: 0,
-      totalOrders: 0,
-      registeredCompanies: 0
+      totalUsers: users.data().count,
+      upcomingEvents,
+      totalOrders: orders.data().count,
+      registeredCompanies: Math.max(companyUsers.data().count, companySet.size)
     };
-  }
-
-  const now = Date.now();
-  const [users, events, orders, products, companyUsers] = await Promise.all([
-    adminDb.collection("users").count().get(),
-    adminDb.collection("events").select("startsAt").get(),
-    adminDb.collection("orders").count().get(),
-    adminDb.collection("products").select("company").get(),
-    adminDb.collection("users").where("role", "==", "company").count().get()
-  ]);
-
-  const companySet = new Set(products.docs.map((doc) => doc.get("company")).filter(Boolean));
-  const upcomingEvents = events.docs.filter((doc) => {
-    const startsAt = normalizeDateValue(doc.get("startsAt"));
-    return startsAt && new Date(startsAt).getTime() >= now;
-  }).length;
-
-  return {
-    totalUsers: users.data().count,
-    upcomingEvents,
-    totalOrders: orders.data().count,
-    registeredCompanies: Math.max(companyUsers.data().count, companySet.size)
-  };
+  });
 }
 
 export async function getUserProfileById(userId?: string): Promise<UserProfile | null> {
@@ -583,12 +633,14 @@ export async function getUserProfileById(userId?: string): Promise<UserProfile |
     return null;
   }
 
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return null;
-  }
+  return safeQuery("getUserProfileById", null, async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return null;
+    }
 
-  const doc = await adminDb.collection("users").doc(userId).get();
-  return doc.exists ? normalizeUserProfile(doc.id, doc.data() || {}) : null;
+    const doc = await adminDb.collection("users").doc(userId).get();
+    return doc.exists ? normalizeUserProfile(doc.id, doc.data() || {}) : null;
+  });
 }
 
 export async function getOrdersForUser(userId?: string): Promise<Order[]> {
@@ -596,168 +648,206 @@ export async function getOrdersForUser(userId?: string): Promise<Order[]> {
     return [];
   }
 
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return [];
-  }
+  return safeQuery("getOrdersForUser", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return [];
+    }
 
-  const snapshot = await adminDb
-    .collection("orders")
-    .where("userId", "==", userId)
-    .orderBy("createdAt", "desc")
-    .get();
+    try {
+      const snapshot = await adminDb
+        .collection("orders")
+        .where("userId", "==", userId)
+        .orderBy("createdAt", "desc")
+        .get();
 
-  return snapshot.docs.map((doc) => convertDoc<Order>(doc.id, doc.data()));
+      return snapshot.docs.map((doc) => convertDoc<Order>(doc.id, doc.data()));
+    } catch {
+      const snapshot = await adminDb.collection("orders").where("userId", "==", userId).get();
+      return snapshot.docs
+        .map((doc) => convertDoc<Order>(doc.id, doc.data()))
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    }
+  });
 }
 
 export async function getAllUsers(): Promise<UserProfile[]> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return [];
-  }
+  return safeQuery("getAllUsers", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return [];
+    }
 
-  const snapshot = await adminDb.collection("users").get();
-  return snapshot.docs
-    .map((doc) => normalizeUserProfile(doc.id, doc.data()))
-    .sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime());
+    const snapshot = await adminDb.collection("users").get();
+    return snapshot.docs
+      .map((doc) => normalizeUserProfile(doc.id, doc.data()))
+      .sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime());
+  });
 }
 
 export async function getAllOrders(): Promise<Order[]> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return [];
-  }
+  return safeQuery("getAllOrders", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return [];
+    }
 
-  const snapshot = await adminDb.collection("orders").orderBy("createdAt", "desc").get();
-  return snapshot.docs.map((doc) => convertDoc<Order>(doc.id, doc.data()));
+    try {
+      const snapshot = await adminDb.collection("orders").orderBy("createdAt", "desc").get();
+      return snapshot.docs.map((doc) => convertDoc<Order>(doc.id, doc.data()));
+    } catch {
+      const snapshot = await adminDb.collection("orders").get();
+      return snapshot.docs
+        .map((doc) => convertDoc<Order>(doc.id, doc.data()))
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    }
+  });
 }
 
 export async function getOrdersForCompany(companyId: string): Promise<Order[]> {
-  if (!isFirebaseAdminConfigured || !adminDb || !companyId) {
-    return [];
-  }
+  return safeQuery("getOrdersForCompany", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb || !companyId) {
+      return [];
+    }
 
-  try {
-    const snapshot = await adminDb
-      .collection("orders")
-      .where("companyIds", "array-contains", companyId)
-      .orderBy("createdAt", "desc")
-      .get();
+    try {
+      const snapshot = await adminDb
+        .collection("orders")
+        .where("companyIds", "array-contains", companyId)
+        .orderBy("createdAt", "desc")
+        .get();
 
-    return snapshot.docs.map((doc) => convertDoc<Order>(doc.id, doc.data()));
-  } catch {
-    // Fallback if composite index is not ready yet.
-    const snapshot = await adminDb.collection("orders").orderBy("createdAt", "desc").get();
-    return snapshot.docs
-      .map((doc) => convertDoc<Order>(doc.id, doc.data()))
-      .filter((order) => {
-        if (Array.isArray(order.companyIds) && order.companyIds.includes(companyId)) {
-          return true;
-        }
+      return snapshot.docs.map((doc) => convertDoc<Order>(doc.id, doc.data()));
+    } catch {
+      // Fallback if composite index is not ready yet.
+      try {
+        const snapshot = await adminDb.collection("orders").orderBy("createdAt", "desc").get();
+        return snapshot.docs
+          .map((doc) => convertDoc<Order>(doc.id, doc.data()))
+          .filter((order) => {
+            if (Array.isArray(order.companyIds) && order.companyIds.includes(companyId)) {
+              return true;
+            }
 
-        return (order.items || []).some((item) => item.companyId === companyId);
-      });
-  }
+            return (order.items || []).some((item) => item.companyId === companyId);
+          });
+      } catch {
+        return [];
+      }
+    }
+  });
 }
 
 export async function getPublishedJobs(): Promise<Job[]> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return [];
-  }
+  return safeQuery("getPublishedJobs", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return [];
+    }
 
-  try {
-    const snapshot = await adminDb
-      .collection("jobs")
-      .where("published", "==", true)
-      .where("status", "==", "open")
-      .orderBy("createdAt", "desc")
-      .get();
+    try {
+      const snapshot = await adminDb
+        .collection("jobs")
+        .where("published", "==", true)
+        .where("status", "==", "open")
+        .orderBy("createdAt", "desc")
+        .get();
 
-    return snapshot.docs.map((doc) => normalizeJob(doc.id, doc.data()));
-  } catch {
-    const snapshot = await adminDb.collection("jobs").get();
-    return snapshot.docs
-      .map((doc) => normalizeJob(doc.id, doc.data()))
-      .filter((job) => job.published && job.status === "open")
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
+      return snapshot.docs.map((doc) => normalizeJob(doc.id, doc.data()));
+    } catch {
+      const snapshot = await adminDb.collection("jobs").get();
+      return snapshot.docs
+        .map((doc) => normalizeJob(doc.id, doc.data()))
+        .filter((job) => job.published && job.status === "open")
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+  });
 }
 
 export async function getAllJobs(): Promise<Job[]> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return [];
-  }
+  return safeQuery("getAllJobs", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return [];
+    }
 
-  const snapshot = await adminDb.collection("jobs").get();
-  return snapshot.docs
-    .map((doc) => normalizeJob(doc.id, doc.data()))
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-}
-
-export async function getJobsByOwner(ownerId: string): Promise<Job[]> {
-  if (!isFirebaseAdminConfigured || !adminDb || !ownerId) {
-    return [];
-  }
-
-  try {
-    const snapshot = await adminDb
-      .collection("jobs")
-      .where("ownerId", "==", ownerId)
-      .orderBy("createdAt", "desc")
-      .get();
-
-    return snapshot.docs.map((doc) => normalizeJob(doc.id, doc.data()));
-  } catch {
-    const snapshot = await adminDb.collection("jobs").where("ownerId", "==", ownerId).get();
+    const snapshot = await adminDb.collection("jobs").get();
     return snapshot.docs
       .map((doc) => normalizeJob(doc.id, doc.data()))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
+  });
+}
+
+export async function getJobsByOwner(ownerId: string): Promise<Job[]> {
+  return safeQuery("getJobsByOwner", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb || !ownerId) {
+      return [];
+    }
+
+    try {
+      const snapshot = await adminDb
+        .collection("jobs")
+        .where("ownerId", "==", ownerId)
+        .orderBy("createdAt", "desc")
+        .get();
+
+      return snapshot.docs.map((doc) => normalizeJob(doc.id, doc.data()));
+    } catch {
+      const snapshot = await adminDb.collection("jobs").where("ownerId", "==", ownerId).get();
+      return snapshot.docs
+        .map((doc) => normalizeJob(doc.id, doc.data()))
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+  });
 }
 
 export async function getJobBySlug(slug: string): Promise<Job | null> {
-  if (!isFirebaseAdminConfigured || !adminDb || !slug) {
-    return null;
-  }
+  return safeQuery("getJobBySlug", null, async () => {
+    if (!isFirebaseAdminConfigured || !adminDb || !slug) {
+      return null;
+    }
 
-  const snapshot = await adminDb.collection("jobs").where("slug", "==", slug).limit(1).get();
-  if (!snapshot.empty) {
-    return normalizeJob(snapshot.docs[0].id, snapshot.docs[0].data());
-  }
+    const snapshot = await adminDb.collection("jobs").where("slug", "==", slug).limit(1).get();
+    if (!snapshot.empty) {
+      return normalizeJob(snapshot.docs[0].id, snapshot.docs[0].data());
+    }
 
-  const doc = await adminDb.collection("jobs").doc(slug).get();
-  return doc.exists ? normalizeJob(doc.id, doc.data() || {}) : null;
+    const doc = await adminDb.collection("jobs").doc(slug).get();
+    return doc.exists ? normalizeJob(doc.id, doc.data() || {}) : null;
+  });
 }
 
 export async function getJobApplicationsByOwner(ownerId: string): Promise<JobApplication[]> {
-  if (!isFirebaseAdminConfigured || !adminDb || !ownerId) {
-    return [];
-  }
+  return safeQuery("getJobApplicationsByOwner", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb || !ownerId) {
+      return [];
+    }
 
-  try {
-    const snapshot = await adminDb
-      .collection("jobApplications")
-      .where("ownerId", "==", ownerId)
-      .orderBy("createdAt", "desc")
-      .get();
+    try {
+      const snapshot = await adminDb
+        .collection("jobApplications")
+        .where("ownerId", "==", ownerId)
+        .orderBy("createdAt", "desc")
+        .get();
 
-    return snapshot.docs.map((doc) => normalizeJobApplication(doc.id, doc.data()));
-  } catch {
-    const snapshot = await adminDb
-      .collection("jobApplications")
-      .where("ownerId", "==", ownerId)
-      .get();
+      return snapshot.docs.map((doc) => normalizeJobApplication(doc.id, doc.data()));
+    } catch {
+      const snapshot = await adminDb
+        .collection("jobApplications")
+        .where("ownerId", "==", ownerId)
+        .get();
 
-    return snapshot.docs
-      .map((doc) => normalizeJobApplication(doc.id, doc.data()))
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
+      return snapshot.docs
+        .map((doc) => normalizeJobApplication(doc.id, doc.data()))
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+  });
 }
 
 export async function getAllJobApplications(): Promise<JobApplication[]> {
-  if (!isFirebaseAdminConfigured || !adminDb) {
-    return [];
-  }
+  return safeQuery("getAllJobApplications", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return [];
+    }
 
-  const snapshot = await adminDb.collection("jobApplications").get();
-  return snapshot.docs
-    .map((doc) => normalizeJobApplication(doc.id, doc.data()))
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const snapshot = await adminDb.collection("jobApplications").get();
+    return snapshot.docs
+      .map((doc) => normalizeJobApplication(doc.id, doc.data()))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  });
 }
