@@ -5,9 +5,19 @@ import { PageHero } from "@/components/ui/page-hero";
 import { SmartImage } from "@/components/ui/smart-image";
 import { getArchivedEvents, getBoardMembersByYear } from "@/lib/firebase/queries";
 import { getServerDictionary } from "@/lib/i18n/server";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import { CheckCircle2, UsersRound } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata() {
+  const dictionary = getServerDictionary();
+  return buildPageMetadata({
+    title: dictionary.nav.about,
+    description: dictionary.about.description,
+    path: "/about"
+  });
+}
 
 export default async function AboutPage() {
   const dictionary = getServerDictionary();

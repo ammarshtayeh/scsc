@@ -11,10 +11,12 @@ import {
   getArticlesForModeration,
   getDashboardStats,
   getEventRegistrationsForDashboard,
+  getContactMessages,
   getFinanceSettings,
   getHomePageSettings,
   getUpcomingEvents
 } from "@/lib/firebase/queries";
+import { ContactMessagesPanel } from "@/components/dashboard/contact-messages-panel";
 import { getServerDictionary, getServerLocale } from "@/lib/i18n/server";
 
 interface DashboardPageContentProps {
@@ -35,7 +37,8 @@ const dashboardSections: DashboardSection[] = [
   "users",
   "orders",
   "finance",
-  "moderation"
+  "moderation",
+  "messages"
 ];
 
 function normalizeDashboardSection(section?: string): DashboardSection {
@@ -53,7 +56,9 @@ export async function DashboardPageContent({ mode = "admin", section }: Dashboar
         ? "event-archive"
         : section === "jobs"
           ? "jobs"
-          : "moderation"
+          : section === "messages"
+            ? "messages"
+            : "moderation"
       : normalizeDashboardSection(section);
 
   let stats = {
@@ -112,6 +117,9 @@ export async function DashboardPageContent({ mode = "admin", section }: Dashboar
     console.error("[dashboard:load]", error instanceof Error ? error.message : error);
   }
 
+  const contactMessages = await getContactMessages();
+  const newMessagesCount = contactMessages.filter((entry) => entry.status === "new").length;
+
   return (
     <>
       <PageHero
@@ -137,6 +145,16 @@ export async function DashboardPageContent({ mode = "admin", section }: Dashboar
         labels={dictionary.dashboard}
         mode={mode}
         activeSection={activeSection}
+        newMessagesCount={newMessagesCount}
+        messagesPanel={
+          activeSection === "messages" ? (
+            <ContactMessagesPanel
+              initialMessages={contactMessages}
+              locale={locale}
+              canDelete={mode === "admin"}
+            />
+          ) : null
+        }
       />
     </>
   );

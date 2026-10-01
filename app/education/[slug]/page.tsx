@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { cache } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -7,9 +8,25 @@ import { SmartImage } from "@/components/ui/smart-image";
 import { getArticleBySlug } from "@/lib/firebase/queries";
 import { translateArticleCategory } from "@/lib/i18n/helpers";
 import { getServerDictionary, getServerLocale } from "@/lib/i18n/server";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import { formatDateShort } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+const loadArticle = cache(getArticleBySlug);
+
+export async function generateMetadata({ params }: { params: { slug: string } }) {
+  const dictionary = getServerDictionary();
+  const article = await loadArticle(params.slug);
+
+  return buildPageMetadata({
+    title: article?.title || dictionary.nav.education,
+    description: article?.excerpt || dictionary.education.description,
+    path: `/education/${encodeURIComponent(params.slug)}`,
+    image: article?.coverImage,
+    type: "article"
+  });
+}
 
 export default async function ArticleDetailPage({
   params
@@ -18,7 +35,7 @@ export default async function ArticleDetailPage({
 }) {
   const dictionary = getServerDictionary();
   const locale = getServerLocale();
-  const article = await getArticleBySlug(params.slug);
+  const article = await loadArticle(params.slug);
 
   if (!article) {
     notFound();

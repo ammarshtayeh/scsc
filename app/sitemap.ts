@@ -1,14 +1,9 @@
 import type { MetadataRoute } from "next";
 
 import { getAllArticles, getAllProducts, getUpcomingEvents } from "@/lib/firebase/queries";
+import { toAbsoluteUrl } from "@/lib/site-url";
 
-function getSiteUrl() {
-  return (process.env.NEXT_PUBLIC_APP_URL || "https://pscsc.com").replace(/\/+$/, "");
-}
-
-function toAbsoluteUrl(path: string) {
-  return `${getSiteUrl()}${path.startsWith("/") ? path : `/${path}`}`;
-}
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
@@ -44,10 +39,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9
     },
     {
+      url: toAbsoluteUrl("/jobs"),
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.8
+    },
+    {
       url: toAbsoluteUrl("/contact"),
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.7
+    },
+    {
+      url: toAbsoluteUrl("/privacy"),
+      lastModified: now,
+      changeFrequency: "yearly",
+      priority: 0.3
     }
   ];
 

@@ -14,6 +14,7 @@ import {
   Images,
   ImageUp,
   LinkIcon,
+  Mail,
   Package,
   Save,
   ShieldCheck,
@@ -24,7 +25,7 @@ import {
   Users
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { JobsManagePanel } from "@/components/jobs/jobs-manage-panel";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -110,7 +111,8 @@ export type DashboardSection =
   | "users"
   | "orders"
   | "finance"
-  | "moderation";
+  | "moderation"
+  | "messages";
 
 const productCategories: ProductCategory[] = ["Skin Care", "Body Care", "Makeup", "Masks"];
 const articleCategories: ArticleCategory[] = ["Skin Care", "Makeup", "Hair Care", "Others"];
@@ -568,8 +570,12 @@ export function DashboardShell({
   locale,
   labels,
   mode = "admin",
-  activeSection = "overview"
+  activeSection = "overview",
+  messagesPanel,
+  newMessagesCount = 0
 }: {
+  messagesPanel?: ReactNode;
+  newMessagesCount?: number;
   stats: DashboardStats;
   events: EventItem[];
   archivedEvents: ArchivedEvent[];
@@ -1420,6 +1426,12 @@ export function DashboardShell({
         title: labels.moderation,
         metric: localCounts.pendingArticles,
         icon: CheckCircle2
+      },
+      {
+        href: "/admin/messages",
+        title: locale === "ar" ? "رسائل التواصل" : "Contact messages",
+        metric: newMessagesCount,
+        icon: Mail
       }
     ],
     [
@@ -1429,8 +1441,10 @@ export function DashboardShell({
       editableHomeSlides.length,
       financeLabels.finance,
       labels,
+      locale,
       localFinanceSettings.balance,
-      localCounts
+      localCounts,
+      newMessagesCount
     ]
   );
 
@@ -1576,6 +1590,8 @@ export function DashboardShell({
         <Sidebar />
 
         <div className="space-y-6">
+          {activeSection === "messages" ? messagesPanel : null}
+
           {showOverview ? (
             <>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

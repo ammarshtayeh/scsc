@@ -231,6 +231,19 @@ export interface ContactMessagePayload {
   name: string;
   email: string;
   message: string;
+  website?: string;
+}
+
+export type ContactMessageStatus = "new" | "handled";
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  message: string;
+  status: ContactMessageStatus;
+  createdAt: string;
+  handledAt?: string | null;
 }
 
 export interface AppSessionUser {

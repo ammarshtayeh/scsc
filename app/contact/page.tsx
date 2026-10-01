@@ -2,6 +2,16 @@ import { ContactForm } from "@/components/contact/contact-form";
 import { Card } from "@/components/ui/card";
 import { PageHero } from "@/components/ui/page-hero";
 import { getServerDictionary } from "@/lib/i18n/server";
+import { buildPageMetadata } from "@/lib/page-metadata";
+
+export function generateMetadata() {
+  const dictionary = getServerDictionary();
+  return buildPageMetadata({
+    title: dictionary.nav.contact,
+    description: dictionary.contact.description,
+    path: "/contact"
+  });
+}
 
 export default function ContactPage() {
   const dictionary = getServerDictionary();

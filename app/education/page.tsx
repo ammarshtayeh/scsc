@@ -2,8 +2,18 @@ import { ArticleBrowser } from "@/components/sections/article-browser";
 import { PageHero } from "@/components/ui/page-hero";
 import { getAllArticles } from "@/lib/firebase/queries";
 import { getServerDictionary } from "@/lib/i18n/server";
+import { buildPageMetadata } from "@/lib/page-metadata";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata() {
+  const dictionary = getServerDictionary();
+  return buildPageMetadata({
+    title: dictionary.nav.education,
+    description: dictionary.education.description,
+    path: "/education"
+  });
+}
 
 export default async function EducationPage() {
   const dictionary = getServerDictionary();

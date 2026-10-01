@@ -10,9 +10,19 @@ import { SmartImage } from "@/components/ui/smart-image";
 import { getUpcomingEvents } from "@/lib/firebase/queries";
 import { translateEventTag } from "@/lib/i18n/helpers";
 import { getServerDictionary, getServerLocale } from "@/lib/i18n/server";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import { formatDateTime, safeNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata() {
+  const dictionary = getServerDictionary();
+  return buildPageMetadata({
+    title: dictionary.nav.events,
+    description: dictionary.events.description,
+    path: "/events"
+  });
+}
 
 const PAGE_SIZE = 9;
 

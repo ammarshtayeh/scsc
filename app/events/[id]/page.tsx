@@ -1,5 +1,6 @@
 import { CalendarRange, MapPin, Users } from "lucide-react";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 
 import { EventRegisterCard } from "@/components/sections/event-register-card";
 import { Badge } from "@/components/ui/badge";
@@ -9,9 +10,24 @@ import { SmartImage } from "@/components/ui/smart-image";
 import { getEventBySlug } from "@/lib/firebase/queries";
 import { translateEventTag } from "@/lib/i18n/helpers";
 import { getServerDictionary, getServerLocale } from "@/lib/i18n/server";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import { formatDateTime, formatNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+const loadEvent = cache(getEventBySlug);
+
+export async function generateMetadata({ params }: { params: { id: string } }) {
+  const dictionary = getServerDictionary();
+  const event = await loadEvent(params.id);
+
+  return buildPageMetadata({
+    title: event?.title || dictionary.nav.events,
+    description: event?.excerpt || dictionary.events.description,
+    path: `/events/${encodeURIComponent(params.id)}`,
+    image: event?.coverImage
+  });
+}
 
 export default async function EventDetailPage({
   params
@@ -20,7 +36,7 @@ export default async function EventDetailPage({
 }) {
   const dictionary = getServerDictionary();
   const locale = getServerLocale();
-  const event = await getEventBySlug(params.id);
+  const event = await loadEvent(params.id);
 
   if (!event) {
     notFound();

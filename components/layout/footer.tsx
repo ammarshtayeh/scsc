@@ -70,6 +70,12 @@ export function Footer() {
           <p className="mt-3 text-pretty text-sm text-[#445061] dark:text-[#d7e1f1]">
             {dictionary.footer.membershipText}
           </p>
+          <Link
+            href="/privacy"
+            className="mt-4 inline-block text-sm font-medium text-brand-primary underline underline-offset-4 dark:text-brand-accent"
+          >
+            {dictionary.localeName === "العربية" ? "سياسة الخصوصية وشروط الاستخدام" : "Privacy policy & terms"}
+          </Link>
         </div>
       </div>
     </footer>

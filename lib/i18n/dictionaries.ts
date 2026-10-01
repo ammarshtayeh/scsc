@@ -240,7 +240,7 @@ export const dictionaries = {
       eyebrow: "Contact",
       title: "Reach the association team.",
       description:
-        "Use the contact form for collaborations, questions, workshop requests, or general support. The form is designed for clear validation and email delivery through Firebase Cloud Functions.",
+        "Use the contact form for collaborations, questions, workshop requests, or general support. The association team reviews every message and replies by email.",
       cardTitle: "Let's talk",
       cardText:
         "We welcome questions from members, guests, faculty, and brand partners interested in education, events, or student collaboration.",
@@ -305,7 +305,7 @@ export const dictionaries = {
         "Create your member account to unlock event registration, profile tools, QR verification, order history, and member pricing.",
       loginCardTitle: "Login",
       loginCardText:
-        "Sign in with your association account. Admin and moderator access is controlled by Firebase roles.",
+        "Sign in with your association account to access your membership, orders, and applications.",
       emailLabel: "Email",
       passwordLabel: "Password",
       passwordPlaceholder: "Enter your password",
@@ -315,7 +315,7 @@ export const dictionaries = {
       orEmail: "or email",
       forgotPassword: "Forgot password?",
       enterEmailFirst: "Enter your email first to reset your password.",
-      resetNeedsFirebase: "Password reset email requires Firebase configuration.",
+      resetNeedsFirebase: "Password reset is temporarily unavailable. Please contact the association.",
       resetSent: "Password reset email sent.",
       resetError: "Unable to send reset email.",
       lockoutPrefix: "Too many failed attempts. Try again after",
@@ -826,7 +826,7 @@ export const dictionaries = {
       eyebrow: "تواصل معنا",
       title: "تواصل مع فريق الجمعية.",
       description:
-        "استخدم نموذج التواصل للاستفسارات والتعاون وطلبات الورش أو الدعم العام. النموذج مصمم مع تحقق واضح وإرسال بريد عبر دوال فايربيس السحابية.",
+        "استخدم نموذج التواصل للاستفسارات والتعاون وطلبات الورش أو الدعم العام. فريق الجمعية يراجع كل رسالة ويرد عليها بالبريد الإلكتروني.",
       cardTitle: "لنتحدث",
       cardText:
         "نرحب بأسئلة الأعضاء والزوار وأعضاء الهيئة التدريسية والشركاء المهتمين بالتعليم والفعاليات أو التعاون الطلابي.",
@@ -891,7 +891,7 @@ export const dictionaries = {
         "أنشئ حساب العضوية للوصول إلى التسجيل في الفعاليات وأدوات الملف الشخصي والتحقق برمز الاستجابة السريعة وسجل الطلبات وأسعار الأعضاء.",
       loginCardTitle: "تسجيل الدخول",
       loginCardText:
-        "سجّل الدخول بحساب الجمعية. صلاحيات الإدارة والمراجعة تُدار من أدوار فايربيس.",
+        "سجّل الدخول بحساب الجمعية للوصول إلى عضويتك وطلباتك وطلبات التوظيف.",
       emailLabel: "البريد الإلكتروني",
       passwordLabel: "كلمة المرور",
       passwordPlaceholder: "أدخل كلمة المرور",
@@ -901,7 +901,7 @@ export const dictionaries = {
       orEmail: "أو البريد",
       forgotPassword: "نسيت كلمة المرور؟",
       enterEmailFirst: "أدخل بريدك الإلكتروني أولًا لإرسال إعادة تعيين كلمة المرور.",
-      resetNeedsFirebase: "إرسال بريد إعادة التعيين يتطلب إعداد فايربيس.",
+      resetNeedsFirebase: "استعادة كلمة المرور غير متاحة مؤقتًا. تواصل مع الجمعية.",
       resetSent: "تم إرسال بريد إعادة تعيين كلمة المرور.",
       resetError: "تعذر إرسال بريد إعادة التعيين.",
       lockoutPrefix: "عدد كبير من المحاولات الفاشلة. حاول مرة أخرى بعد",

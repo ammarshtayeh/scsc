@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateJobApplicationStatus = exports.submitJobApplication = exports.deleteJob = exports.upsertJob = exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.deleteOrder = exports.updateCompanyOrderFulfillment = exports.updateOrderStatus = exports.deleteUserAdmin = exports.sendUserPasswordResetAdmin = exports.createUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.updateFinanceSettings = exports.upsertHomeSettings = exports.deleteArchivedEvent = exports.upsertArchivedEvent = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
+exports.updateJobApplicationStatus = exports.submitJobApplication = exports.deleteJob = exports.upsertJob = exports.deleteContactMessage = exports.updateContactMessageStatus = exports.moderateArticle = exports.removeEventRegistration = exports.setEventRegistrationCheckIn = exports.deleteArticle = exports.upsertArticle = exports.deleteOrder = exports.updateCompanyOrderFulfillment = exports.updateOrderStatus = exports.deleteUserAdmin = exports.sendUserPasswordResetAdmin = exports.createUserAdmin = exports.updateUserAdmin = exports.deleteBoardMember = exports.upsertBoardMember = exports.deleteProduct = exports.upsertProduct = exports.updateFinanceSettings = exports.upsertHomeSettings = exports.deleteArchivedEvent = exports.upsertArchivedEvent = exports.deleteEvent = exports.upsertEvent = exports.setUserRole = exports.verifyMembership = exports.issueMembershipQrPass = exports.sendContactEmail = void 0;
 const crypto_1 = require("crypto");
 const https_1 = require("firebase-functions/v2/https");
 const nodemailer_1 = __importDefault(require("nodemailer"));
@@ -269,15 +269,59 @@ async function sendOrderStatusEmail(orderId, status) {
         text: `Hello ${userData.displayName || "SCSC member"},\n\nYour order ${orderId} status is now ${status}.\n\nTotal: ${(_a = orderData.total) !== null && _a !== void 0 ? _a : ""}\n\nSCSC`
     });
 }
+const CONTACT_LIMITS = {
+    nameMax: 100,
+    emailMax: 200,
+    messageMin: 5,
+    messageMax: 3000,
+    perWindow: 5,
+    windowMs: 60 * 60 * 1000
+};
+async function enforceContactRateLimit(key) {
+    const db = getDb();
+    const ref = db.collection("rateLimits").doc(`contact_${key}`);
+    const now = Date.now();
+    await db.runTransaction(async (transaction) => {
+        var _a, _b;
+        const snap = await transaction.get(ref);
+        const previous = Array.isArray((_a = snap.data()) === null || _a === void 0 ? void 0 : _a.hits) ? (_b = snap.data()) === null || _b === void 0 ? void 0 : _b.hits : [];
+        const recent = previous.filter((hit) => typeof hit === "number" && now - hit < CONTACT_LIMITS.windowMs);
+        if (recent.length >= CONTACT_LIMITS.perWindow) {
+            throw new https_1.HttpsError("resource-exhausted", "Too many messages. Please try again later.");
+        }
+        transaction.set(ref, { hits: [...recent, now], updatedAt: new Date(now).toISOString() });
+    });
+}
 exports.sendContactEmail = (0, https_1.onCall)(publicCallableOptions, async (request) => {
-    const { name, email, message } = request.data;
+    var _a, _b;
+    const data = (request.data || {});
+    const name = typeof data.name === "string" ? data.name.trim() : "";
+    const email = typeof data.email === "string" ? data.email.trim().toLowerCase() : "";
+    const message = typeof data.message === "string" ? data.message.trim() : "";
+    // Honeypot: bots fill hidden fields; pretend success without storing anything.
+    if (typeof data.website === "string" && data.website.trim()) {
+        return { success: true };
+    }
     if (!name || !email || !message) {
         throw new https_1.HttpsError("invalid-argument", "Name, email, and message are required.");
     }
+    if (name.length > CONTACT_LIMITS.nameMax ||
+        email.length > CONTACT_LIMITS.emailMax ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        throw new https_1.HttpsError("invalid-argument", "Please provide a valid name and email.");
+    }
+    if (message.length < CONTACT_LIMITS.messageMin || message.length > CONTACT_LIMITS.messageMax) {
+        throw new https_1.HttpsError("invalid-argument", `Message must be between ${CONTACT_LIMITS.messageMin} and ${CONTACT_LIMITS.messageMax} characters.`);
+    }
+    const ip = ((_a = request.rawRequest) === null || _a === void 0 ? void 0 : _a.ip) || "unknown";
+    const rateKey = (0, crypto_1.createHash)("sha256").update(ip).digest("hex").slice(0, 32);
+    await enforceContactRateLimit(rateKey);
     await getDb().collection("contacts").add({
         name,
         email,
         message,
+        status: "new",
+        userId: ((_b = request.auth) === null || _b === void 0 ? void 0 : _b.uid) || null,
         createdAt: new Date().toISOString()
     });
     const transporter = createTransport();
@@ -1285,6 +1329,36 @@ exports.moderateArticle = (0, https_1.onCall)(publicCallableOptions, async (requ
             createdAt: moderatedAt
         });
     });
+    return { success: true };
+});
+const CONTACT_STATUSES = ["new", "handled"];
+exports.updateContactMessageStatus = (0, https_1.onCall)(publicCallableOptions, async (request) => {
+    var _a;
+    const callerRole = await resolveCallerRole(request);
+    if (callerRole !== "admin" && callerRole !== "moderator") {
+        throw new https_1.HttpsError("permission-denied", "Only admins or moderators can perform this action.");
+    }
+    const { id, status } = (request.data || {});
+    if (!id || !CONTACT_STATUSES.includes(status)) {
+        throw new https_1.HttpsError("invalid-argument", "Message ID and a valid status are required.");
+    }
+    await getDb().collection("contacts").doc(id).set({
+        status,
+        handledAt: status === "handled" ? new Date().toISOString() : null,
+        handledBy: status === "handled" ? ((_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid) || null : null
+    }, { merge: true });
+    return { success: true };
+});
+exports.deleteContactMessage = (0, https_1.onCall)(publicCallableOptions, async (request) => {
+    const callerRole = await resolveCallerRole(request);
+    if (callerRole !== "admin") {
+        throw new https_1.HttpsError("permission-denied", "Only admins can delete messages.");
+    }
+    const { id } = (request.data || {});
+    if (!id) {
+        throw new https_1.HttpsError("invalid-argument", "Message ID is required.");
+    }
+    await getDb().collection("contacts").doc(id).delete();
     return { success: true };
 });
 const JOB_EMPLOYMENT_TYPES = ["full-time", "part-time", "internship", "contract"];

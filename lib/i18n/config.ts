@@ -1,6 +1,6 @@
 export const LOCALE_COOKIE_NAME = "scsc-locale";
 export const LOCALES = ["en", "ar"] as const;
-export const DEFAULT_LOCALE = "en";
+export const DEFAULT_LOCALE = "ar";
 
 export type AppLocale = (typeof LOCALES)[number];
 export type AppDirection = "ltr" | "rtl";

@@ -8,6 +8,7 @@ import type {
   ArchivedEvent,
   BoardMember,
   ContactMessagePayload,
+  ContactMessageStatus,
   EventItem,
   EventRegistration,
   FinanceSettings,
@@ -125,6 +126,18 @@ async function callAdminFunction<Input, Output = { success: boolean; id?: string
 export async function sendContactEmail(payload: ContactMessagePayload) {
   const callable = httpsCallable(requireFunctions(), "sendContactEmail");
   const result = await callable(payload);
+  return result.data;
+}
+
+export async function updateContactMessageStatusAdmin(input: { id: string; status: ContactMessageStatus }) {
+  const callable = httpsCallable(requireFunctions(), "updateContactMessageStatus");
+  const result = await callable(input);
+  return result.data;
+}
+
+export async function deleteContactMessageAdmin(id: string) {
+  const callable = httpsCallable(requireFunctions(), "deleteContactMessage");
+  const result = await callable({ id });
   return result.data;
 }
 

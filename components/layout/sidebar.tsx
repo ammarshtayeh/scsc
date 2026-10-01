@@ -15,6 +15,7 @@ export function Sidebar() {
       ? "/moderator"
       : "/dashboard";
   const isModeratorPanel = basePath === "/moderator";
+  const isArabic = dictionary.localeName === "العربية";
   const dashboardLinks = isModeratorPanel
     ? [
         { href: "/moderator", label: dictionary.dashboard.overview },
@@ -23,7 +24,8 @@ export function Sidebar() {
           label: dictionary.localeName === "العربية" ? "أرشيف الفعاليات" : "Events archive"
         },
         { href: "/moderator/jobs#jobs", label: dictionary.dashboard.jobManagement || "Jobs" },
-        { href: "/moderator/moderation#moderation", label: dictionary.dashboard.moderation }
+        { href: "/moderator/moderation#moderation", label: dictionary.dashboard.moderation },
+        { href: "/moderator/messages#messages", label: isArabic ? "رسائل التواصل" : "Contact messages" }
       ]
     : [
         { href: basePath, label: dictionary.dashboard.overview },
@@ -41,7 +43,8 @@ export function Sidebar() {
         { href: `${basePath}/users#users`, label: dictionary.dashboard.userManagement },
         { href: `${basePath}/orders#orders`, label: dictionary.dashboard.orders },
         { href: `${basePath}/finance#finance`, label: dictionary.localeName === "العربية" ? "الحسابات" : "Finance" },
-        { href: `${basePath}/moderation#moderation`, label: dictionary.dashboard.moderation }
+        { href: `${basePath}/moderation#moderation`, label: dictionary.dashboard.moderation },
+        { href: `${basePath}/messages#messages`, label: isArabic ? "رسائل التواصل" : "Contact messages" }
       ];
 
   return (

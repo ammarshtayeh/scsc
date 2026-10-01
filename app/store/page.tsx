@@ -3,8 +3,18 @@ import { StoreSpotlight } from "@/components/store/store-spotlight";
 import { PageHero } from "@/components/ui/page-hero";
 import { getAllProducts, getHomePageSettings } from "@/lib/firebase/queries";
 import { getServerDictionary, getServerLocale } from "@/lib/i18n/server";
+import { buildPageMetadata } from "@/lib/page-metadata";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata() {
+  const dictionary = getServerDictionary();
+  return buildPageMetadata({
+    title: dictionary.nav.store,
+    description: dictionary.store.description,
+    path: "/store"
+  });
+}
 
 export default async function StorePage() {
   const dictionary = getServerDictionary();

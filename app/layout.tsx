@@ -15,6 +15,7 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ToastProvider } from "@/components/ui/toast";
 import { getDirection } from "@/lib/i18n/config";
 import { getServerDictionary, getServerLocale } from "@/lib/i18n/server";
+import { getSiteUrl } from "@/lib/site-url";
 
 import "./globals.css";
 
@@ -45,18 +46,32 @@ const tajawal = Tajawal({
 export function generateMetadata(): Metadata {
   try {
     const dictionary = getServerDictionary();
-    const metadataBase = process.env.NEXT_PUBLIC_APP_URL
-      ? new URL(process.env.NEXT_PUBLIC_APP_URL)
-      : undefined;
+    const locale = getServerLocale();
+    const metadataBase = new URL(getSiteUrl());
+    const fullTitle = `${dictionary.site.title} | ${dictionary.site.university}`;
 
     return {
       metadataBase,
       title: {
-        default: dictionary.site.title,
+        default: fullTitle,
         template: `%s | ${dictionary.site.title}`
       },
       description: dictionary.site.description,
+      applicationName: dictionary.site.title,
       manifest: "/manifest.webmanifest",
+      openGraph: {
+        type: "website",
+        siteName: dictionary.site.title,
+        title: fullTitle,
+        description: dictionary.site.description,
+        locale: locale === "ar" ? "ar_PS" : "en_US",
+        alternateLocale: locale === "ar" ? ["en_US"] : ["ar_PS"]
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: fullTitle,
+        description: dictionary.site.description
+      },
       appleWebApp: {
         capable: true,
         statusBarStyle: "default",

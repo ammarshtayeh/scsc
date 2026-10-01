@@ -359,21 +359,81 @@ async function sendOrderStatusEmail(orderId: string, status: OrderStatus) {
   });
 }
 
+const CONTACT_LIMITS = {
+  nameMax: 100,
+  emailMax: 200,
+  messageMin: 5,
+  messageMax: 3000,
+  perWindow: 5,
+  windowMs: 60 * 60 * 1000
+};
+
+async function enforceContactRateLimit(key: string) {
+  const db = getDb();
+  const ref = db.collection("rateLimits").doc(`contact_${key}`);
+  const now = Date.now();
+
+  await db.runTransaction(async (transaction) => {
+    const snap = await transaction.get(ref);
+    const previous = Array.isArray(snap.data()?.hits) ? (snap.data()?.hits as number[]) : [];
+    const recent = previous.filter((hit) => typeof hit === "number" && now - hit < CONTACT_LIMITS.windowMs);
+
+    if (recent.length >= CONTACT_LIMITS.perWindow) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "Too many messages. Please try again later."
+      );
+    }
+
+    transaction.set(ref, { hits: [...recent, now], updatedAt: new Date(now).toISOString() });
+  });
+}
+
 export const sendContactEmail = onCall(publicCallableOptions, async (request) => {
-  const { name, email, message } = request.data as {
-    name?: string;
-    email?: string;
-    message?: string;
+  const data = (request.data || {}) as {
+    name?: unknown;
+    email?: unknown;
+    message?: unknown;
+    website?: unknown;
   };
+  const name = typeof data.name === "string" ? data.name.trim() : "";
+  const email = typeof data.email === "string" ? data.email.trim().toLowerCase() : "";
+  const message = typeof data.message === "string" ? data.message.trim() : "";
+
+  // Honeypot: bots fill hidden fields; pretend success without storing anything.
+  if (typeof data.website === "string" && data.website.trim()) {
+    return { success: true };
+  }
 
   if (!name || !email || !message) {
     throw new HttpsError("invalid-argument", "Name, email, and message are required.");
   }
 
+  if (
+    name.length > CONTACT_LIMITS.nameMax ||
+    email.length > CONTACT_LIMITS.emailMax ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)
+  ) {
+    throw new HttpsError("invalid-argument", "Please provide a valid name and email.");
+  }
+
+  if (message.length < CONTACT_LIMITS.messageMin || message.length > CONTACT_LIMITS.messageMax) {
+    throw new HttpsError(
+      "invalid-argument",
+      `Message must be between ${CONTACT_LIMITS.messageMin} and ${CONTACT_LIMITS.messageMax} characters.`
+    );
+  }
+
+  const ip = request.rawRequest?.ip || "unknown";
+  const rateKey = createHash("sha256").update(ip).digest("hex").slice(0, 32);
+  await enforceContactRateLimit(rateKey);
+
   await getDb().collection("contacts").add({
     name,
     email,
     message,
+    status: "new",
+    userId: request.auth?.uid || null,
     createdAt: new Date().toISOString()
   });
 
@@ -1851,6 +1911,46 @@ export const moderateArticle = onCall(publicCallableOptions, async (request) => 
     });
   });
 
+  return { success: true };
+});
+
+const CONTACT_STATUSES = ["new", "handled"] as const;
+
+export const updateContactMessageStatus = onCall(publicCallableOptions, async (request) => {
+  const callerRole = await resolveCallerRole(request);
+  if (callerRole !== "admin" && callerRole !== "moderator") {
+    throw new HttpsError("permission-denied", "Only admins or moderators can perform this action.");
+  }
+
+  const { id, status } = (request.data || {}) as { id?: string; status?: string };
+  if (!id || !CONTACT_STATUSES.includes(status as (typeof CONTACT_STATUSES)[number])) {
+    throw new HttpsError("invalid-argument", "Message ID and a valid status are required.");
+  }
+
+  await getDb().collection("contacts").doc(id).set(
+    {
+      status,
+      handledAt: status === "handled" ? new Date().toISOString() : null,
+      handledBy: status === "handled" ? request.auth?.uid || null : null
+    },
+    { merge: true }
+  );
+
+  return { success: true };
+});
+
+export const deleteContactMessage = onCall(publicCallableOptions, async (request) => {
+  const callerRole = await resolveCallerRole(request);
+  if (callerRole !== "admin") {
+    throw new HttpsError("permission-denied", "Only admins can delete messages.");
+  }
+
+  const { id } = (request.data || {}) as { id?: string };
+  if (!id) {
+    throw new HttpsError("invalid-argument", "Message ID is required.");
+  }
+
+  await getDb().collection("contacts").doc(id).delete();
   return { success: true };
 });
 

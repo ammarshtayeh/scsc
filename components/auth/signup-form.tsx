@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -268,7 +269,14 @@ export function SignupForm() {
             placeholder={dictionary.auth.signupPasswordPlaceholder}
           />
         </div>
-        <div className="md:col-span-2">
+        <div className="space-y-3 md:col-span-2">
+          <p className="text-xs leading-6 text-slate-500">
+            {locale === "ar" ? "بإنشاء الحساب فإنك توافق على " : "By creating an account you agree to the "}
+            <Link href="/privacy" className="font-medium text-brand-primary underline underline-offset-4">
+              {locale === "ar" ? "سياسة الخصوصية وشروط الاستخدام" : "privacy policy and terms of use"}
+            </Link>
+            .
+          </p>
           <Button type="submit" loading={loading}>
             {dictionary.auth.createAccount}
           </Button>

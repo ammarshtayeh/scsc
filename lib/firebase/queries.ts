@@ -8,6 +8,7 @@ import type {
   Article,
   ArchivedEvent,
   BoardMember,
+  ContactMessage,
   DashboardStats,
   EventRegistration,
   EventItem,
@@ -298,6 +299,18 @@ function sortByDate<T extends { publishedAt?: string; startsAt?: string; created
   return [...items].sort((a, b) => {
     return new Date(b[field] || 0).getTime() - new Date(a[field] || 0).getTime();
   });
+}
+
+function normalizeContactMessage(id: string, data: Record<string, unknown>): ContactMessage {
+  return {
+    id,
+    name: cleanString(data.name),
+    email: cleanString(data.email),
+    message: cleanString(data.message),
+    status: data.status === "handled" ? "handled" : "new",
+    createdAt: normalizeDateValue(data.createdAt) || new Date(0).toISOString(),
+    handledAt: normalizeDateValue(data.handledAt) || null
+  };
 }
 
 function convertDoc<T>(id: string, data: Record<string, unknown>) {
@@ -836,6 +849,19 @@ export async function getJobApplicationsByOwner(ownerId: string): Promise<JobApp
         .map((doc) => normalizeJobApplication(doc.id, doc.data()))
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
+  });
+}
+
+export async function getContactMessages(): Promise<ContactMessage[]> {
+  return safeQuery("getContactMessages", [], async () => {
+    if (!isFirebaseAdminConfigured || !adminDb) {
+      return [];
+    }
+
+    const snapshot = await adminDb.collection("contacts").get();
+    return snapshot.docs
+      .map((doc) => normalizeContactMessage(doc.id, doc.data()))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   });
 }
 
