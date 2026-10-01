@@ -2,21 +2,7 @@
 
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { motion } from "framer-motion";
-import type { ComponentType } from "react";
 import { useEffect, useMemo, useState } from "react";
-import {
-  CalendarDays,
-  Crown,
-  FlaskConical,
-  Handshake,
-  Lightbulb,
-  Megaphone,
-  Network,
-  ShieldCheck,
-  UserRoundCheck,
-  UsersRound,
-  WalletCards
-} from "lucide-react";
 
 import { SmartImage } from "@/components/ui/smart-image";
 import { db } from "@/lib/firebase/firebase";
@@ -31,16 +17,6 @@ interface OrganizationStructureProps {
   roles: readonly string[];
   members?: BoardMember[];
 }
-
-const leadershipIcons = [Crown, ShieldCheck, WalletCards];
-const committeeIcons = [
-  Megaphone,
-  Handshake,
-  CalendarDays,
-  Lightbulb,
-  UserRoundCheck,
-  FlaskConical
-];
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -83,14 +59,12 @@ function MemberPhotoCard({
   name,
   image,
   index,
-  Icon,
   featured = false
 }: {
   role: string;
   name: string;
   image?: string;
   index: number;
-  Icon: ComponentType<{ className?: string }>;
   featured?: boolean;
 }) {
   const hasImage = Boolean(image);
@@ -137,18 +111,15 @@ function MemberPhotoCard({
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#06172b]/48 via-transparent to-transparent opacity-80" />
       </div>
-      <div className="flex min-h-[132px] items-center justify-between gap-4 border-t border-white/10 bg-[#06172b]/68 p-4 sm:p-5">
+      <div className="flex min-h-[132px] items-center border-t border-white/10 bg-[#06172b]/68 p-4 sm:p-5">
         <div className="min-w-0">
-          <h3 className="break-words font-heading text-lg font-bold leading-7 text-white sm:text-xl">
+          <h3 className="break-words font-heading text-xl font-bold leading-8 text-white sm:text-2xl">
             {name}
           </h3>
-          <p className="mt-2 break-words text-sm font-semibold leading-6 text-white/68">
+          <p className="mt-2 break-words text-base font-semibold leading-7 text-white/80 sm:text-lg">
             {role}
           </p>
         </div>
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-accent text-brand-primary shadow-[0_12px_26px_rgba(242,195,24,0.2)]">
-          <Icon className="h-5 w-5" />
-        </span>
       </div>
     </motion.div>
   );
@@ -248,10 +219,7 @@ export function OrganizationStructure({
           variants={cardVariants}
           className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end"
         >
-          <div className="flex max-w-3xl items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-brand-accent shadow-[0_14px_32px_rgba(0,0,0,0.18)]">
-              <Network className="h-6 w-6" />
-            </div>
+          <div className="max-w-3xl">
             <div>
               <h2 className="font-heading text-3xl font-bold leading-tight sm:text-4xl">
                 {title}
@@ -269,7 +237,7 @@ export function OrganizationStructure({
               <div>
                 <motion.p
                   variants={cardVariants}
-                  className="mb-4 text-xs font-bold uppercase tracking-[0.22em] text-white/62"
+                  className="mb-4 text-base font-bold text-white/80"
                 >
                   {leadershipTitle}
                 </motion.p>
@@ -281,7 +249,6 @@ export function OrganizationStructure({
                       name={member.name}
                       image={member.image}
                       index={index}
-                      Icon={leadershipIcons[index] || UsersRound}
                       featured
                     />
                   ))}
@@ -292,7 +259,7 @@ export function OrganizationStructure({
                 <div>
                   <motion.p
                     variants={cardVariants}
-                    className="mb-4 text-xs font-bold uppercase tracking-[0.22em] text-white/62"
+                    className="mb-4 text-base font-bold text-white/80"
                   >
                     {committeesTitle}
                   </motion.p>
@@ -301,7 +268,6 @@ export function OrganizationStructure({
                     className="grid gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
                   >
                     {committeeMembers.map((member, index) => {
-                      const Icon = committeeIcons[index] || UsersRound;
                       const memberIndex = index + leadershipRoles.length;
                       return (
                         <MemberPhotoCard
@@ -310,7 +276,6 @@ export function OrganizationStructure({
                           name={member.name}
                           image={member.image}
                           index={memberIndex}
-                          Icon={Icon}
                         />
                       );
                     })}
