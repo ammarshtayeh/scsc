@@ -8,6 +8,7 @@ import { useLocale } from "@/hooks/useLocale";
 export function Footer() {
   const { dictionary } = useLocale();
   const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL;
+  const isArabic = dictionary.localeName === "العربية";
   const navLinks = [
     { href: "/", label: dictionary.nav.home },
     { href: "/about", label: dictionary.nav.about },
@@ -74,9 +75,25 @@ export function Footer() {
             href="/privacy"
             className="mt-4 inline-block text-sm font-medium text-brand-primary underline underline-offset-4 dark:text-brand-accent"
           >
-            {dictionary.localeName === "العربية" ? "سياسة الخصوصية وشروط الاستخدام" : "Privacy policy & terms"}
+            {isArabic ? "سياسة الخصوصية وشروط الاستخدام" : "Privacy policy & terms"}
           </Link>
         </div>
+      </div>
+      <div className="mx-auto mt-3 flex max-w-7xl flex-wrap items-center justify-center gap-x-2 gap-y-1 px-4 text-center text-xs text-[#5b6677] dark:text-[#aebbd0]">
+        <span>© {new Date().getFullYear()} SCSC-NNU</span>
+        <span aria-hidden="true">·</span>
+        <span>
+          {isArabic ? "تم تطوير الموقع بواسطة عمار اشتية" : "Developed by Ammar Shtayeh"}
+          {" — "}
+          <a
+            href="https://www.instagram.com/zeriv.tech"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-brand-primary underline-offset-4 hover:underline dark:text-brand-accent"
+          >
+            ZerivTech
+          </a>
+        </span>
       </div>
     </footer>
   );
