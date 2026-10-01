@@ -31,6 +31,9 @@ export const PRODUCT_CATEGORIES: ProductCategory[] = [
 
 export const ROLES: Role[] = ["admin", "moderator", "user"];
 
+export const SOCIETY_INSTAGRAM_URL =
+  process.env.NEXT_PUBLIC_INSTAGRAM_URL?.trim() || "https://www.instagram.com/scscnnu";
+
 export const MEMBER_DISCOUNT_RATE = 0.12;
 export const STORE_CURRENCY = "ILS";
 export const LOGIN_LOCK_DURATION_MINUTES = 15;

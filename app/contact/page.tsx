@@ -1,6 +1,7 @@
 import { ContactForm } from "@/components/contact/contact-form";
 import { Card } from "@/components/ui/card";
 import { PageHero } from "@/components/ui/page-hero";
+import { SOCIETY_INSTAGRAM_URL } from "@/lib/constants";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { buildPageMetadata } from "@/lib/page-metadata";
 
@@ -15,7 +16,7 @@ export function generateMetadata() {
 
 export default function ContactPage() {
   const dictionary = getServerDictionary();
-  const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL;
+  const instagramUrl = SOCIETY_INSTAGRAM_URL;
 
   return (
     <>

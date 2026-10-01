@@ -1,13 +1,14 @@
 "use client";
 
+import { Instagram } from "lucide-react";
 import Link from "next/link";
 
 import { SiteLogo } from "@/components/ui/site-logo";
 import { useLocale } from "@/hooks/useLocale";
+import { SOCIETY_INSTAGRAM_URL } from "@/lib/constants";
 
 export function Footer() {
   const { dictionary } = useLocale();
-  const instagramUrl = process.env.NEXT_PUBLIC_INSTAGRAM_URL;
   const isArabic = dictionary.localeName === "العربية";
   const navLinks = [
     { href: "/", label: dictionary.nav.home },
@@ -50,16 +51,17 @@ export function Footer() {
           </h4>
           <div className="mt-3 space-y-2 text-sm text-[#445061] dark:text-[#d7e1f1]">
             <p className="break-all">scsc@najah.edu</p>
-            {instagramUrl ? (
-              <a
-                href={instagramUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="block break-words font-medium text-brand-primary underline underline-offset-4 dark:text-brand-accent"
-              >
-                {dictionary.footer.instagram}
-              </a>
-            ) : null}
+            <a
+              href={SOCIETY_INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 break-words font-medium text-brand-primary underline-offset-4 hover:underline dark:text-brand-accent"
+            >
+              <Instagram className="h-4 w-4 shrink-0" />
+              <span>
+                {dictionary.footer.instagram} <span dir="ltr">@scscnnu</span>
+              </span>
+            </a>
             <p className="text-pretty">{dictionary.footer.location}</p>
             <p className="text-pretty">{dictionary.footer.officeHours}</p>
           </div>
@@ -79,7 +81,7 @@ export function Footer() {
           </Link>
         </div>
       </div>
-      <div className="mx-auto mt-3 flex max-w-7xl flex-wrap items-center justify-center gap-x-2 gap-y-1 px-4 text-center text-xs text-[#5b6677] dark:text-[#aebbd0]">
+      <div className="mx-auto mt-4 flex max-w-7xl flex-wrap items-center justify-center gap-x-3 gap-y-2 px-4 py-2 text-center text-sm text-[#445061] dark:text-[#c3cee0] sm:text-base">
         <span>© {new Date().getFullYear()} SCSC-NNU</span>
         <span aria-hidden="true">·</span>
         <span>
@@ -89,7 +91,7 @@ export function Footer() {
             href="https://www.instagram.com/zeriv.tech"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-semibold text-brand-primary underline-offset-4 hover:underline dark:text-brand-accent"
+            className="font-bold text-brand-primary underline-offset-4 hover:underline dark:text-brand-accent"
           >
             ZerivTech
           </a>
