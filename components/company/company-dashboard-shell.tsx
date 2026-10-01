@@ -12,7 +12,6 @@ import {
   Plus,
   Save,
   Search,
-  Sparkles,
   Store,
   Trash2,
   X
@@ -21,7 +20,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { JobsManagePanel } from "@/components/jobs/jobs-manage-panel";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SmartImage } from "@/components/ui/smart-image";
@@ -321,7 +319,6 @@ export function CompanyDashboardShell({
                 <h1 className="font-heading text-2xl font-bold text-brand-primary dark:text-brand-ink sm:text-3xl">
                   {companyName}
                 </h1>
-                <Badge>{locale === "ar" ? "بوابة الشركاء" : "Partner Portal"}</Badge>
               </div>
               <p className="text-sm text-slate-600 dark:text-brand-mist">
                 {company.email} {company.phone ? `• ${company.phone}` : ""}
@@ -533,7 +530,7 @@ export function CompanyDashboardShell({
                         <SmartImage src={product.images[0]} alt={product.name} fill className="object-cover" />
                       ) : (
                         <div className="flex h-full items-center justify-center">
-                          <Sparkles className="h-5 w-5 text-slate-400" />
+                          <Package className="h-5 w-5 text-slate-400" />
                         </div>
                       )}
                     </div>

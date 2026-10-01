@@ -157,10 +157,7 @@ export function EventArchive({ initialEvents }: EventArchiveProps) {
       <div className="rounded-[32px] border border-brand-primary/10 bg-white/82 p-8 shadow-soft backdrop-blur-xl dark:border-white/10 dark:bg-[#0d1829]/92 dark:shadow-[0_26px_70px_rgba(0,0,0,0.36)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="max-w-3xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent-strong">
-              {labels.eyebrow}
-            </p>
-            <h2 className="mt-3 font-heading text-3xl font-bold text-brand-primary dark:text-brand-ink">
+            <h2 className="font-heading text-3xl font-bold text-brand-primary dark:text-brand-ink">
               {labels.title}
             </h2>
             <p className="mt-4 text-sm leading-7 text-slate-600 dark:text-[#d7e2f2]">

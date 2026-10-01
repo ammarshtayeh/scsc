@@ -7,14 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 export function StoreSpotlight({
-  eyebrow,
   title,
   description,
   ctaLabel,
   ctaHref,
   perks
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description: string;
   ctaLabel: string;
@@ -29,10 +28,7 @@ export function StoreSpotlight({
             <div className="absolute right-0 top-0 h-36 w-36 rounded-full bg-brand-accent/20 blur-3xl" />
             <div className="absolute bottom-0 left-0 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
             <div className="relative max-w-2xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent">
-                {eyebrow}
-              </p>
-              <h2 className="mt-3 font-heading text-3xl font-bold sm:text-4xl">{title}</h2>
+              <h2 className="font-heading text-3xl font-bold sm:text-4xl">{title}</h2>
               <p className="mt-4 text-sm leading-7 text-white/88 sm:text-base">{description}</p>
               <Link href={ctaHref} className="mt-6 inline-flex">
                 <Button variant="accent" size="lg">

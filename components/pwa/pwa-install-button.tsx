@@ -110,10 +110,7 @@ export function PwaInstallButton({
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.26em] text-brand-accent-strong">
-                    {dictionary.nav.installGuideEyebrow}
-                  </p>
-                  <h3 className="mt-2 font-heading text-xl font-semibold text-brand-primary dark:text-brand-ink">
+                  <h3 className="font-heading text-xl font-semibold text-brand-primary dark:text-brand-ink">
                     {dictionary.nav.installGuideTitle}
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-brand-mist">

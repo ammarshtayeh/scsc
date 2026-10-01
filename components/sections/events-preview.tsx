@@ -26,10 +26,7 @@ export function EventsPreview({ events }: { events: EventItem[] }) {
         <div className="rounded-[28px] border border-white/70 bg-white/88 p-5 shadow-soft backdrop-blur-xl dark:border-white/12 dark:bg-brand-surface sm:rounded-[32px] sm:p-8">
           <div className="mb-7 flex flex-col items-start justify-between gap-4 sm:mb-8 sm:flex-row sm:items-end">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent-strong">
-                {dictionary.home.upcomingEventsLabel}
-              </p>
-              <h2 className="mt-3 font-heading text-2xl font-bold text-brand-primary dark:text-brand-ink sm:text-3xl">
+              <h2 className="font-heading text-2xl font-bold text-brand-primary dark:text-brand-ink sm:text-3xl">
                 {dictionary.home.upcomingEventsTitle}
               </h2>
             </div>

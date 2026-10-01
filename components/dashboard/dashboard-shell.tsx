@@ -1624,9 +1624,7 @@ export function DashboardShell({
                         ? "اختصارات مباشرة لإدارة المنتجات، الفعاليات القادمة، أرشيف الفعاليات، المستخدمين، الطلبات، والهيئة الإدارية."
                         : "Fast access to products, live events, archived events, users, orders, board members, and moderation."}
                     </p>
-                  </div>
-                  <Badge>{locale === "ar" ? "صلاحيات كاملة" : "Full admin controls"}</Badge>
-                </div>
+                  </div>                </div>
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {managementCards.map((card) => {
                     const Icon = card.icon;

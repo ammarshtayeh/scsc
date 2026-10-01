@@ -44,16 +44,8 @@ export function MembershipPromo() {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <motion.p 
-              className="text-xs font-bold uppercase tracking-widest text-brand-accent"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              transition={{ delay: 0.1 }}
-            >
-              {dictionary.membershipPromo.eyebrow}
-            </motion.p>
             <motion.h2 
-              className="mt-4 font-heading text-3xl font-bold leading-tight sm:text-5xl"
+              className="font-heading text-3xl font-bold leading-tight sm:text-5xl"
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}

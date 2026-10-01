@@ -2,12 +2,11 @@
 
 import { doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
-import { ArrowRight, PlayCircle, ShieldCheck, Sparkles, Store } from "lucide-react";
+import { ArrowRight, PlayCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { ImageSlider } from "@/components/sections/image-slider";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { db } from "@/lib/firebase/firebase";
@@ -137,16 +136,9 @@ export function HeroSection({ slides, featuredEvent, featuredVideo }: HeroSectio
           <div className="absolute bottom-0 left-0 h-44 w-44 rounded-full bg-brand-sky blur-3xl dark:bg-[#173257]" />
           <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.24),transparent_35%,transparent_65%,rgba(255,255,255,0.16))]" />
           <div className="relative">
-            <motion.div variants={itemVariants}>
-              <Badge className="border-brand-accent/30 bg-brand-accent/15">
-                <Sparkles className="h-4 w-4" />
-                {dictionary.home.badge}
-              </Badge>
-            </motion.div>
-
             <motion.h1
               variants={itemVariants}
-              className="mt-6 font-heading text-4xl font-bold leading-tight text-brand-primary dark:text-brand-ink sm:mt-8 sm:text-5xl lg:text-6xl"
+              className="font-heading text-4xl font-bold leading-tight text-brand-primary dark:text-brand-ink sm:text-5xl lg:text-6xl"
             >
               {dictionary.home.title}
             </motion.h1>
@@ -157,17 +149,6 @@ export function HeroSection({ slides, featuredEvent, featuredVideo }: HeroSectio
             >
               {dictionary.home.description}
             </motion.p>
-
-            <motion.div variants={itemVariants} className="mt-6 flex flex-wrap gap-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/10 bg-white/70 px-4 py-2 text-sm font-medium text-brand-primary dark:border-white/10 dark:bg-white/5 dark:text-brand-ink">
-                <ShieldCheck className="h-4 w-4 text-brand-accent-strong dark:text-[#f5d669]" />
-                مجتمع طلابي موثوق
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-primary/10 bg-white/70 px-4 py-2 text-sm font-medium text-brand-primary dark:border-white/10 dark:bg-white/5 dark:text-brand-ink">
-                <Store className="h-4 w-4 text-brand-accent-strong dark:text-[#f5d669]" />
-                متجر شركاء ومزايا أعضاء
-              </div>
-            </motion.div>
 
             <motion.div variants={itemVariants} className="mt-7 grid gap-4 sm:mt-8 sm:grid-cols-2">
               <div className="rounded-2xl border border-brand-primary/15 bg-white/82 p-5 transition-shadow dark:border-brand-accent/18 dark:bg-white/[0.06] dark:shadow-[0_16px_40px_rgba(0,0,0,0.22)] sm:p-6 sm:hover:shadow-card">

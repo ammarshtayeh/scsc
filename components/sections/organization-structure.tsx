@@ -136,9 +136,6 @@ function MemberPhotoCard({
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#06172b]/48 via-transparent to-transparent opacity-80" />
-        <div className="absolute left-3 top-3 rounded-full border border-white/16 bg-[#06172b]/62 px-3 py-1 text-xs font-bold text-brand-accent backdrop-blur-md">
-          {String(index + 1).padStart(2, "0")}
-        </div>
       </div>
       <div className="flex min-h-[132px] items-center justify-between gap-4 border-t border-white/10 bg-[#06172b]/68 p-4 sm:p-5">
         <div className="min-w-0">
@@ -256,10 +253,7 @@ export function OrganizationStructure({
               <Network className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.28em] text-brand-accent">
-                SCSC-NNU
-              </p>
-              <h2 className="mt-2 font-heading text-3xl font-bold leading-tight sm:text-4xl">
+              <h2 className="font-heading text-3xl font-bold leading-tight sm:text-4xl">
                 {title}
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-white/78">

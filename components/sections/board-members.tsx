@@ -105,10 +105,7 @@ export function BoardMembers({ groupedMembers }: BoardMembersProps) {
       <div className="rounded-[32px] border border-brand-primary/10 bg-white/82 p-8 shadow-soft backdrop-blur-xl dark:border-white/10 dark:bg-[#0d1829]/92 dark:shadow-[0_26px_70px_rgba(0,0,0,0.36)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-accent-strong">
-              {dictionary.about.boardEyebrow}
-            </p>
-            <h2 className="mt-3 font-heading text-3xl font-bold text-brand-primary dark:text-brand-ink">
+            <h2 className="font-heading text-3xl font-bold text-brand-primary dark:text-brand-ink">
               {dictionary.about.boardTitle}
             </h2>
           </div>
