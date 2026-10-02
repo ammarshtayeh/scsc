@@ -126,8 +126,6 @@ export function MembershipIdCard({
     <div className="mx-auto w-full max-w-2xl animate-fadeIn">
       <div className="relative overflow-hidden rounded-[2rem] shadow-elevated ring-1 ring-white/20 transition-transform duration-500 sm:rounded-[2.25rem] sm:hover:scale-[1.012]">
         <div className="absolute inset-0 bg-gradient-to-br from-[#0B3B78] via-[#11488d] to-[#062347]" />
-        <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-brand-accent/20 blur-3xl" />
-        <div className="absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-[#487ed6]/25 blur-3xl" />
         <div
           className="absolute inset-0 opacity-[0.14]"
           style={{

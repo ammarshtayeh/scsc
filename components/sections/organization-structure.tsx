@@ -211,9 +211,6 @@ export function OrganizationStructure({
       variants={containerVariants}
       className="relative w-full overflow-x-clip bg-[linear-gradient(135deg,#06172b,#0b3b78_46%,#14515b)] py-12 text-white dark:bg-[linear-gradient(135deg,#06172b,#0a2d4d_50%,#124348)] sm:py-16"
     >
-      <div className="absolute left-[6%] top-8 h-56 w-56 rounded-full bg-brand-accent/16 blur-3xl" />
-      <div className="absolute bottom-0 right-[8%] h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-
       <div className="relative mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-8">
         <motion.div
           variants={cardVariants}

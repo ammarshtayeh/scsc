@@ -70,9 +70,6 @@ export function VerifiedMembershipPaperCard({
         className
       )}
     >
-      <div className="pointer-events-none absolute -left-10 -top-12 h-40 w-40 rounded-full bg-brand-primary/10 blur-2xl" />
-      <div className="pointer-events-none absolute -right-8 top-8 h-32 w-32 rounded-full bg-brand-accent/15 blur-2xl" />
-
       <div className="relative aspect-[1.72/1] min-h-[220px] p-5 sm:p-6">
         <div className="pointer-events-none absolute left-0 top-0 h-24 w-32 overflow-hidden">
           <div className="absolute -left-8 top-2 h-16 w-36 rotate-[-18deg] rounded-full bg-brand-primary/90" />

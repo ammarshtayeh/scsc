@@ -1,8 +1,5 @@
 import type { MetadataRoute } from "next";
-
-function getSiteUrl() {
-  return (process.env.NEXT_PUBLIC_APP_URL || "https://pscsc.com").replace(/\/+$/, "");
-}
+import { getSiteUrl } from "@/lib/site-url";
 
 export default function robots(): MetadataRoute.Robots {
   const siteUrl = getSiteUrl();
@@ -11,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin", "/dashboard", "/moderator", "/profile", "/auth", "/verify"]
+      disallow: ["/admin", "/dashboard", "/moderator", "/company", "/profile", "/auth", "/verify", "/api"]
     },
     sitemap: `${siteUrl}/sitemap.xml`,
     host: siteUrl

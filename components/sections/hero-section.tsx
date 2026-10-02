@@ -132,8 +132,6 @@ export function HeroSection({ slides, featuredEvent, featuredVideo }: HeroSectio
           animate="visible"
           className="glass-surface relative overflow-hidden rounded-[28px] border border-white/70 p-6 shadow-float ring-1 ring-brand-primary/5 dark:border-white/10 dark:shadow-[0_28px_72px_rgba(0,0,0,0.4)] sm:rounded-[34px] sm:p-10"
         >
-          <div className="absolute -right-10 top-0 h-36 w-36 rounded-full bg-brand-accent/18 blur-3xl dark:bg-brand-accent/14" />
-          <div className="absolute bottom-0 left-0 h-44 w-44 rounded-full bg-brand-sky blur-3xl dark:bg-[#173257]" />
           <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.24),transparent_35%,transparent_65%,rgba(255,255,255,0.16))]" />
           <div className="relative">
             <motion.h1

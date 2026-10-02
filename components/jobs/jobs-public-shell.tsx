@@ -40,7 +40,10 @@ export function JobsPublicShell({ initialJobs = [] }: { initialJobs?: Job[] }) {
 
     async function load() {
       try {
-        const next = await fetchPublishedJobsClient();
+        const next = await Promise.race([
+          fetchPublishedJobsClient(),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 10000))
+        ]);
         if (!cancelled) {
           setJobs(next);
         }

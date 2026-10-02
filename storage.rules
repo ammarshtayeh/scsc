@@ -29,7 +29,7 @@ service firebase.storage {
     }
 
     match /images/products/{allPaths=**} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdminOrModerator() || isCompany();
     }
 
@@ -54,12 +54,12 @@ service firebase.storage {
     }
 
     match /images/members/{userId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdminOrModerator());
       allow write: if isSignedIn() && (request.auth.uid == userId || isAdminOrModerator());
     }
 
     match /documents/cvs/{userId}/{allPaths=**} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdminOrModerator());
       allow write: if isSignedIn()
         && request.auth.uid == userId
         && request.resource.size < 10 * 1024 * 1024

@@ -31,43 +31,7 @@ export default async function HomePage() {
       caption: savedSlide?.caption || slide.caption
     };
   });
-  const partnerFallbacks =
-    locale === "ar"
-      ? [
-          {
-            name: "شركاء الجمال والعناية",
-            tagline: "مساحات تعاون مع شركات تقدّم منتجات وتجارب وأنشطة موجّهة للطلاب.",
-            logo: slideImages[0]
-          },
-          {
-            name: "مختبرات ومورّدون",
-            tagline: "فرص ربط الطلبة بالقطاع من خلال منتجات تعليمية وعروض مدروسة.",
-            logo: slideImages[1]
-          },
-          {
-            name: "علامات داعمة للمجتمع",
-            tagline: "شراكات تعطي قيمة حقيقية للأعضاء وتدعم رسالة الجمعية داخل الجامعة.",
-            logo: slideImages[2]
-          }
-        ]
-      : [
-          {
-            name: "Beauty and care partners",
-            tagline: "Collaboration spaces with companies offering products, campaigns, and student-facing experiences.",
-            logo: slideImages[0]
-          },
-          {
-            name: "Labs and suppliers",
-            tagline: "Practical bridges between students and the sector through curated offers and learning products.",
-            logo: slideImages[1]
-          },
-          {
-            name: "Brands supporting the community",
-            tagline: "Partnerships that create real member value while reinforcing the association mission.",
-            logo: slideImages[2]
-          }
-        ];
-  const partners = homeSettings?.partners?.length ? homeSettings.partners : partnerFallbacks;
+  const partners = homeSettings?.partners ?? [];
   const partnerEyebrow =
     homeSettings?.partnerEyebrow || (locale === "ar" ? "شركاؤنا" : "Our partners");
   const partnerTitle =
@@ -118,12 +82,14 @@ export default async function HomePage() {
       />
       <MembershipPromo />
       <NewsSection articles={articles} />
-      <PartnersShowcase
-        eyebrow={partnerEyebrow}
-        title={partnerTitle}
-        description={partnerDescription}
-        partners={partners}
-      />
+      {partners.length ? (
+        <PartnersShowcase
+          eyebrow={partnerEyebrow}
+          title={partnerTitle}
+          description={partnerDescription}
+          partners={partners}
+        />
+      ) : null}
       <StoreSpotlight
         eyebrow={storeEyebrow}
         title={storeTitle}

@@ -891,7 +891,6 @@ export function ProfileShell({
 
           <Card className="overflow-hidden border-0 p-0 shadow-elevated">
             <div className="relative overflow-hidden bg-gradient-to-br from-[#0B3B78] via-[#11488d] to-[#062347] p-6 text-white sm:p-7">
-              <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-brand-accent/15 blur-3xl" />
               <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-brand-accent to-transparent" />
               <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-center gap-4">

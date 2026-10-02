@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 
+import { LoginRequiredModal } from "@/components/store/login-required-modal";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SmartImage } from "@/components/ui/smart-image";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { useLocale } from "@/hooks/useLocale";
 import { useMemberPricing } from "@/hooks/useMemberPricing";
@@ -30,11 +32,18 @@ export function ProductDetailClient({
   const productImages = product.images.length ? product.images : [null];
   const { addProduct } = useCart(cartProducts, memberPricing.useMemberPricing);
   const [activeImage, setActiveImage] = useState<string | null>(product.images[0] || null);
+  const { user } = useAuth();
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
   const displayPrice = memberPricing.useMemberPricing
     ? product.memberPrice ?? product.price
     : product.price;
 
   async function handleAdd() {
+    if (!user) {
+      setLoginPromptOpen(true);
+      return;
+    }
+
     try {
       await addProduct(product.id);
       pushToast(dictionary.store.addedToCart, "success");
@@ -48,6 +57,7 @@ export function ProductDetailClient({
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <LoginRequiredModal open={loginPromptOpen} onClose={() => setLoginPromptOpen(false)} />
       <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
         <Card className="space-y-4 overflow-hidden dark:border-white/10 dark:bg-white/5">
           <div className="relative h-[420px]">

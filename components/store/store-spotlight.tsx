@@ -25,8 +25,6 @@ export function StoreSpotlight({
       <Card className="overflow-hidden p-0">
         <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="relative bg-gradient-to-br from-brand-primary via-[#11488d] to-[#0d2e5c] p-6 text-white sm:p-8">
-            <div className="absolute right-0 top-0 h-36 w-36 rounded-full bg-brand-accent/20 blur-3xl" />
-            <div className="absolute bottom-0 left-0 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
             <div className="relative max-w-2xl">
               <h2 className="font-heading text-3xl font-bold sm:text-4xl">{title}</h2>
               <p className="mt-4 text-sm leading-7 text-white/88 sm:text-base">{description}</p>

@@ -4,11 +4,13 @@ import Link from "next/link";
 import { collection, getDocs } from "firebase/firestore";
 import { useEffect, useMemo, useState } from "react";
 
+import { LoginRequiredModal } from "@/components/store/login-required-modal";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SmartImage } from "@/components/ui/smart-image";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { useLocale } from "@/hooks/useLocale";
 import { useMemberPricing } from "@/hooks/useMemberPricing";
@@ -54,8 +56,10 @@ const STORE_MAX_PRICE = 20000;
 export function StoreShell({ products: initialProducts }: { products: Product[] }) {
   const { dictionary, locale } = useLocale();
   const { pushToast } = useToast();
+  const { user } = useAuth();
   const memberPricing = useMemberPricing();
   const [products, setProducts] = useState(initialProducts);
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
   const priceCeiling = STORE_MAX_PRICE;
   const { items, total, addProduct, updateQuantity, checkout } = useCart(
     products,
@@ -146,7 +150,26 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
     return memberPricing.useMemberPricing ? product.memberPrice ?? product.price : product.price;
   }
 
+  async function handleAddToCart(product: Product) {
+    if (!user) {
+      setLoginPromptOpen(true);
+      return;
+    }
+
+    try {
+      await addProduct(product.id);
+      pushToast(dictionary.store.addedToCart, "success");
+    } catch (error) {
+      pushToast(error instanceof Error ? error.message : dictionary.store.addToCartError, "error");
+    }
+  }
+
   async function handleCheckout() {
+    if (!user) {
+      setLoginPromptOpen(true);
+      return;
+    }
+
     if (
       !deliveryForm.contactName.trim() ||
       !deliveryForm.phone.trim() ||
@@ -173,8 +196,24 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
     }
   }
 
+  if (!products.length) {
+    return (
+      <section id="store-grid" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <EmptyState
+          title={locale === "ar" ? "المنتجات قريباً" : "Products coming soon"}
+          description={
+            locale === "ar"
+              ? "نعمل مع الشركات الشريكة على تجهيز المتجر. تابعونا قريباً."
+              : "We are preparing the store with our partner companies. Check back soon."
+          }
+        />
+      </section>
+    );
+  }
+
   return (
     <section id="store-grid" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <LoginRequiredModal open={loginPromptOpen} onClose={() => setLoginPromptOpen(false)} />
       <div className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr_0.82fr]">
         <Card className="space-y-5 xl:sticky xl:top-24">
           <div>
@@ -183,7 +222,7 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
             </h2>
             <p className="mt-2 text-sm text-slate-600">{dictionary.store.filtersText}</p>
             {!memberPricing.useMemberPricing ? (
-              <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+              <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 dark:border-amber-300/30 dark:bg-amber-300/10 dark:text-amber-100">
                 {dictionary.store.renewalPrompt}
               </p>
             ) : null}
@@ -311,19 +350,7 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
                       <Button
                         className="w-full sm:w-auto"
                         disabled={product.stock <= 0}
-                        onClick={async () => {
-                          try {
-                            await addProduct(product.id);
-                            pushToast(dictionary.store.addedToCart, "success");
-                          } catch (error) {
-                            pushToast(
-                              error instanceof Error
-                                ? error.message
-                                : dictionary.store.addToCartError,
-                              "error"
-                            );
-                          }
-                        }}
+                        onClick={() => void handleAddToCart(product)}
                       >
                         {product.stock <= 0 ? dictionary.store.outOfStock : dictionary.store.addToCart}
                       </Button>
