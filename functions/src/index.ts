@@ -1158,7 +1158,7 @@ export const upsertProduct = onCall(publicCallableOptions, async (request) => {
     const existingSnap = await getDb().collection("products").doc(id).get();
     if (existingSnap.exists) {
       const existingData = existingSnap.data() || {};
-      if (existingData.companyId && existingData.companyId !== callerUid) {
+      if (existingData.companyId !== callerUid) {
         throw new HttpsError("permission-denied", "You can only edit your own products.");
       }
     }
@@ -1224,7 +1224,7 @@ export const deleteProduct = onCall(publicCallableOptions, async (request) => {
     const existingSnap = await getDb().collection("products").doc(id).get();
     if (existingSnap.exists) {
       const existingData = existingSnap.data() || {};
-      if (existingData.companyId && existingData.companyId !== callerUid) {
+      if (existingData.companyId !== callerUid) {
         throw new HttpsError("permission-denied", "You can only delete your own products.");
       }
     }

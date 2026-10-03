@@ -113,7 +113,7 @@ export function VerifiedMembershipPaperCard({
                   />
                 ) : (
                   <Image
-                    src="/favicon.svg"
+                    src="/logo.png"
                     alt=""
                     fill
                     sizes="112px"

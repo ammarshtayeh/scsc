@@ -26,7 +26,7 @@ export function SiteLogo({
         )}
       >
         <Image
-          src="/favicon.svg"
+          src="/logo.png"
           alt=""
           aria-hidden="true"
           fill

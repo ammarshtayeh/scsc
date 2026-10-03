@@ -43,7 +43,6 @@ function applyDocumentLocale(locale: AppLocale) {
   const direction = getDirection(locale);
   document.documentElement.lang = locale;
   document.documentElement.dir = direction;
-  document.title = getDictionary(locale).site.title;
 }
 
 export function LocaleProvider({

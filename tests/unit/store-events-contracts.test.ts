@@ -78,9 +78,11 @@ describe("Store enterprise QA contracts", () => {
       functionsSource.indexOf("export const upsertBoardMember")
     );
 
-    expect(upsertProductBlock).toContain("requireAdminOrModerator(request);");
+    for (const block of [upsertProductBlock, deleteProductBlock]) {
+      expect(block).toContain('callerRole !== "admin" && callerRole !== "moderator" && callerRole !== "company"');
+      expect(block).toContain("if (existingData.companyId !== callerUid)");
+    }
     expect(upsertProductBlock).toContain("if (!name || price <= 0 || stock < 0)");
-    expect(deleteProductBlock).toContain("requireAdminOrModerator(request);");
     expect(deleteProductBlock).toContain("if (!id)");
   });
 });
@@ -145,7 +147,7 @@ describe("Events enterprise QA contracts", () => {
     expect(upsertEventBlock).toContain("if (!title || !startsAt || capacity <= 0)");
     expect(deleteEventBlock).toContain("requireAdminOrModerator(request);");
     expect(deleteEventBlock).toContain("if (!registrationsSnap.empty && !cleanupRegistrations)");
-    expect(deleteEventBlock).toContain("FieldValue.arrayRemove(id)");
+    expect(deleteEventBlock).toContain("getFieldValue().arrayRemove(id)");
   });
 
   it("exposes archived events management with multi-image uploads for admin and moderator workflows", () => {

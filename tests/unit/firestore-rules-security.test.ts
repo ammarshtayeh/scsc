@@ -5,10 +5,13 @@ import { join } from "node:path";
 const rules = readFileSync(join(process.cwd(), "firestore.rules"), "utf8");
 
 describe("Firestore security rules coverage", () => {
-  it("keeps products writable only by admins or moderators", () => {
-    expect(rules).toContain("match /products/{productId}");
-    expect(rules).toContain("allow read: if isSignedIn() || isAdminOrModerator();");
-    expect(rules).toContain("allow create, update, delete: if isAdminOrModerator();");
+  it("keeps products publicly readable and writable only by elevated roles or the owning company", () => {
+    const productBlock = rules.slice(rules.indexOf("match /products/{productId}"), rules.indexOf("match /orders/{orderId}"));
+
+    expect(productBlock).toContain("allow read: if true;");
+    expect(productBlock).toContain("allow create, update, delete: if isAdminOrModerator() || (");
+    expect(productBlock).toContain("request.resource.data.companyId == request.auth.uid");
+    expect(productBlock).toContain("resource.data.companyId == request.auth.uid");
   });
 
   it("blocks duplicate event registration and enforces capacity", () => {
