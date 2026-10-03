@@ -43,7 +43,8 @@ function normalizeClientProduct(id: string, data: Record<string, unknown>): Prod
     companyId: typeof data.companyId === "string" && data.companyId.trim() ? data.companyId.trim() : undefined,
     stock: Math.max(0, Number(data.stock) || 0),
     images: sanitizeImageSources(data.images),
-    featured: Boolean(data.featured)
+    featured: Boolean(data.featured),
+    hidden: data.hidden === true
   };
 }
 
@@ -125,13 +126,15 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
     };
   }, [dictionary.store.noProductsDescription, initialProducts, pushToast]);
 
+  const visibleProducts = useMemo(() => products.filter((product) => !product.hidden), [products]);
+
   const companies = useMemo(
-    () => [dictionary.common.all, ...Array.from(new Set(products.map((product) => product.company)))],
-    [dictionary.common.all, products]
+    () => [dictionary.common.all, ...Array.from(new Set(visibleProducts.map((product) => product.company)))],
+    [dictionary.common.all, visibleProducts]
   );
 
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
+    return visibleProducts.filter((product) => {
       const matchesSearch =
         product.name.toLowerCase().includes(search.toLowerCase()) ||
         product.description.toLowerCase().includes(search.toLowerCase());
@@ -142,9 +145,11 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
         maxPrice;
       return matchesSearch && matchesCategory && matchesCompany && matchesPrice;
     });
-  }, [products, search, category, company, maxPrice, memberPricing.useMemberPricing]);
+  }, [visibleProducts, search, category, company, maxPrice, memberPricing.useMemberPricing]);
 
-  const hasCartStockIssue = items.some((item) => item.product.stock < item.quantity);
+  const hasCartStockIssue = items.some(
+    (item) => item.product.hidden || item.product.stock < item.quantity
+  );
 
   function getDisplayPrice(product: Product) {
     return memberPricing.useMemberPricing ? product.memberPrice ?? product.price : product.price;
@@ -196,7 +201,7 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
     }
   }
 
-  if (!products.length) {
+  if (!visibleProducts.length && !items.length) {
     return (
       <section id="store-grid" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <EmptyState
@@ -382,7 +387,13 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
                   <p className="mt-1 text-sm text-slate-500">
                     {formatCurrency(item?.lineTotal || 0, STORE_CURRENCY, locale)}
                   </p>
-                  {item.product.stock < item.quantity ? (
+                  {item.product.hidden ? (
+                    <p className="mt-2 text-xs font-medium text-rose-600">
+                      {locale === "ar"
+                        ? "هذا المنتج لم يعد متاحاً، احذفه من السلة لإكمال الطلب."
+                        : "This product is no longer available. Remove it to continue."}
+                    </p>
+                  ) : item.product.stock < item.quantity ? (
                     <p className="mt-2 text-xs font-medium text-rose-600">
                       {dictionary.store.cartStockWarning}
                     </p>

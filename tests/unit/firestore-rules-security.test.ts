@@ -54,9 +54,9 @@ describe("Firestore security rules coverage", () => {
   });
 
   it("limits carts and orders to their owner or elevated roles", () => {
-    expect(rules).toContain("match /orders/{orderId}");
-    expect(rules).toContain("resource.data.userId == request.auth.uid");
-    expect(rules).toContain("request.resource.data.userId == request.auth.uid");
+    const orderBlock = rules.slice(rules.indexOf("match /orders/{orderId}"), rules.indexOf("match /boardMembers/{memberId}"));
+    expect(orderBlock).toContain("resource.data.userId == request.auth.uid");
+    expect(orderBlock).toContain("allow create: if false;");
     expect(rules).toContain("allow update, delete: if isAdminOrModerator();");
     expect(rules).toContain("match /carts/{userId}");
     expect(rules).toContain("allow read, write: if isSelf(userId) || isAdminOrModerator();");

@@ -9,7 +9,10 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 
 export const dynamic = "force-dynamic";
 
-const loadProduct = cache(getProductBySlug);
+const loadProduct = cache(async (slug: string) => {
+  const product = await getProductBySlug(slug);
+  return product && !product.hidden ? product : null;
+});
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   const dictionary = getServerDictionary();

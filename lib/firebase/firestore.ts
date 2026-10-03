@@ -8,11 +8,9 @@ import {
   serverTimestamp,
   setDoc
 } from "firebase/firestore";
-import { v4 as uuidv4 } from "uuid";
 
-import { MEMBER_DISCOUNT_RATE } from "@/lib/constants";
 import { db } from "@/lib/firebase/firebase";
-import type { CartItem, Order, OrderDeliveryInfo, OrderLineItem, Product } from "@/types";
+import type { CartItem } from "@/types";
 
 function requireDb() {
   if (!db) {
@@ -214,120 +212,4 @@ export async function getCartItems(userId: string): Promise<CartItem[]> {
   const snapshot = await getDoc(doc(database, "carts", userId));
   const data = snapshot.data() as { items?: CartItem[] } | undefined;
   return data?.items || [];
-}
-
-export async function checkoutCodOrder(
-  userId: string,
-  products: Product[],
-  useMemberPricing = true,
-  membershipDiscountRate = MEMBER_DISCOUNT_RATE,
-  deliveryInfo?: OrderDeliveryInfo
-) {
-  const cartItems = await getCartItems(userId);
-
-  if (!cartItems.length) {
-    throw new Error("Your cart is empty.");
-  }
-
-  const database = db;
-
-  if (!database) {
-    throw new Error("Firebase Firestore is not configured.");
-  }
-
-  const userSnap = await getDoc(doc(database, "users", userId));
-  const userData = userSnap.data() as
-    | {
-        membershipStatus?: string;
-        membershipExpiresAt?: string;
-      }
-    | undefined;
-  const hasActiveMembership =
-    (userData?.membershipStatus || "active") === "active" &&
-    (!userData?.membershipExpiresAt || new Date(userData.membershipExpiresAt).getTime() >= Date.now());
-  const shouldUseMemberPricing = useMemberPricing && hasActiveMembership;
-
-  const lineItems: OrderLineItem[] = cartItems.map((item) => {
-    const product = products.find((entry) => entry.id === item.productId);
-
-    if (!product) {
-      throw new Error("One of the selected products is unavailable.");
-    }
-
-    return {
-      productId: product.id,
-      name: product.name,
-      price: shouldUseMemberPricing ? product.memberPrice ?? product.price : product.price,
-      quantity: item.quantity,
-      companyId: product.companyId || undefined,
-      company: product.company || undefined,
-      fulfillmentStatus: "pending" as const
-    };
-  });
-
-  const companyIds = Array.from(
-    new Set(
-      lineItems
-        .map((item) => item.companyId)
-        .filter((value): value is string => Boolean(value && value.trim()))
-    )
-  );
-
-  const subtotal = lineItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discount = shouldUseMemberPricing
-    ? Number((subtotal * membershipDiscountRate).toFixed(2))
-    : 0;
-  const total = Number((subtotal - discount).toFixed(2));
-
-  const orderId = uuidv4();
-
-  await runTransaction(database, async (transaction) => {
-    const productRefs = lineItems.map((lineItem) => doc(database, "products", lineItem.productId));
-    const productSnaps = await Promise.all(
-      productRefs.map((productRef) => transaction.get(productRef))
-    );
-
-    productSnaps.forEach((productSnap, index) => {
-      const lineItem = lineItems[index];
-      const stock = Number(productSnap.data()?.stock || 0);
-      if (!productSnap.exists() || stock < lineItem.quantity) {
-        throw new Error(`${lineItem.name} does not have enough stock.`);
-      }
-    });
-
-    lineItems.forEach((lineItem, index) => {
-      const stock = Number(productSnaps[index].data()?.stock || 0);
-      transaction.update(productRefs[index], {
-        stock: stock - lineItem.quantity
-      });
-    });
-
-    transaction.set(doc(database, "orders", orderId), {
-      userId,
-      createdAt: serverTimestamp(),
-      status: "pending",
-      subtotal,
-      discount,
-      total,
-      items: lineItems,
-      companyIds,
-      deliveryInfo: deliveryInfo
-        ? {
-            contactName: deliveryInfo.contactName.trim(),
-            phone: deliveryInfo.phone.trim(),
-            address: deliveryInfo.address.trim(),
-            notes: deliveryInfo.notes?.trim() || ""
-          }
-        : null
-    });
-
-    transaction.delete(doc(database, "carts", userId));
-  });
-
-  return {
-    id: orderId,
-    subtotal,
-    discount,
-    total
-  };
 }

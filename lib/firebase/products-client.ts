@@ -36,7 +36,8 @@ export function mapProductDoc(id: string, data: Record<string, unknown>): Produc
     companyId: cleanString(data.companyId) || undefined,
     stock: Math.max(0, cleanNumber(data.stock)),
     images: sanitizeImageSources(data.images),
-    featured: Boolean(data.featured)
+    featured: Boolean(data.featured),
+    hidden: data.hidden === true
   };
 }
 

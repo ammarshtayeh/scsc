@@ -1,11 +1,12 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, ShoppingBag, User2, X } from "lucide-react";
+import { KeyRound, Menu, ShoppingBag, User2, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { ChangePasswordModal } from "@/components/auth/change-password-modal";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocale } from "@/hooks/useLocale";
 import { getManagementPortalHref, getProfileHref } from "@/lib/auth-redirect";
@@ -23,6 +24,8 @@ export function Navbar() {
   const { dictionary, locale } = useLocale();
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const changePasswordLabel = locale === "ar" ? "تغيير كلمة المرور" : "Change password";
 
   async function handleLogout() {
     if (loggingOut) {
@@ -96,6 +99,16 @@ export function Navbar() {
         <User2 className="h-4 w-4" />
         <span className="max-w-28 truncate">{user.displayName}</span>
       </Link>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setPasswordModalOpen(true)}
+        aria-label={changePasswordLabel}
+        title={changePasswordLabel}
+        className="px-2.5"
+      >
+        <KeyRound className="h-4 w-4" />
+      </Button>
       <Button
         variant="primary"
         size="sm"
@@ -228,6 +241,16 @@ export function Navbar() {
                   >
                     {dictionary.nav.profile}
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      setPasswordModalOpen(true);
+                    }}
+                    className="text-start text-sm font-medium text-slate-700 dark:text-brand-mist"
+                  >
+                    {changePasswordLabel}
+                  </button>
                   <Button size="sm" onClick={() => void handleLogout()} loading={loggingOut}>
                     {dictionary.nav.logout}
                   </Button>
@@ -250,6 +273,13 @@ export function Navbar() {
           </motion.div>
         ) : null}
       </AnimatePresence>
+      {user ? (
+        <ChangePasswordModal
+          open={passwordModalOpen}
+          onClose={() => setPasswordModalOpen(false)}
+          email={user.email}
+        />
+      ) : null}
     </header>
   );
 }

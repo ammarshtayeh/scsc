@@ -11,33 +11,49 @@ const dashboardSource = readFileSync(
 const functionsSource = readFileSync(join(process.cwd(), "functions/src/index.ts"), "utf8");
 
 describe("Store enterprise QA contracts", () => {
-  it("keeps checkout atomic: reads cart, validates stock, creates order, decrements products, and clears cart", () => {
-    const checkoutBlock = firestoreSource.slice(
-      firestoreSource.indexOf("export async function checkoutCodOrder"),
-      firestoreSource.length
+  it("places orders server-side atomically: reads cart, validates stock and visibility, prices on the server, and clears cart", () => {
+    const checkoutBlock = functionsSource.slice(
+      functionsSource.indexOf("export const placeCodOrder"),
+      functionsSource.indexOf("export const upsertBoardMember")
     );
 
-    expect(checkoutBlock).toContain("const cartItems = await getCartItems(userId);");
-    expect(checkoutBlock).toContain("if (!cartItems.length)");
-    expect(checkoutBlock).toContain("throw new Error(\"Your cart is empty.\");");
-    expect(checkoutBlock).toContain("await runTransaction(database, async (transaction) =>");
-    expect(checkoutBlock).toContain("const productSnaps = await Promise.all(");
+    expect(checkoutBlock).toContain("Please sign in to place an order.");
+    expect(checkoutBlock).toContain("return db.runTransaction(async (transaction) =>");
+    expect(checkoutBlock).toContain("transaction.get(cartRef)");
+    expect(checkoutBlock).toContain("Your cart is empty.");
     expect(checkoutBlock).toContain("productRefs.map((productRef) => transaction.get(productRef))");
-    expect(checkoutBlock).toContain("stock < lineItem.quantity");
-    expect(checkoutBlock).toContain("transaction.update(productRefs[index]");
-    expect(checkoutBlock).toContain("transaction.set(doc(database, \"orders\", orderId)");
+    expect(checkoutBlock).toContain("product.hidden === true");
+    expect(checkoutBlock).toContain("stock < item.quantity");
+    expect(checkoutBlock).toContain("const unitPrice = hasActiveMembership && memberPrice > 0 ? memberPrice : basePrice;");
+    expect(checkoutBlock).toContain("transaction.update(productRefs[index], { stock: item.stock - item.quantity });");
     expect(checkoutBlock).toContain("status: \"pending\"");
     expect(checkoutBlock).toContain("companyIds");
-    expect(checkoutBlock).toContain("fulfillmentStatus: \"pending\"");
-    expect(checkoutBlock).toContain("transaction.delete(doc(database, \"carts\", userId));");
+    expect(checkoutBlock).toContain("fulfillmentStatus: \"pending\" as const");
+    expect(checkoutBlock).toContain("transaction.delete(cartRef);");
+    expect(useCartSource).toContain("return placeCodOrder(deliveryInfo);");
   });
 
-  it("rejects invalid product IDs and trims delivery info before order persistence", () => {
-    expect(firestoreSource).toContain("throw new Error(\"One of the selected products is unavailable.\");");
-    expect(firestoreSource).toContain("contactName: deliveryInfo.contactName.trim()");
-    expect(firestoreSource).toContain("phone: deliveryInfo.phone.trim()");
-    expect(firestoreSource).toContain("address: deliveryInfo.address.trim()");
-    expect(firestoreSource).toContain("notes: deliveryInfo.notes?.trim() || \"\"");
+  it("requires and trims delivery info before order persistence", () => {
+    const checkoutBlock = functionsSource.slice(functionsSource.indexOf("export const placeCodOrder"));
+    expect(checkoutBlock).toContain("contactName: cleanString(delivery.contactName)");
+    expect(checkoutBlock).toContain("phone: cleanString(delivery.phone)");
+    expect(checkoutBlock).toContain("address: cleanString(delivery.address)");
+    expect(checkoutBlock).toContain("Delivery name, phone, and address are required.");
+  });
+
+  it("keeps admin edits from transferring company product ownership and supports hiding products", () => {
+    const upsertProductBlock = functionsSource.slice(
+      functionsSource.indexOf("export const upsertProduct"),
+      functionsSource.indexOf("export const setProductVisibility")
+    );
+    const visibilityBlock = functionsSource.slice(
+      functionsSource.indexOf("export const setProductVisibility"),
+      functionsSource.indexOf("export const placeCodOrder")
+    );
+
+    expect(upsertProductBlock).toContain("companyId = existingData ? cleanString(existingData.companyId) : \"\";");
+    expect(visibilityBlock).toContain("productSnap.data()?.companyId !== request.auth?.uid");
+    expect(visibilityBlock).toContain("productRef.set({ hidden, updatedAt: new Date().toISOString() }, { merge: true });");
   });
 
   it("persists carts under the authenticated owner document and supports remove/quantity updates", () => {
@@ -57,6 +73,7 @@ describe("Store enterprise QA contracts", () => {
 
     expect(productBlock).toContain("upsertProductAdmin");
     expect(productBlock).toContain("deleteProductAdmin(product.id)");
+    expect(productBlock).toContain("setProductVisibility(product.id, !product.hidden)");
     expect(productBlock).toContain("name: productForm.name");
     expect(productBlock).toContain("stock: Number(productForm.stock)");
     expect(productBlock).toContain("images,");
@@ -80,7 +97,7 @@ describe("Store enterprise QA contracts", () => {
 
     for (const block of [upsertProductBlock, deleteProductBlock]) {
       expect(block).toContain('callerRole !== "admin" && callerRole !== "moderator" && callerRole !== "company"');
-      expect(block).toContain("if (existingData.companyId !== callerUid)");
+      expect(block).toContain("existingData.companyId !== callerUid");
     }
     expect(upsertProductBlock).toContain("if (!name || price <= 0 || stock < 0)");
     expect(deleteProductBlock).toContain("if (!id)");

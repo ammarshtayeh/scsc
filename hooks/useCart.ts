@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   addCartItem,
-  checkoutCodOrder,
   removeCartItem,
   subscribeToCart,
   updateCartItem
 } from "@/lib/firebase/firestore";
+import { placeCodOrder } from "@/lib/firebase/functions";
 import type { CartItem, OrderDeliveryInfo, Product } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -69,7 +69,7 @@ export function useCart(products: Product[], useMemberPricing = true) {
     }
 
     const product = products.find((entry) => entry.id === productId);
-    if (!product || product.stock <= 0) {
+    if (!product || product.hidden || product.stock <= 0) {
       throw new Error("This product is currently out of stock.");
     }
 
@@ -91,7 +91,10 @@ export function useCart(products: Product[], useMemberPricing = true) {
     if (!user) {
       throw new Error("Please login first.");
     }
-    return checkoutCodOrder(user.id, products, useMemberPricing, undefined, deliveryInfo);
+    if (!deliveryInfo) {
+      throw new Error("Delivery details are required.");
+    }
+    return placeCodOrder(deliveryInfo);
   }
 
   return {

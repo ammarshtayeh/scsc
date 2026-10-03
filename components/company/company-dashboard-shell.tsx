@@ -4,6 +4,8 @@ import Link from "next/link";
 import {
   ClipboardList,
   ExternalLink,
+  Eye,
+  EyeOff,
   ImageUp,
   Briefcase,
   Package,
@@ -28,6 +30,7 @@ import { useLocale } from "@/hooks/useLocale";
 import { STORE_CURRENCY } from "@/lib/constants";
 import {
   deleteProductAdmin,
+  setProductVisibility,
   updateCompanyOrderFulfillment,
   upsertProductAdmin
 } from "@/lib/firebase/functions";
@@ -237,7 +240,8 @@ export function CompanyDashboardShell({
         images: payload.images,
         description: payload.description,
         longDescription: payload.longDescription,
-        featured: payload.featured
+        featured: payload.featured,
+        hidden: products.find((entry) => entry.id === editingProductId)?.hidden ?? false
       };
 
       setProducts((current) =>
@@ -254,6 +258,27 @@ export function CompanyDashboardShell({
       }
     } catch (error) {
       pushToast(error instanceof Error ? error.message : "Save failed", "error");
+    } finally {
+      setLoadingAction(null);
+    }
+  }
+
+  async function handleToggleVisibility(product: Product) {
+    const nextHidden = !product.hidden;
+    try {
+      setLoadingAction(`visibility-${product.id}`);
+      await setProductVisibility(product.id, nextHidden);
+      setProducts((current) =>
+        current.map((entry) => (entry.id === product.id ? { ...entry, hidden: nextHidden } : entry))
+      );
+      pushToast(
+        nextHidden
+          ? locale === "ar" ? "تم إخفاء المنتج من المتجر" : "Product hidden from the store"
+          : locale === "ar" ? "المنتج ظاهر في المتجر الآن" : "Product is visible in the store",
+        "success"
+      );
+    } catch (error) {
+      pushToast(error instanceof Error ? error.message : "Update failed", "error");
     } finally {
       setLoadingAction(null);
     }
@@ -541,6 +566,18 @@ export function CompanyDashboardShell({
                         {formatCurrency(product.price, STORE_CURRENCY, locale)} •{" "}
                         {formatNumber(product.stock, locale)}
                       </p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {product.hidden ? (
+                          <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:bg-white/10 dark:text-brand-mist">
+                            {locale === "ar" ? "مخفي من المتجر" : "Hidden from store"}
+                          </span>
+                        ) : null}
+                        {product.stock <= 0 ? (
+                          <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-400/15 dark:text-rose-200">
+                            {locale === "ar" ? "نفدت الكمية" : "Out of stock"}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -552,6 +589,17 @@ export function CompanyDashboardShell({
                     </Link>
                     <Button size="sm" variant="secondary" onClick={() => handleOpenEditModal(product)}>
                       {locale === "ar" ? "تعديل" : "Edit"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      loading={loadingAction === `visibility-${product.id}`}
+                      onClick={() => void handleToggleVisibility(product)}
+                    >
+                      {product.hidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      {product.hidden
+                        ? locale === "ar" ? "إظهار" : "Show"
+                        : locale === "ar" ? "إخفاء" : "Hide"}
                     </Button>
                     <Button
                       size="sm"

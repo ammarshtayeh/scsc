@@ -31,9 +31,11 @@ function normalizeProduct(id: string, data: Record<string, unknown>): Product {
       : 0,
     category: (typeof data.category === "string" ? data.category : "Skin Care") as Product["category"],
     company: typeof data.company === "string" && data.company.trim() ? data.company.trim() : "SCSC Partner",
+    companyId: typeof data.companyId === "string" && data.companyId.trim() ? data.companyId.trim() : undefined,
     stock: Math.max(0, Number(data.stock) || 0),
     images: sanitizeImageSources(data.images),
-    featured: Boolean(data.featured)
+    featured: Boolean(data.featured),
+    hidden: data.hidden === true
   };
 }
 
@@ -72,7 +74,7 @@ export function ProductDetailResolver({ slug }: { slug: string }) {
         : allProducts.find((entry) => entry.slug === slug || entry.id === slug) || null;
 
       setProducts(allProducts);
-      setProduct(matchedProduct);
+      setProduct(matchedProduct && !matchedProduct.hidden ? matchedProduct : null);
       setLoading(false);
     }
 

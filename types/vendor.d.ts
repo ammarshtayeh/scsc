@@ -23,11 +23,17 @@ declare module "firebase/auth" {
     claims: Record<string, unknown>;
   }
 
+  export interface UserInfo {
+    providerId: string;
+    email: string | null;
+  }
+
   export interface User {
     uid: string;
     email: string | null;
     displayName: string | null;
     photoURL: string | null;
+    providerData: UserInfo[];
     getIdToken(forceRefresh?: boolean): Promise<string>;
     getIdTokenResult(forceRefresh?: boolean): Promise<IdTokenResult>;
   }
@@ -36,13 +42,37 @@ declare module "firebase/auth" {
     user: User;
   }
 
-  export interface Auth {}
+  export interface Auth {
+    currentUser: User | null;
+  }
   export interface AuthProvider {}
+  export interface AuthCredential {}
+  export interface ActionCodeSettings {
+    url: string;
+    handleCodeInApp?: boolean;
+  }
+  export interface ActionCodeInfo {
+    operation: string;
+    data: { email?: string | null; previousEmail?: string | null };
+  }
 
   export class GoogleAuthProvider implements AuthProvider {
     constructor();
     setCustomParameters(parameters: Record<string, string>): AuthProvider;
   }
+
+  export class EmailAuthProvider {
+    static credential(email: string, password: string): AuthCredential;
+  }
+
+  export function reauthenticateWithCredential(user: User, credential: AuthCredential): Promise<UserCredential>;
+  export function reauthenticateWithPopup(user: User, provider: AuthProvider): Promise<UserCredential>;
+  export function linkWithCredential(user: User, credential: AuthCredential): Promise<UserCredential>;
+  export function updatePassword(user: User, newPassword: string): Promise<void>;
+  export function verifyPasswordResetCode(auth: Auth, code: string): Promise<string>;
+  export function confirmPasswordReset(auth: Auth, code: string, newPassword: string): Promise<void>;
+  export function checkActionCode(auth: Auth, code: string): Promise<ActionCodeInfo>;
+  export function applyActionCode(auth: Auth, code: string): Promise<void>;
 
   export function getAuth(app?: FirebaseApp): Auth;
   export function onIdTokenChanged(
@@ -68,7 +98,11 @@ declare module "firebase/auth" {
     profile: { displayName?: string | null; photoURL?: string | null }
   ): Promise<void>;
   export function signOut(auth: Auth): Promise<void>;
-  export function sendPasswordResetEmail(auth: Auth, email: string): Promise<void>;
+  export function sendPasswordResetEmail(
+    auth: Auth,
+    email: string,
+    actionCodeSettings?: ActionCodeSettings
+  ): Promise<void>;
 }
 
 declare module "firebase/firestore" {

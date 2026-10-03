@@ -19,6 +19,7 @@ import type {
   JobApplicationStatus,
   MembershipQrSession,
   MembershipStatus,
+  OrderDeliveryInfo,
   OrderStatus,
   Product,
   Role,
@@ -228,6 +229,17 @@ export async function deleteProductAdmin(id: string) {
   return callAdminFunction<{ id: string }>("deleteProduct", { id });
 }
 
+export async function setProductVisibility(id: string, hidden: boolean) {
+  return callAdminFunction<{ id: string; hidden: boolean }>("setProductVisibility", { id, hidden });
+}
+
+export async function placeCodOrder(deliveryInfo: OrderDeliveryInfo) {
+  return callAdminFunction<
+    { deliveryInfo: OrderDeliveryInfo },
+    { success: boolean; id: string; subtotal: number; discount: number; total: number }
+  >("placeCodOrder", { deliveryInfo });
+}
+
 export async function upsertArticleAdmin(payload: AdminArticleInput) {
   return callAdminFunction<AdminArticleInput>("upsertArticle", payload);
 }
@@ -336,6 +348,10 @@ export async function sendUserPasswordResetAdmin(payload: {
       resetLink?: string;
     }
   >("sendUserPasswordResetAdmin", payload);
+}
+
+export async function setUserPasswordAdmin(payload: { uid: string; password: string }) {
+  return callAdminFunction<{ uid: string; password: string }>("setUserPasswordAdmin", payload);
 }
 
 export async function deleteUserAdmin(uid: string) {

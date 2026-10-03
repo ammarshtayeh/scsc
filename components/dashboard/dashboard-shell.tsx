@@ -10,7 +10,10 @@ import {
   DollarSign,
   Download,
   ExternalLink,
+  Eye,
+  EyeOff,
   Home,
+  KeyRound,
   Images,
   ImageUp,
   LinkIcon,
@@ -27,6 +30,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
+import { AdminSetPasswordModal, type AdminPasswordTarget } from "@/components/dashboard/admin-set-password-modal";
 import { JobsManagePanel } from "@/components/jobs/jobs-manage-panel";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +52,8 @@ import {
   removeEventRegistrationAdmin,
   sendUserPasswordResetAdmin,
   setEventRegistrationCheckInAdmin,
+  setProductVisibility,
+  setUserPasswordAdmin,
   updateOrderStatusAdmin,
   updateUserAdmin,
   updateFinanceSettingsAdmin,
@@ -196,9 +202,11 @@ function normalizeDashboardProduct(id: string, data: Record<string, unknown>): P
     discountPercent: normalizeDiscountPercent(data.discountPercent),
     category: (typeof data.category === "string" ? data.category : "Skin Care") as ProductCategory,
     company: typeof data.company === "string" && data.company.trim() ? data.company.trim() : "SCSC Partner",
+    companyId: typeof data.companyId === "string" && data.companyId.trim() ? data.companyId.trim() : undefined,
     stock: Math.max(0, Number(data.stock) || 0),
     images: sanitizeImageSources(data.images),
-    featured: Boolean(data.featured)
+    featured: Boolean(data.featured),
+    hidden: data.hidden === true
   };
 }
 
@@ -723,6 +731,11 @@ export function DashboardShell({
   });
   const [adminProductSearch, setAdminProductSearch] = useState("");
   const [adminProductCompanyFilter, setAdminProductCompanyFilter] = useState("all");
+  const [adminProductTab, setAdminProductTab] = useState<"association" | "companies">("association");
+  const [passwordTarget, setPasswordTarget] = useState<AdminPasswordTarget | null>(null);
+  const [adminProductStatusFilter, setAdminProductStatusFilter] = useState<
+    "all" | "visible" | "hidden" | "outOfStock"
+  >("all");
   const imageLabels =
     locale === "ar"
       ? {
@@ -1141,6 +1154,22 @@ export function DashboardShell({
     setLocalProducts(nextProducts);
     setLocalCounts((current) => ({ ...current, products: nextProducts.length }));
   }, [products]);
+  const adminFilteredProducts = useMemo(() => {
+    const search = adminProductSearch.trim().toLowerCase();
+    return localProducts.filter((p) => {
+      if (adminProductTab === "companies" ? !p.companyId : Boolean(p.companyId)) return false;
+      if (adminProductTab === "companies" && adminProductCompanyFilter !== "all" && p.companyId !== adminProductCompanyFilter) return false;
+      if (adminProductStatusFilter === "visible" && p.hidden) return false;
+      if (adminProductStatusFilter === "hidden" && !p.hidden) return false;
+      if (adminProductStatusFilter === "outOfStock" && p.stock > 0) return false;
+      if (!search) return true;
+      return (
+        p.name.toLowerCase().includes(search) ||
+        p.company.toLowerCase().includes(search) ||
+        p.description.toLowerCase().includes(search)
+      );
+    });
+  }, [localProducts, adminProductTab, adminProductCompanyFilter, adminProductStatusFilter, adminProductSearch]);
   const refreshClientArchivedEvents = useCallback(async () => {
     if (!db) {
       setLocalArchivedEvents(archivedEvents);
@@ -1467,6 +1496,63 @@ export function DashboardShell({
     }
   }
 
+  async function sendResetLinkFor(actionKey: string, target: { id: string; email: string }) {
+    try {
+      setLoadingAction(actionKey);
+      const result = await sendUserPasswordResetAdmin({ uid: target.id, email: target.email });
+      if (result.emailed) {
+        pushToast(
+          locale === "ar"
+            ? "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريد المستخدم."
+            : "Password reset link sent to the user's email.",
+          "success"
+        );
+        return;
+      }
+      if (result.resetLink) {
+        let copied = false;
+        try {
+          await navigator.clipboard.writeText(result.resetLink);
+          copied = true;
+        } catch {
+          window.prompt(locale === "ar" ? "انسخ رابط إعادة التعيين:" : "Copy the reset link:", result.resetLink);
+        }
+        if (copied) {
+          pushToast(
+            locale === "ar"
+              ? "تم نسخ رابط إعادة التعيين. أرسله للمستخدم ليختار كلمة مرور جديدة (صالح لساعة واحدة)."
+              : "Reset link copied. Send it to the user to choose a new password (valid for one hour).",
+            "success"
+          );
+        }
+      }
+    } catch (error) {
+      pushToast(error instanceof Error ? error.message : labels.actionFailed, "error");
+    } finally {
+      setLoadingAction(null);
+    }
+  }
+
+  function renderSetPasswordButton(target: { id: string; displayName?: string; email: string; role?: string }) {
+    if (mode === "moderator" || target.role === "admin" || !target.email) {
+      return null;
+    }
+    return (
+      <Button
+        size="sm"
+        variant="secondary"
+        type="button"
+        onClick={() =>
+          setPasswordTarget({ id: target.id, name: target.displayName || target.email, email: target.email })
+        }
+        className="whitespace-nowrap"
+      >
+        <KeyRound className="h-4 w-4" />
+        {locale === "ar" ? "تعيين كلمة مرور" : "Set password"}
+      </Button>
+    );
+  }
+
   async function saveHomeSlide(index: number, formData: FormData) {
     const slides = await Promise.all(
       editableHomeSlides.map(async (slide, slideIndex) => {
@@ -1586,6 +1672,7 @@ export function DashboardShell({
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <AdminSetPasswordModal target={passwordTarget} locale={locale} onClose={() => setPasswordTarget(null)} />
       <div className="grid gap-6 lg:grid-cols-[0.32fr_0.68fr]">
         <Sidebar />
 
@@ -2230,10 +2317,42 @@ export function DashboardShell({
               </h2>
               <p className={`text-sm leading-7 ${dashboardMutedTextClass}`}>
                 {locale === "ar"
-                  ? "المنتجات الأساسية تُضاف من حسابات الشركات عبر بوابة الشركاء وتظهر فورًا في المتجر. استخدموا هذا القسم للقراءة والتدخل عند الحاجة فقط."
-                  : "Companies add products from the partner portal and they appear in the store immediately. Use this section for review and intervention only."}
+                  ? "منتجات الجمعية تضيفونها وتديرونها من هنا. منتجات الشركات تضيفها كل شركة من بوابتها وتظهر فوراً، ويمكنكم تعديلها أو إخفاؤها أو حذفها مع بقائها ملكاً للشركة."
+                  : "Manage the association's own products here. Companies add their products from the partner portal; you can edit, hide, or delete them while they stay owned by the company."}
               </p>
             </div>
+            <div className="flex flex-wrap gap-2" role="tablist">
+              {(
+                [
+                  {
+                    id: "association",
+                    label: locale === "ar" ? "منتجات الجمعية" : "Association products",
+                    count: localProducts.filter((p) => !p.companyId).length
+                  },
+                  {
+                    id: "companies",
+                    label: locale === "ar" ? "منتجات الشركات" : "Company products",
+                    count: localProducts.filter((p) => Boolean(p.companyId)).length
+                  }
+                ] as const
+              ).map((tab) => (
+                <Button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={adminProductTab === tab.id}
+                  variant={adminProductTab === tab.id ? "primary" : "secondary"}
+                  size="sm"
+                  onClick={() => {
+                    setAdminProductTab(tab.id);
+                    setAdminProductCompanyFilter("all");
+                  }}
+                >
+                  {tab.label} ({formatNumber(tab.count, locale)})
+                </Button>
+              ))}
+            </div>
+            {adminProductTab === "association" ? (
             <form
               className="grid gap-3 md:grid-cols-2"
               onSubmit={(event) => {
@@ -2349,47 +2468,74 @@ export function DashboardShell({
                 {labels.addProduct}
               </Button>
             </form>
+            ) : null}
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className={`grid gap-3 ${adminProductTab === "companies" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
               <input
                 placeholder={locale === "ar" ? "ابحث عن منتج..." : "Search products..."}
                 value={adminProductSearch}
                 onChange={(event) => setAdminProductSearch(event.target.value)}
                 className={dashboardFieldClass}
               />
+              {adminProductTab === "companies" ? (
+                <select
+                  value={adminProductCompanyFilter}
+                  onChange={(event) => setAdminProductCompanyFilter(event.target.value)}
+                  className={dashboardFieldClass}
+                >
+                  <option value="all">{locale === "ar" ? "جميع الشركات" : "All companies"}</option>
+                  {Array.from(
+                    new Map(
+                      localProducts
+                        .filter((p) => p.companyId)
+                        .map((p) => [p.companyId as string, p.company] as const)
+                    ).entries()
+                  ).map(([companyId, companyName]) => (
+                    <option key={companyId} value={companyId}>
+                      {companyName}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
               <select
-                value={adminProductCompanyFilter}
-                onChange={(event) => setAdminProductCompanyFilter(event.target.value)}
+                value={adminProductStatusFilter}
+                onChange={(event) => setAdminProductStatusFilter(event.target.value as typeof adminProductStatusFilter)}
                 className={dashboardFieldClass}
               >
-                <option value="all">{locale === "ar" ? "جميع الشركات" : "All Companies"}</option>
-                {Array.from(new Set(localProducts.map((p) => p.company).filter(Boolean))).map((comp) => (
-                  <option key={comp} value={comp}>
-                    {comp}
-                  </option>
-                ))}
+                <option value="all">{locale === "ar" ? "كل الحالات" : "All statuses"}</option>
+                <option value="visible">{locale === "ar" ? "ظاهر في المتجر" : "Visible in store"}</option>
+                <option value="hidden">{locale === "ar" ? "مخفي" : "Hidden"}</option>
+                <option value="outOfStock">{locale === "ar" ? "نفدت الكمية" : "Out of stock"}</option>
               </select>
             </div>
 
             <div className="grid gap-4">
-              {localProducts
-                .filter((p) => {
-                  if (adminProductCompanyFilter !== "all" && p.company !== adminProductCompanyFilter) return false;
-                  if (!adminProductSearch.trim()) return true;
-                  const query = adminProductSearch.trim().toLowerCase();
-                  return (
-                    p.name.toLowerCase().includes(query) ||
-                    p.company.toLowerCase().includes(query) ||
-                    p.description.toLowerCase().includes(query)
-                  );
-                })
-                .map((product) => (
+              {!adminFilteredProducts.length ? (
+                <p className={`rounded-xl border border-dashed border-brand-primary/15 p-6 text-center text-sm ${dashboardMutedTextClass}`}>
+                  {adminProductTab === "companies"
+                    ? locale === "ar" ? "لا توجد منتجات شركات مطابقة." : "No matching company products."
+                    : locale === "ar" ? "لا توجد منتجات للجمعية بعد. أضيفوا أول منتج من النموذج أعلاه." : "No association products yet. Add the first one with the form above."}
+                </p>
+              ) : null}
+              {adminFilteredProducts.map((product) => (
                 <div key={product.id} className={`${dashboardPanelClass} grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start`}>
                   <div className="min-w-0">
                     <p className="break-words font-medium text-brand-primary">{product.name}</p>
                     <p className={`text-sm ${dashboardMutedTextClass}`}>
                       {product.company} - {translateProductCategory(product.category, locale)}
                     </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {product.hidden ? (
+                        <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:bg-white/10 dark:text-brand-mist">
+                          {locale === "ar" ? "مخفي من المتجر" : "Hidden from store"}
+                        </span>
+                      ) : null}
+                      {product.stock <= 0 ? (
+                        <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-400/15 dark:text-rose-200">
+                          {locale === "ar" ? "نفدت الكمية" : "Out of stock"}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
                     <Badge>
@@ -2409,6 +2555,22 @@ export function DashboardShell({
                         {adminLabels.details}
                       </Button>
                     </Link>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      loading={loadingAction === `visibility-product-${product.id}`}
+                      onClick={() => {
+                        void runAction(`visibility-product-${product.id}`, async () => {
+                          await setProductVisibility(product.id, !product.hidden);
+                          await refreshClientProducts();
+                        });
+                      }}
+                    >
+                      {product.hidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      {product.hidden
+                        ? locale === "ar" ? "إظهار" : "Show"
+                        : locale === "ar" ? "إخفاء" : "Hide"}
+                    </Button>
                     <Button
                       variant="secondary"
                       size="sm"
@@ -2470,7 +2632,13 @@ export function DashboardShell({
                         <input name="name" required defaultValue={product.name} className={`${dashboardEditFieldClass} w-full`} />
                       </DashboardFieldLabel>
                       <DashboardFieldLabel label={labels.productCompanyPlaceholder}>
-                        <input name="company" defaultValue={product.company} className={`${dashboardEditFieldClass} w-full`} />
+                        <input
+                          name="company"
+                          defaultValue={product.company}
+                          readOnly={Boolean(product.companyId)}
+                          title={product.companyId ? (locale === "ar" ? "المنتج تابع لهذه الشركة" : "Owned by this company") : undefined}
+                          className={`${dashboardEditFieldClass} w-full ${product.companyId ? "cursor-not-allowed opacity-70" : ""}`}
+                        />
                       </DashboardFieldLabel>
                       <DashboardFieldLabel label={locale === "ar" ? "تصنيف المنتج" : "Product category"}>
                         <select name="category" defaultValue={product.category} className={`${dashboardEditFieldClass} w-full`}>
@@ -3190,18 +3358,16 @@ export function DashboardShell({
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {renderSetPasswordButton(company)}
                         <Button
                           variant="ghost"
                           size="sm"
                           loading={loadingAction === `reset-company-pass-${company.id}`}
-                          onClick={() => {
-                            void runAction(`reset-company-pass-${company.id}`, async () => {
-                              await sendUserPasswordResetAdmin({ email: company.email });
-                            });
-                          }}
+                          onClick={() => void sendResetLinkFor(`reset-company-pass-${company.id}`, company)}
                           className="text-xs whitespace-nowrap"
                         >
-                          {locale === "ar" ? "إعادة تعيين كلمة المرور" : "Reset Password"}
+                          <LinkIcon className="h-4 w-4" />
+                          {locale === "ar" ? "رابط إعادة التعيين" : "Reset link"}
                         </Button>
                         <Button
                           variant="secondary"
@@ -3459,41 +3625,15 @@ export function DashboardShell({
                     <Save className="h-4 w-4" />
                     {labels.save}
                   </Button>
+                  {renderSetPasswordButton(selectedUser)}
                   <Button
                     size="sm"
                     variant="secondary"
                     loading={loadingAction === `detail-reset-password-${selectedUser.id}`}
-                    onClick={() => {
-                      void runAction(`detail-reset-password-${selectedUser.id}`, async () => {
-                        const result = await sendUserPasswordResetAdmin({
-                          uid: selectedUser.id,
-                          email: selectedUser.email
-                        });
-                        if (result.emailed) {
-                          pushToast(
-                            locale === "ar"
-                              ? "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريد المستخدم."
-                              : "Password reset link sent to the user's email.",
-                            "success"
-                          );
-                          return;
-                        }
-                        if (result.resetLink) {
-                          if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-                            await navigator.clipboard.writeText(result.resetLink);
-                          }
-                          pushToast(
-                            locale === "ar"
-                              ? "تم نسخ رابط إعادة التعيين لأن البريد غير مفعّل على الخادم."
-                              : "Reset link copied because server email is not configured.",
-                            "success"
-                          );
-                        }
-                      });
-                    }}
+                    onClick={() => void sendResetLinkFor(`detail-reset-password-${selectedUser.id}`, selectedUser)}
                   >
                     <LinkIcon className="h-4 w-4" />
-                    {locale === "ar" ? "إعادة التعيين" : "Reset password"}
+                    {locale === "ar" ? "رابط إعادة التعيين" : "Reset link"}
                   </Button>
                   <Button
                     size="sm"
@@ -3970,41 +4110,15 @@ export function DashboardShell({
                     <Save className="h-4 w-4" />
                     {labels.save}
                   </Button>
+                  {renderSetPasswordButton(selectedUser)}
                   <Button
                     size="sm"
                     variant="secondary"
                     loading={loadingAction === `detail-reset-password-${selectedUser.id}`}
-                    onClick={() => {
-                      void runAction(`detail-reset-password-${selectedUser.id}`, async () => {
-                        const result = await sendUserPasswordResetAdmin({
-                          uid: selectedUser.id,
-                          email: selectedUser.email
-                        });
-                        if (result.emailed) {
-                          pushToast(
-                            locale === "ar"
-                              ? "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريد المستخدم."
-                              : "Password reset link sent to the user's email.",
-                            "success"
-                          );
-                          return;
-                        }
-                        if (result.resetLink) {
-                          if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-                            await navigator.clipboard.writeText(result.resetLink);
-                          }
-                          pushToast(
-                            locale === "ar"
-                              ? "تم نسخ رابط إعادة التعيين لأن البريد غير مفعّل على الخادم."
-                              : "Reset link copied because server email is not configured.",
-                            "success"
-                          );
-                        }
-                      });
-                    }}
+                    onClick={() => void sendResetLinkFor(`detail-reset-password-${selectedUser.id}`, selectedUser)}
                   >
                     <LinkIcon className="h-4 w-4" />
-                    {locale === "ar" ? "إعادة التعيين" : "Reset password"}
+                    {locale === "ar" ? "رابط إعادة التعيين" : "Reset link"}
                   </Button>
                   <Button
                     size="sm"
@@ -4187,45 +4301,18 @@ export function DashboardShell({
                     <Save className="h-4 w-4" />
                     {labels.save}
                   </Button>
+                  <span className={isSelectedUser ? "contents" : "hidden"}>
+                  {renderSetPasswordButton(entry)}
                   <Button
                     size="sm"
                     variant="secondary"
-                    className={isSelectedUser ? "" : "hidden"}
                     loading={loadingAction === `reset-password-${entry.id}`}
-                    onClick={() => {
-                      void runAction(`reset-password-${entry.id}`, async () => {
-                        const result = await sendUserPasswordResetAdmin({
-                          uid: entry.id,
-                          email: entry.email
-                        });
-
-                        if (result.emailed) {
-                          pushToast(
-                            locale === "ar"
-                              ? "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريد المستخدم."
-                              : "Password reset link sent to the user's email.",
-                            "success"
-                          );
-                          return;
-                        }
-
-                        if (result.resetLink) {
-                          if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-                            await navigator.clipboard.writeText(result.resetLink);
-                          }
-                          pushToast(
-                            locale === "ar"
-                              ? "تم نسخ رابط إعادة التعيين لأن البريد غير مفعّل على الخادم."
-                              : "Reset link copied because server email is not configured.",
-                            "success"
-                          );
-                        }
-                      });
-                    }}
+                    onClick={() => void sendResetLinkFor(`reset-password-${entry.id}`, entry)}
                   >
                     <LinkIcon className="h-4 w-4" />
-                    {locale === "ar" ? "إعادة التعيين" : "Reset password"}
+                    {locale === "ar" ? "رابط إعادة التعيين" : "Reset link"}
                   </Button>
+                  </span>
                   <Button
                     size="sm"
                     variant="secondary"

@@ -79,7 +79,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: "weekly" as const,
         priority: 0.8
       })),
-      ...products.map((product) => ({
+      ...products.filter((product) => !product.hidden).map((product) => ({
         url: toAbsoluteUrl(`/store/${product.slug}`),
         lastModified: now,
         changeFrequency: "weekly" as const,

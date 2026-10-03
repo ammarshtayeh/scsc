@@ -140,6 +140,7 @@ export interface Product {
   stock: number;
   images: string[];
   featured?: boolean;
+  hidden?: boolean;
 }
 
 export interface CartItem {

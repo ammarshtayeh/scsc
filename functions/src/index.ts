@@ -1143,41 +1143,49 @@ export const upsertProduct = onCall(publicCallableOptions, async (request) => {
   const name = cleanString(data.name);
   const price = cleanNumber(data.price);
   const stock = cleanNumber(data.stock);
+  const requestedMemberPrice = cleanNumber(data.memberPrice, price);
+  const memberPrice = requestedMemberPrice > 0 ? requestedMemberPrice : price;
 
   if (!name || price <= 0 || stock < 0) {
     throw new HttpsError("invalid-argument", "Product name, price, and stock are required.");
   }
 
-  let companyName = cleanString(data.company, "SCSC Partner");
-  let companyId = cleanString(data.companyId);
+  if (memberPrice > price) {
+    throw new HttpsError("invalid-argument", "Member price cannot be higher than the base price.");
+  }
+
+  const existingSnap = await getDb().collection("products").doc(id).get();
+  const existingData = existingSnap.exists ? existingSnap.data() || {} : null;
+
+  let companyName: string;
+  let companyId: string;
 
   if (callerRole === "company") {
     if (!callerUid) {
       throw new HttpsError("unauthenticated", "Authentication required.");
     }
-    const existingSnap = await getDb().collection("products").doc(id).get();
-    if (existingSnap.exists) {
-      const existingData = existingSnap.data() || {};
-      if (existingData.companyId !== callerUid) {
-        throw new HttpsError("permission-denied", "You can only edit your own products.");
-      }
+    if (existingData && existingData.companyId !== callerUid) {
+      throw new HttpsError("permission-denied", "You can only edit your own products.");
     }
 
     const companySnap = await getDb().collection("users").doc(callerUid).get();
     const companyData = companySnap.data() || {};
     companyName = cleanString(companyData.company) || cleanString(companyData.displayName) || "Partner Company";
     companyId = callerUid;
+  } else {
+    // Admin edits never transfer ownership: company products stay with their company.
+    companyId = existingData ? cleanString(existingData.companyId) : "";
+    companyName = companyId
+      ? cleanString(existingData?.company, "Partner Company")
+      : cleanString(data.company, "SCSC-NNU");
   }
 
   const baseSlug = cleanString(data.slug) || slugify(name) || id;
   let finalSlug = baseSlug;
-  if (callerRole === "company" && companyId) {
-    const existingSnap = await getDb().collection("products").doc(id).get();
-    if (!existingSnap.exists || existingSnap.data()?.slug !== baseSlug) {
-      const conflictSnap = await getDb().collection("products").where("slug", "==", baseSlug).limit(1).get();
-      if (!conflictSnap.empty && conflictSnap.docs[0].id !== id) {
-        finalSlug = `${baseSlug}-${companyId.slice(0, 5).toLowerCase()}`;
-      }
+  if (!existingData || existingData.slug !== baseSlug) {
+    const conflictSnap = await getDb().collection("products").where("slug", "==", baseSlug).limit(1).get();
+    if (!conflictSnap.empty && conflictSnap.docs[0].id !== id) {
+      finalSlug = `${baseSlug}-${id.slice(0, 5).toLowerCase()}`;
     }
   }
 
@@ -1187,7 +1195,7 @@ export const upsertProduct = onCall(publicCallableOptions, async (request) => {
     description: cleanString(data.description),
     longDescription: cleanStringArray(data.longDescription),
     price,
-    memberPrice: cleanNumber(data.memberPrice, price),
+    memberPrice,
     discountPercent: cleanDiscountPercent(data.discountPercent),
     category: cleanString(data.category, "Skin Care"),
     company: companyName,
@@ -1198,8 +1206,169 @@ export const upsertProduct = onCall(publicCallableOptions, async (request) => {
     updatedAt: new Date().toISOString()
   };
 
+  if (typeof data.hidden === "boolean") {
+    payload.hidden = data.hidden;
+  } else if (!existingData) {
+    payload.hidden = false;
+  }
+
+  if (!existingData) {
+    payload.createdAt = new Date().toISOString();
+  }
+
   await getDb().collection("products").doc(id).set(payload, { merge: true });
   return { success: true, id, slug: finalSlug };
+});
+
+export const setProductVisibility = onCall(publicCallableOptions, async (request) => {
+  const callerRole = await resolveCallerRole(request);
+  if (callerRole !== "admin" && callerRole !== "moderator" && callerRole !== "company") {
+    throw new HttpsError(
+      "permission-denied",
+      "Only admins, moderators, or companies can perform this action."
+    );
+  }
+
+  const { id, hidden } = request.data as { id?: string; hidden?: boolean };
+  if (!id || typeof hidden !== "boolean") {
+    throw new HttpsError("invalid-argument", "Product ID and visibility are required.");
+  }
+
+  const productRef = getDb().collection("products").doc(id);
+  const productSnap = await productRef.get();
+  if (!productSnap.exists) {
+    throw new HttpsError("not-found", "Product not found.");
+  }
+
+  if (callerRole === "company" && productSnap.data()?.companyId !== request.auth?.uid) {
+    throw new HttpsError("permission-denied", "You can only change your own products.");
+  }
+
+  await productRef.set({ hidden, updatedAt: new Date().toISOString() }, { merge: true });
+  return { success: true };
+});
+
+export const placeCodOrder = onCall(publicCallableOptions, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Please sign in to place an order.");
+  }
+
+  const delivery = (request.data?.deliveryInfo || {}) as Record<string, unknown>;
+  const deliveryInfo = {
+    contactName: cleanString(delivery.contactName).slice(0, 120),
+    phone: cleanString(delivery.phone).slice(0, 40),
+    address: cleanString(delivery.address).slice(0, 500),
+    notes: cleanString(delivery.notes).slice(0, 1000)
+  };
+
+  if (!deliveryInfo.contactName || !deliveryInfo.phone || !deliveryInfo.address) {
+    throw new HttpsError("invalid-argument", "Delivery name, phone, and address are required.");
+  }
+
+  const db = getDb();
+  const cartRef = db.collection("carts").doc(uid);
+  const orderId = uuidv4();
+
+  return db.runTransaction(async (transaction) => {
+    const [cartSnap, userSnap] = await Promise.all([
+      transaction.get(cartRef),
+      transaction.get(db.collection("users").doc(uid))
+    ]);
+
+    const cartItems = (Array.isArray(cartSnap.data()?.items) ? cartSnap.data()?.items : [])
+      .map((item: Record<string, unknown>) => ({
+        productId: cleanString(item?.productId),
+        quantity: Math.floor(cleanNumber(item?.quantity))
+      }))
+      .filter((item: { productId: string; quantity: number }) => item.productId && item.quantity > 0) as Array<{
+      productId: string;
+      quantity: number;
+    }>;
+
+    if (!cartItems.length) {
+      throw new HttpsError("failed-precondition", "Your cart is empty.");
+    }
+
+    const userData = userSnap.data() || {};
+    const hasActiveMembership =
+      normalizeMembershipStatus({
+        membershipStatus: userData.membershipStatus,
+        membershipExpiresAt: userData.membershipExpiresAt
+      }) === "active";
+
+    const productRefs = cartItems.map((item) => db.collection("products").doc(item.productId));
+    const productSnaps = await Promise.all(productRefs.map((productRef) => transaction.get(productRef)));
+
+    const lineItems = cartItems.map((item, index) => {
+      const productSnap = productSnaps[index];
+      const product = productSnap.data() || {};
+      const productName = cleanString(product.name, "Product");
+
+      if (!productSnap.exists || product.hidden === true) {
+        throw new HttpsError("failed-precondition", `${productName} is no longer available.`);
+      }
+
+      const stock = cleanNumber(product.stock);
+      if (stock < item.quantity) {
+        throw new HttpsError("failed-precondition", `${productName} does not have enough stock.`);
+      }
+
+      const basePrice = cleanNumber(product.price);
+      const memberPrice = cleanNumber(product.memberPrice, basePrice);
+      const unitPrice = hasActiveMembership && memberPrice > 0 ? memberPrice : basePrice;
+      const companyId = cleanString(product.companyId);
+
+      return {
+        productId: productSnap.id,
+        name: productName,
+        price: unitPrice,
+        basePrice,
+        quantity: item.quantity,
+        stock,
+        ...(companyId ? { companyId } : {}),
+        company: cleanString(product.company) || undefined,
+        fulfillmentStatus: "pending" as const
+      };
+    });
+
+    const subtotal = Number(
+      lineItems.reduce((sum, item) => sum + item.basePrice * item.quantity, 0).toFixed(2)
+    );
+    const total = Number(lineItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2));
+    const discount = Number((subtotal - total).toFixed(2));
+    const companyIds = Array.from(
+      new Set(lineItems.map((item) => item.companyId).filter((value): value is string => Boolean(value)))
+    );
+
+    lineItems.forEach((item, index) => {
+      transaction.update(productRefs[index], { stock: item.stock - item.quantity });
+    });
+
+    transaction.set(db.collection("orders").doc(orderId), {
+      userId: uid,
+      createdAt: getFieldValue().serverTimestamp(),
+      status: "pending",
+      subtotal,
+      discount,
+      total,
+      items: lineItems.map((item) => ({
+        productId: item.productId,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        ...(item.companyId ? { companyId: item.companyId } : {}),
+        ...(item.company ? { company: item.company } : {}),
+        fulfillmentStatus: item.fulfillmentStatus
+      })),
+      companyIds,
+      deliveryInfo
+    });
+
+    transaction.delete(cartRef);
+
+    return { success: true, id: orderId, subtotal, discount, total };
+  });
 });
 
 export const deleteProduct = onCall(publicCallableOptions, async (request) => {
@@ -1580,7 +1749,12 @@ export const sendUserPasswordResetAdmin = onCall(publicCallableOptions, async (r
     throw new HttpsError("failed-precondition", "Selected user does not have an email address.");
   }
 
-  const resetLink = await auth.generatePasswordResetLink(userEmail);
+  const firebaseResetLink = await auth.generatePasswordResetLink(userEmail);
+  const oobCode = new URL(firebaseResetLink).searchParams.get("oobCode");
+  const siteUrl = (process.env.SITE_URL || "https://www.pscsc.com").replace(/\/+$/, "");
+  const resetLink = oobCode
+    ? `${siteUrl}/auth/action?mode=resetPassword&oobCode=${encodeURIComponent(oobCode)}`
+    : firebaseResetLink;
   const transporter = createTransport();
 
   if (transporter) {
@@ -1613,8 +1787,64 @@ export const deleteUserAdmin = onCall(publicCallableOptions, async (request) => 
     throw new HttpsError("failed-precondition", "Cannot delete your own admin account.");
   }
 
-  await getAuthClient().deleteUser(uid);
+  const companyProducts = await getDb().collection("products").where("companyId", "==", uid).get();
+  if (!companyProducts.empty) {
+    const batch = getDb().batch();
+    const now = new Date().toISOString();
+    companyProducts.docs.forEach((productDoc) => {
+      batch.set(productDoc.ref, { hidden: true, updatedAt: now }, { merge: true });
+    });
+    await batch.commit();
+  }
+
+  try {
+    await getAuthClient().deleteUser(uid);
+  } catch (error) {
+    if (getErrorCode(error) !== "auth/user-not-found") {
+      throw error;
+    }
+  }
   await getDb().collection("users").doc(uid).delete();
+  return { success: true, hiddenProducts: companyProducts.size };
+});
+
+export const setUserPasswordAdmin = onCall(publicCallableOptions, async (request) => {
+  requireAdmin(request);
+
+  const { uid, password } = request.data as { uid?: string; password?: string };
+  const nextPassword = typeof password === "string" ? password : "";
+
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "User ID is required.");
+  }
+
+  if (nextPassword.length < 8 || nextPassword.length > 128) {
+    throw new HttpsError("invalid-argument", "Password must be between 8 and 128 characters.");
+  }
+
+  if (uid === request.auth?.uid) {
+    throw new HttpsError("failed-precondition", "Change your own password from your profile.");
+  }
+
+  const auth = getAuthClient();
+  const userRecord = await auth.getUser(uid);
+  const profileSnap = await getDb().collection("users").doc(uid).get();
+  const targetRole = normalizeCallerRole(userRecord.customClaims?.role ?? profileSnap.data()?.role);
+
+  if (targetRole === "admin") {
+    throw new HttpsError("permission-denied", "Admin passwords can only be changed by their owner.");
+  }
+
+  await auth.updateUser(uid, { password: nextPassword });
+  await auth.revokeRefreshTokens(uid);
+  await getDb().collection("users").doc(uid).set(
+    {
+      passwordChangedAt: new Date().toISOString(),
+      passwordChangedBy: request.auth?.uid || null
+    },
+    { merge: true }
+  );
+
   return { success: true };
 });
 

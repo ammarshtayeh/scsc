@@ -140,7 +140,7 @@ service cloud.firestore {
           request.auth.uid in resource.data.companyIds
         )
       );
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create: if false;
       allow update, delete: if isAdminOrModerator();
     }
 

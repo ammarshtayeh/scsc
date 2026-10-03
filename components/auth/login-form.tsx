@@ -14,6 +14,7 @@ import {
   getLoginLockout,
   recordFailedLogin
 } from "@/lib/auth-lockout";
+import { getAuthErrorMessage } from "@/lib/auth/password-policy";
 import { sendPasswordReset } from "@/lib/firebase/auth";
 import { isFirebaseClientConfigured } from "@/lib/firebase/firebase";
 import { useAuth } from "@/hooks/useAuth";
@@ -110,7 +111,7 @@ export function LoginForm() {
       await sendPasswordReset(email);
       pushToast(dictionary.auth.resetSent, "success");
     } catch (error) {
-      pushToast(error instanceof Error ? error.message : dictionary.auth.resetError, "error");
+      pushToast(getAuthErrorMessage(error, locale), "error");
     }
   }
 
