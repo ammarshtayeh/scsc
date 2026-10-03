@@ -214,10 +214,21 @@ html[dir="rtl"] .force-ltr {
     color: #c9d5e7 !important;
   }
 
-  .dark .bg-brand-sky {
+  .dark .bg-brand-sky,
+  .dark .bg-brand-sky\/30,
+  .dark .bg-brand-sky\/35,
+  .dark .bg-brand-sky\/40,
+  .dark .bg-brand-sky\/50,
+  .dark .bg-brand-sky\/55,
+  .dark .bg-brand-sky\/60 {
     background-color: rgba(18, 34, 57, 0.82) !important;
   }
 
+  .dark .bg-brand-background {
+    background-color: #0f1b2e !important;
+  }
+
+  .dark .bg-white\/88,
   .dark .bg-white\/92,
   .dark .bg-white\/90,
   .dark .bg-white\/82,
@@ -227,6 +238,30 @@ html[dir="rtl"] .force-ltr {
   .dark .bg-white\/70,
   .dark .bg-white\/95 {
     background-color: rgba(15, 26, 45, 0.94) !important;
+  }
+
+  .dark .paper-light {
+    --app-accent-strong: #8f6400;
+  }
+
+  .dark .paper-light .text-brand-primary {
+    color: #0b3b78 !important;
+  }
+
+  .dark .paper-light .text-slate-500 {
+    color: #64748b !important;
+  }
+
+  .dark .paper-light .text-slate-600 {
+    color: #475569 !important;
+  }
+
+  .dark .paper-light .text-slate-700 {
+    color: #334155 !important;
+  }
+
+  .dark .paper-light .bg-white\/80 {
+    background-color: rgba(255, 255, 255, 0.8) !important;
   }
 
   .dark .border-white\/70 {

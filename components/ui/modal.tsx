@@ -23,7 +23,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
           exit={{ opacity: 0 }}
         >
           <motion.div
-            className="w-full max-w-xl rounded-[28px] border border-white/50 bg-brand-background p-6 shadow-soft"
+            className="w-full max-w-xl rounded-[28px] border border-white/50 bg-brand-background p-6 shadow-soft dark:border-white/10 dark:shadow-[0_24px_60px_rgba(0,0,0,0.5)]"
             initial={{ opacity: 0, scale: 0.96, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98, y: 12 }}

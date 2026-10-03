@@ -64,7 +64,7 @@ export function VerifiedMembershipPaperCard({
     <article
       dir={isArabic ? "rtl" : "ltr"}
       className={cn(
-        "relative mx-auto w-full max-w-[680px] overflow-hidden rounded-[1.35rem] border border-slate-200/80 bg-[#fcfbfa] shadow-[0_28px_70px_rgba(11,59,120,0.18),0_2px_0_rgba(255,255,255,0.9)_inset]",
+        "paper-light relative mx-auto w-full max-w-[680px] overflow-hidden rounded-[1.35rem] border border-slate-200/80 bg-[#fcfbfa] shadow-[0_28px_70px_rgba(11,59,120,0.18),0_2px_0_rgba(255,255,255,0.9)_inset]",
         "before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_20%_10%,rgba(242,195,24,0.08),transparent_28%),radial-gradient(circle_at_88%_88%,rgba(11,59,120,0.06),transparent_32%)]",
         "after:pointer-events-none after:absolute after:inset-0 after:opacity-[0.035] after:[background-image:linear-gradient(rgba(11,59,120,0.35)_1px,transparent_1px),linear-gradient(90deg,rgba(11,59,120,0.35)_1px,transparent_1px)] after:[background-size:18px_18px]",
         className

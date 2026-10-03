@@ -144,7 +144,7 @@ export function LoginForm() {
         loading={loading}
         onClick={handleGoogleLogin}
       >
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-sm font-bold text-brand-primary shadow-sm">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-sm font-bold text-[#0B3B78] shadow-sm">
           G
         </span>
         {dictionary.auth.continueWithGoogle}

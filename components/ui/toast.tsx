@@ -46,7 +46,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   ? "border-emerald-200 bg-emerald-50 text-emerald-900"
                   : item.tone === "error"
                     ? "border-rose-200 bg-rose-50 text-rose-900"
-                    : "border-brand-primary/10 bg-white text-brand-primary"
+                    : "border-brand-primary/10 bg-white text-brand-primary dark:border-white/10 dark:bg-[#0f1b2e]"
               }`}
             >
               {item.title}
