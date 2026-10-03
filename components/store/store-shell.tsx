@@ -52,7 +52,8 @@ function getProductDetailHref(product: Product) {
   return `/store/${encodeURIComponent(product.slug || product.id)}`;
 }
 
-const STORE_MAX_PRICE = 20000;
+const STORE_MIN_PRICE = 10;
+const STORE_DEFAULT_MAX_PRICE = 2000;
 
 export function StoreShell({ products: initialProducts }: { products: Product[] }) {
   const { dictionary, locale } = useLocale();
@@ -61,7 +62,6 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
   const memberPricing = useMemberPricing();
   const [products, setProducts] = useState(initialProducts);
   const [loginPromptOpen, setLoginPromptOpen] = useState(false);
-  const priceCeiling = STORE_MAX_PRICE;
   const { items, total, addProduct, updateQuantity, checkout } = useCart(
     products,
     memberPricing.useMemberPricing
@@ -69,17 +69,13 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [company, setCompany] = useState("All");
-  const [maxPrice, setMaxPrice] = useState(priceCeiling);
+  const [maxPrice, setMaxPrice] = useState(STORE_DEFAULT_MAX_PRICE);
   const [deliveryForm, setDeliveryForm] = useState({
     contactName: "",
     phone: "",
     address: "",
     notes: ""
   });
-
-  useEffect(() => {
-    setMaxPrice(priceCeiling);
-  }, [priceCeiling]);
 
   useEffect(() => {
     let mounted = true;
@@ -127,6 +123,14 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
   }, [dictionary.store.noProductsDescription, initialProducts, pushToast]);
 
   const visibleProducts = useMemo(() => products.filter((product) => !product.hidden), [products]);
+  const priceCeiling = useMemo(() => {
+    const highest = visibleProducts.reduce((max, product) => Math.max(max, product.price), 0);
+    return highest > 0 ? Math.max(STORE_MIN_PRICE, Math.ceil(highest)) : STORE_DEFAULT_MAX_PRICE;
+  }, [visibleProducts]);
+
+  useEffect(() => {
+    setMaxPrice(priceCeiling);
+  }, [priceCeiling]);
 
   const companies = useMemo(
     () => [dictionary.common.all, ...Array.from(new Set(visibleProducts.map((product) => product.company)))],
@@ -284,16 +288,16 @@ export function StoreShell({ products: initialProducts }: { products: Product[] 
             </label>
             <input
               type="range"
-              min={0}
+              min={STORE_MIN_PRICE}
               max={priceCeiling}
               step={1}
               value={maxPrice}
-              disabled={priceCeiling <= 0}
+              disabled={priceCeiling <= STORE_MIN_PRICE}
               onChange={(event) => setMaxPrice(Number(event.target.value))}
               className="w-full accent-[#0B3B78]"
             />
             <div className="mt-2 flex items-center justify-between text-xs font-medium text-slate-500">
-              <span>{formatCurrency(0, STORE_CURRENCY, locale)}</span>
+              <span>{formatCurrency(STORE_MIN_PRICE, STORE_CURRENCY, locale)}</span>
               <span>{formatCurrency(priceCeiling, STORE_CURRENCY, locale)}</span>
             </div>
           </div>
