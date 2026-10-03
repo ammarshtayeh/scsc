@@ -45,9 +45,14 @@ export function EventsGrid({
     };
   }, [initialEvents.length]);
 
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const upcomingEvents = events.filter(
+    (event) => !event.startsAt || new Date(event.startsAt).getTime() >= startOfToday.getTime()
+  );
   const paginatedEvents = initialEvents.length
-    ? events.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-    : events;
+    ? upcomingEvents.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    : upcomingEvents;
 
   if (!paginatedEvents.length) {
     return (
