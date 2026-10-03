@@ -36,6 +36,7 @@ import {
   updateCompanyOrderFulfillment,
   upsertProductAdmin
 } from "@/lib/firebase/functions";
+import { fetchJobsForManagerClient } from "@/lib/firebase/jobs-client";
 import { fetchProductsByCompanyClient } from "@/lib/firebase/products-client";
 import { uploadFileToStorage } from "@/lib/firebase/storage";
 import { translateOrderStatus, translateProductCategory } from "@/lib/i18n/helpers";
@@ -81,6 +82,7 @@ export function CompanyDashboardShell({
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [profile, setProfile] = useState<UserProfile>(company);
   const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [jobsCount, setJobsCount] = useState(initialJobs.length);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStockStatus, setSelectedStockStatus] = useState("all");
@@ -122,6 +124,18 @@ export function CompanyDashboardShell({
       cancelled = true;
     };
   }, [company.id, initialProducts.length]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchJobsForManagerClient({ ownerId: company.id }).then((nextJobs) => {
+      if (!cancelled && (nextJobs.length || !initialJobs.length)) {
+        setJobsCount(nextJobs.length);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [company.id, initialJobs.length]);
 
   useEffect(() => {
     const database = db;
@@ -481,8 +495,8 @@ export function CompanyDashboardShell({
         >
           <Briefcase className="h-4 w-4" />
           {locale === "ar"
-            ? `الوظائف (${formatNumber(initialJobs.length, locale)})`
-            : `Jobs (${initialJobs.length})`}
+            ? `الوظائف (${formatNumber(jobsCount, locale)})`
+            : `Jobs (${jobsCount})`}
         </Button>
       </div>
 

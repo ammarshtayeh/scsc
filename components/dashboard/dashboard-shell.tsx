@@ -64,6 +64,7 @@ import {
   upsertHomeSettingsAdmin,
   upsertProductAdmin
 } from "@/lib/firebase/functions";
+import { fetchEventsClient } from "@/lib/firebase/events-client";
 import { db } from "@/lib/firebase/firebase";
 import { deleteFileFromStorage, uploadFileToStorage } from "@/lib/firebase/storage";
 import {
@@ -654,6 +655,8 @@ export function DashboardShell({
     companies: users.filter((user) => user.role === "company").length
   });
   const [localArchivedEvents, setLocalArchivedEvents] = useState(archivedEvents);
+  const [localEvents, setLocalEvents] = useState(events);
+  const [localEventRegistrations, setLocalEventRegistrations] = useState(eventRegistrations);
   const [localProducts, setLocalProducts] = useState(products);
   const [localBoardMembers, setLocalBoardMembers] = useState(boardMembers);
   const [localUsers, setLocalUsers] = useState(users);
@@ -1183,6 +1186,42 @@ export function DashboardShell({
     setLocalArchivedEvents(nextArchivedEvents);
     setLocalCounts((current) => ({ ...current, archivedEvents: nextArchivedEvents.length }));
   }, [archivedEvents]);
+  const refreshClientEvents = useCallback(async () => {
+    if (!db) {
+      return;
+    }
+
+    const firestore = db;
+    const [nextEvents, usersSnapshot] = await Promise.all([
+      fetchEventsClient(),
+      getDocs(collection(firestore, "users")).catch(() => null)
+    ]);
+    const usersById = new Map(
+      (usersSnapshot?.docs ?? []).map((entry) => [entry.id, entry.data() as { displayName?: string; email?: string }])
+    );
+    const nextRegistrations = await Promise.all(
+      nextEvents.map(async (event) => {
+        const snapshot = await getDocs(collection(firestore, `events/${event.id}/registrations`)).catch(() => null);
+        return (snapshot?.docs ?? []).map((entry) => {
+          const data = entry.data() as Record<string, unknown>;
+          const user = usersById.get(entry.id);
+          return {
+            id: entry.id,
+            eventId: event.id,
+            userId: entry.id,
+            displayName: (data.displayName as string | undefined) || user?.displayName,
+            email: (data.email as string | undefined) || user?.email,
+            registeredAt: normalizeDashboardDateValue(data.registeredAt || data.createdAt) || undefined,
+            checkedInAt: normalizeDashboardDateValue(data.checkedInAt) || null
+          } satisfies EventRegistration;
+        });
+      })
+    );
+
+    setLocalEvents([...nextEvents].sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime()));
+    setLocalEventRegistrations(nextRegistrations.flat());
+    setLocalCounts((current) => ({ ...current, events: nextEvents.length }));
+  }, []);
   const refreshClientBoardMembers = useCallback(async () => {
     if (!db) {
       setLocalBoardMembers(boardMembers);
@@ -1306,13 +1345,17 @@ export function DashboardShell({
       companies: users.filter((user) => user.role === "company").length
     });
     setLocalArchivedEvents(archivedEvents);
+    if (events.length) {
+      setLocalEvents(events);
+      setLocalEventRegistrations(eventRegistrations);
+    }
     setLocalProducts(products);
     setLocalBoardMembers(boardMembers);
     setLocalUsers(users);
     setLocalFinanceSettings(financeSettings);
     setFinanceBalanceInput(String(financeSettings.balance));
     setResolvedHomeSettings(homeSettings);
-  }, [archivedEvents, articles, boardMembers, events, financeSettings, homeSettings, orders, products, stats, users]);
+  }, [archivedEvents, articles, boardMembers, eventRegistrations, events, financeSettings, homeSettings, orders, products, stats, users]);
 
   useEffect(() => {
     if (activeSection !== "products") {
@@ -1348,6 +1391,10 @@ export function DashboardShell({
       void refreshClientArchivedEvents().catch(() => undefined);
     }
 
+    if (activeSection === "events" || activeSection === "registrants") {
+      void refreshClientEvents().catch(() => undefined);
+    }
+
     if (activeSection === "board-members") {
       void refreshClientBoardMembers().catch(() => undefined);
     }
@@ -1363,6 +1410,7 @@ export function DashboardShell({
     activeSection,
     refreshClientArchivedEvents,
     refreshClientBoardMembers,
+    refreshClientEvents,
     refreshClientHomeSettings,
     refreshClientProducts,
     refreshClientStats,
@@ -1370,13 +1418,13 @@ export function DashboardShell({
   ]);
 
   const registrationsByEvent = useMemo(() => {
-    return eventRegistrations.reduce<Record<string, EventRegistration[]>>((acc, registration) => {
+    return localEventRegistrations.reduce<Record<string, EventRegistration[]>>((acc, registration) => {
       acc[registration.eventId] = acc[registration.eventId]
         ? [...acc[registration.eventId], registration]
         : [registration];
       return acc;
     }, {});
-  }, [eventRegistrations]);
+  }, [localEventRegistrations]);
 
   const statCards = useMemo(
     () => [
@@ -1488,6 +1536,9 @@ export function DashboardShell({
       pushToast(labels.actionSaved, "success");
       if (!options?.skipRouteRefresh) {
         router.refresh();
+      }
+      if (activeSection === "events" || activeSection === "registrants") {
+        void refreshClientEvents().catch(() => undefined);
       }
     } catch (error) {
       pushToast(error instanceof Error ? error.message : labels.actionFailed, "error");
@@ -2110,7 +2161,7 @@ export function DashboardShell({
             </form>
 
             <div className="grid gap-4">
-              {events.map((event) => (
+              {localEvents.map((event) => (
                 <div key={event.id} className={dashboardPanelClass}>
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
@@ -2220,9 +2271,9 @@ export function DashboardShell({
                 onClick={() =>
                   getCsvData(
                     "event-registrations.csv",
-                    eventRegistrations.map((registration) => ({
+                    localEventRegistrations.map((registration) => ({
                       eventId: registration.eventId,
-                      eventTitle: events.find((event) => event.id === registration.eventId)?.title || "",
+                      eventTitle: localEvents.find((event) => event.id === registration.eventId)?.title || "",
                       userId: registration.userId,
                       name: registration.displayName || "",
                       email: registration.email || "",
@@ -2237,7 +2288,7 @@ export function DashboardShell({
               </Button>
             </div>
             <div className="grid gap-4">
-              {events.map((event) => {
+              {localEvents.map((event) => {
                 const registrations = registrationsByEvent[event.id] || [];
                 return (
                   <details key={event.id} className={dashboardPanelClass}>
