@@ -18,6 +18,7 @@ import {
   Trash2,
   X
 } from "lucide-react";
+import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -28,6 +29,7 @@ import { SmartImage } from "@/components/ui/smart-image";
 import { useToast } from "@/components/ui/toast";
 import { useLocale } from "@/hooks/useLocale";
 import { STORE_CURRENCY } from "@/lib/constants";
+import { db } from "@/lib/firebase/firebase";
 import {
   deleteProductAdmin,
   setProductVisibility,
@@ -51,6 +53,19 @@ interface CompanyDashboardShellProps {
 const productCategories: ProductCategory[] = ["Skin Care", "Body Care", "Makeup", "Masks"];
 const orderStatuses: OrderStatus[] = ["pending", "confirmed", "processing", "delivered"];
 
+function toIsoDate(value: unknown) {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  if (value && typeof (value as { toDate?: () => Date }).toDate === "function") {
+    return (value as { toDate: () => Date }).toDate().toISOString();
+  }
+  return new Date(0).toISOString();
+}
+
 export function CompanyDashboardShell({
   company,
   initialProducts,
@@ -64,6 +79,7 @@ export function CompanyDashboardShell({
 
   const [activeTab, setActiveTab] = useState<"products" | "orders" | "jobs">("products");
   const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [profile, setProfile] = useState<UserProfile>(company);
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -107,7 +123,64 @@ export function CompanyDashboardShell({
     };
   }, [company.id, initialProducts.length]);
 
-  const companyName = company.company || company.displayName || "Company Partner";
+  useEffect(() => {
+    const database = db;
+    if (!database || !company.id) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function hydrateProfileAndOrders(firestore: NonNullable<typeof db>) {
+      const [profileResult, ordersResult] = await Promise.allSettled([
+        getDoc(doc(firestore, "users", company.id)),
+        getDocs(
+          query(collection(firestore, "orders"), where("companyIds", "array-contains", company.id))
+        )
+      ]);
+
+      if (cancelled) {
+        return;
+      }
+
+      if (profileResult.status === "fulfilled" && profileResult.value.exists()) {
+        const data = profileResult.value.data() as Record<string, unknown>;
+        setProfile((current) => ({
+          ...current,
+          displayName: typeof data.displayName === "string" && data.displayName ? data.displayName : current.displayName,
+          email: typeof data.email === "string" ? data.email : current.email,
+          company: typeof data.company === "string" ? data.company : current.company,
+          photoURL: typeof data.photoURL === "string" ? data.photoURL : current.photoURL,
+          phone: typeof data.phone === "string" ? data.phone : current.phone
+        }));
+      }
+
+      if (ordersResult.status === "fulfilled") {
+        const nextOrders = ordersResult.value.docs
+          .map((entry) => {
+            const data = entry.data() as Record<string, unknown>;
+            return {
+              ...data,
+              id: entry.id,
+              createdAt: toIsoDate(data.createdAt),
+              updatedAt: data.updatedAt ? toIsoDate(data.updatedAt) : undefined
+            } as unknown as Order;
+          })
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        if (nextOrders.length || !initialOrders.length) {
+          setOrders(nextOrders);
+        }
+      }
+    }
+
+    void hydrateProfileAndOrders(database);
+    return () => {
+      cancelled = true;
+    };
+  }, [company.id, initialOrders.length]);
+
+  const companyName = profile.company || profile.displayName || "Company Partner";
   const companyId = company.id;
 
   const stats = useMemo(() => {
@@ -128,11 +201,11 @@ export function CompanyDashboardShell({
       if (selectedStockStatus === "inStock" && product.stock <= 0) return false;
       if (selectedStockStatus === "outOfStock" && product.stock > 0) return false;
       if (searchQuery.trim()) {
-        const query = searchQuery.trim().toLowerCase();
+        const term = searchQuery.trim().toLowerCase();
         return (
-          product.name.toLowerCase().includes(query) ||
-          product.description.toLowerCase().includes(query) ||
-          product.category.toLowerCase().includes(query)
+          product.name.toLowerCase().includes(term) ||
+          product.description.toLowerCase().includes(term) ||
+          product.category.toLowerCase().includes(term)
         );
       }
       return true;
@@ -333,8 +406,8 @@ export function CompanyDashboardShell({
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
             <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-brand-primary/10 bg-brand-sky/50 text-2xl font-bold text-brand-primary dark:border-white/10 dark:bg-white/5 dark:text-brand-ink">
-              {company.photoURL ? (
-                <SmartImage src={company.photoURL} alt={companyName} fill className="object-cover" />
+              {profile.photoURL ? (
+                <SmartImage src={profile.photoURL} alt={companyName} fill className="object-cover" />
               ) : (
                 companyName[0]?.toUpperCase() || "C"
               )}
@@ -346,7 +419,7 @@ export function CompanyDashboardShell({
                 </h1>
               </div>
               <p className="text-sm text-slate-600 dark:text-brand-mist">
-                {company.email} {company.phone ? `• ${company.phone}` : ""}
+                {profile.email} {profile.phone ? `• ${profile.phone}` : ""}
               </p>
               <p className="text-xs text-slate-500">
                 {locale === "ar"
