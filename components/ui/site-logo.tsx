@@ -8,9 +8,11 @@ export function SiteLogo({
   compact = false,
   title = "Cosmetics & Skin Care",
   university = "An-Najah National University",
-  shortName = "SCSC"
+  shortName = "SCSC",
+  wordmarkClassName
 }: {
   className?: string;
+  wordmarkClassName?: string;
   withWordmark?: boolean;
   compact?: boolean;
   title?: string;
@@ -37,7 +39,7 @@ export function SiteLogo({
       </div>
 
       {withWordmark ? (
-        <div className="min-w-0 max-w-full">
+        <div className={cn("min-w-0 max-w-full", wordmarkClassName)}>
           <p
             className={cn(
               "truncate font-heading font-semibold text-brand-primary dark:text-brand-ink",

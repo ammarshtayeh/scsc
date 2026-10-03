@@ -62,6 +62,8 @@ export function Navbar() {
         : "Company Portal"
       : dictionary.nav.dashboard;
 
+  const wideDesktop = Boolean(user);
+
   const linkClass = (href: string) =>
     cn(
       "text-sm font-medium transition hover:text-brand-accent-strong dark:hover:text-[#f5d669]",
@@ -72,9 +74,14 @@ export function Navbar() {
 
   const authActions = user ? (
     <>
-      <Link href="/store" className={getButtonClassName({ variant: "secondary", size: "sm", className: "whitespace-nowrap" })}>
+      <Link
+        href="/store"
+        title={dictionary.nav.store}
+        aria-label={dictionary.nav.store}
+        className={getButtonClassName({ variant: "secondary", size: "sm", className: "whitespace-nowrap" })}
+      >
         <ShoppingBag className="h-4 w-4" />
-        <span>{dictionary.nav.store}</span>
+        <span className="hidden 2xl:inline">{dictionary.nav.store}</span>
       </Link>
       {showPortal ? (
         <Link
@@ -90,6 +97,8 @@ export function Navbar() {
       ) : null}
       <Link
         href={profileHref}
+        title={user.displayName}
+        aria-label={dictionary.nav.profile}
         className={getButtonClassName({
           variant: pathname.startsWith("/profile") ? "secondary" : "ghost",
           size: "sm",
@@ -97,7 +106,7 @@ export function Navbar() {
         })}
       >
         <User2 className="h-4 w-4" />
-        <span className="max-w-28 truncate">{user.displayName}</span>
+        <span className="hidden max-w-28 truncate 2xl:inline">{user.displayName}</span>
       </Link>
       <Button
         variant="ghost"
@@ -143,10 +152,16 @@ export function Navbar() {
               title={dictionary.site.title}
               university={dictionary.site.university}
               className={locale === "ar" ? "text-right" : ""}
+              wordmarkClassName={wideDesktop ? "xl:hidden 2xl:block" : "lg:hidden xl:block"}
             />
           </Link>
 
-          <nav className="relative z-10 hidden min-w-0 flex-1 items-center justify-center gap-3 xl:gap-4 lg:flex">
+          <nav
+            className={cn(
+              "relative z-10 hidden min-w-0 flex-1 items-center justify-center gap-3 xl:gap-4",
+              wideDesktop ? "xl:flex" : "lg:flex"
+            )}
+          >
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -161,7 +176,12 @@ export function Navbar() {
             ))}
           </nav>
 
-          <div className="relative z-10 ms-auto hidden shrink-0 items-center gap-2 lg:flex xl:gap-2.5">
+          <div
+            className={cn(
+              "relative z-10 ms-auto hidden shrink-0 items-center gap-2 xl:gap-2.5",
+              wideDesktop ? "xl:flex" : "lg:flex"
+            )}
+          >
             <ThemeSwitcher />
             <LanguageToggle />
             <PwaInstallButton />
@@ -178,7 +198,7 @@ export function Navbar() {
           <Button
             variant="ghost"
             size="sm"
-            className="relative z-10 ms-auto shrink-0 lg:hidden"
+            className={cn("relative z-10 ms-auto shrink-0", wideDesktop ? "xl:hidden" : "lg:hidden")}
             onClick={() => setOpen((current) => !current)}
             aria-label={dictionary.nav.toggleNavigation}
           >
@@ -193,7 +213,7 @@ export function Navbar() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="mx-auto mt-2 max-w-[96rem] px-1 lg:hidden"
+            className={cn("mx-auto mt-2 max-w-[96rem] px-1", wideDesktop ? "xl:hidden" : "lg:hidden")}
           >
             <nav className="glass-surface flex flex-col gap-3 rounded-[24px] border border-white/60 px-4 py-4 shadow-soft dark:border-white/10">
               <div className="flex flex-wrap items-center gap-3 pb-2">

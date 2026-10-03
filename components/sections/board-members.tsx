@@ -118,8 +118,8 @@ export function BoardMembers({ groupedMembers }: BoardMembersProps) {
                   className={cn(
                     "rounded-full px-4 py-2 text-sm font-medium transition",
                     year === selectedYear
-                      ? "bg-brand-primary text-white dark:bg-brand-accent dark:text-brand-primary"
-                      : "bg-brand-sky text-brand-primary hover:bg-brand-primary hover:text-white dark:bg-white/8 dark:text-brand-ink dark:hover:bg-brand-accent dark:hover:text-brand-primary"
+                      ? "bg-brand-primary text-white dark:bg-brand-accent dark:text-[#0B3B78]"
+                      : "bg-brand-sky text-brand-primary hover:bg-brand-primary hover:text-white dark:bg-white/8 dark:text-brand-ink dark:hover:bg-brand-accent dark:hover:text-[#0B3B78]"
                   )}
                 >
                   {year}
