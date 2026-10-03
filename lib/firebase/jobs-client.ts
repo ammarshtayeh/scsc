@@ -114,14 +114,16 @@ export async function fetchJobBySlugClient(slug: string): Promise<Job | null> {
     return null;
   }
 
-  const bySlug = await getDocs(query(collection(db, "jobs"), where("slug", "==", slug)));
-  if (bySlug.docs.length > 0) {
+  const bySlug = await getDocs(
+    query(collection(db, "jobs"), where("slug", "==", slug), where("published", "==", true))
+  ).catch(() => null);
+  if (bySlug && bySlug.docs.length > 0) {
     const entry = bySlug.docs[0];
     return mapJobDoc(entry.id, entry.data() as Record<string, unknown>);
   }
 
-  const byId = await getDoc(doc(db, "jobs", slug));
-  if (!byId.exists()) {
+  const byId = await getDoc(doc(db, "jobs", slug)).catch(() => null);
+  if (!byId || !byId.exists()) {
     return null;
   }
 
